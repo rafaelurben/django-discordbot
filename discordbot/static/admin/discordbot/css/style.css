@@ -1,0 +1,28 @@
+@import "colors-discordbot.css";
+
+#branding h1,
+#branding h1 a:link,
+#branding h1 a:visited {
+    color: var(--discordbot-lightest);
+}
+
+#header {
+    color: var(--discordbot-light);
+
+    background-color: var(--discordbot-dark);
+}
+
+div.breadcrumbs,
+.module h2,
+.module caption,
+.inline-group h2 {
+    background-color: var(--discordbot-default);
+}
+
+a:link, a:visited {
+    color: var(--discordbot-dark);
+}
+
+a:focus, a:hover {
+    color: var(--discordbot-darkest);
+}

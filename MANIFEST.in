@@ -1,0 +1,8 @@
+include LICENSE
+include README.rst
+recursive-include discordbot/static *
+recursive-include discordbot/templates *
+recursive-include discordbot/botcmds *
+recursive-include discordbot/botevents *
+recursive-include discordbot/botmodules *
+recursive-include docs *

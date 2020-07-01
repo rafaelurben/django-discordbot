@@ -1,0 +1,4 @@
+{% extends "admin/index.html" %}
+{% load static %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/discordbot/css/index-discordbot.css" %}">{% endblock %}

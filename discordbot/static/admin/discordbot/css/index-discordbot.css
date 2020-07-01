@@ -1,0 +1,13 @@
+@import "colors-discordbot.css";
+
+.app-discordbot caption {
+    background-color: var(--discordbot-default);
+}
+
+.app-discordbot tr a:link, .app-discordbot tr a:visited {
+    color: var(--discordbot-dark);
+}
+
+.app-discordbot tr a:focus, .app-discordbot tr a:hover {
+    color: var(--discordbot-darkest);
+}

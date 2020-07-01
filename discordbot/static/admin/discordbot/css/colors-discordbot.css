@@ -1,0 +1,14 @@
+:root {
+  --discordbot-darkest: #2C1320;
+  --discordbot-dark: #5F4B66;
+  --discordbot-default: #8C9EFF;
+  --discordbot-light: #FD3E81;
+  --discordbot-lightest: #EB9486;
+
+  /* Default:
+  --default-darkest: #036;
+  --default-dark: #417690;
+  --default-default: #79aec8;
+  --default-light: #ffc;
+  --default-lightest: #f5dd5d; */
+}
