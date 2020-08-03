@@ -1,0 +1,13 @@
+{% extends "admin/delete_selected_confirmation.html" %}
+{% load static %}
+
+{% block title %}{{ title }}
+    | Discordbot Manager{% endblock %}
+
+{% block branding %}
+    <h1 id="site-name">
+        <a href="{% url 'admin:index' %}discordbot/">Discordbot Manager</a>
+    </h1>
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/discordbot/css/style.css" %}">{% endblock %}
