@@ -10,14 +10,18 @@ Django Admin is installed and activated.
 
 1.  Add "discordbot" to your INSTALLED_APPS setting like this::
 
+    ```python
     INSTALLED_APPS = [
         ...
         'discordbot',
     ]
+    ```
 
 2.  Include the discordbot URLconf in your project urls.py like this::
 
+    ```python
     path('discordbot/', include('discordbot.urls')),
+    ```
 
 3.  Run `python manage.py migrate` to create the models.
 
