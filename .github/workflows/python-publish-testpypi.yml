@@ -8,7 +8,7 @@ on:
     branches:
       - master
     paths:
-      - 'setup.cfg'
+      - '_version.txt'
 
 jobs:
   deploy:
