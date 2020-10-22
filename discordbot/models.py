@@ -1,6 +1,18 @@
+# pylint: disable=no-member
+
 from django.db import models
+from django.conf import settings
+from django.urls import reverse
 
 import time
+import uuid
+
+###
+
+
+def get_discordbot_domain():
+    return getattr(settings, "DISCORDBOT_DOMAIN", None)
+
 
 # Create your models here.
 
@@ -15,6 +27,8 @@ class Member(models.Model):
     class Meta():
         verbose_name = "Mitglied"
         verbose_name_plural = "Mitglieder"
+
+    objects = models.Manager()
 
 class Server(models.Model):
     id = models.CharField("Discord ID", primary_key=True, max_length=20)
@@ -50,6 +64,8 @@ class Server(models.Model):
     class Meta():
         verbose_name = "Server"
         verbose_name_plural = "Server"
+
+    objects = models.Manager()
 
 class User(models.Model):
     id = models.CharField("Discord ID", primary_key=True, max_length=20)
@@ -91,6 +107,8 @@ class User(models.Model):
     class Meta():
         verbose_name = "Benutzer"
         verbose_name_plural = "Benutzer"
+    
+    objects = models.Manager()
 
 
 class Report(models.Model):
@@ -115,3 +133,142 @@ class Report(models.Model):
     class Meta():
         verbose_name = "Report"
         verbose_name_plural = "Reports"
+
+    objects = models.Manager()
+
+AMONGUS_PLAYER_COLORS = {
+    'red':      ("#C51111", (179, 17, 17)),
+    'blue':     ("#132FD2", (19, 47, 210)),
+    'green':    ("#127F2D", (18, 127, 45)),
+    'pink':     ("#ED53B9", (237, 83, 185)),
+    'orange':   ("#EF7D0E", (239, 125, 14)),
+    'yellow':   ("#F3F558", (243, 246, 88)),
+    'black':    ("#3F484E", (63, 72, 78)),
+    'white':    ("#D5E0EF", (213, 224, 239)),
+    'purple':   ("#6B30BC", (107, 48, 188)),
+    'brown':    ("#72491E", (114, 37, 30)),
+    'cyan':     ("#39FEDB", (57, 254, 219)),
+    'lime':     ("#50EF3A", (80, 239, 58)),
+}
+
+class AmongUsGame(models.Model):
+    api_key = models.UUIDField("API Key", default=uuid.uuid4)
+
+    creator = models.ForeignKey("User", on_delete=models.CASCADE)
+    guild = models.ForeignKey("Server", on_delete=models.CASCADE)
+    
+    voice_channel_id = models.CharField("Voice channel ID", max_length=20)
+    text_channel_id = models.CharField("Text channel ID", max_length=20)
+    text_message_id = models.CharField("Text message ID", max_length=20, default=None, null=True)
+
+    code = models.CharField("Gamecode", max_length=6, default="", blank=True)
+
+    last_edited = models.DateTimeField("Last edited", auto_now=True)
+    tracker_connected = models.BooleanField("Tracker connected", default=False)
+
+    state_ingame = models.BooleanField("In game", default=False)
+    state_meeting = models.BooleanField("Meeting ongoing", default=False)
+
+    p_red_name = models.CharField("Red's name", max_length=50, default="", blank=True)
+    p_red_alive = models.BooleanField("Red's alive", default=True)
+    p_red_exists = models.BooleanField("Red exists", default=False)
+    p_blue_name = models.CharField("Blue's name", max_length=50, default="", blank=True)
+    p_blue_alive = models.BooleanField("Blue's alive", default=True)
+    p_blue_exists = models.BooleanField("Blue exists", default=False)
+    p_green_name = models.CharField("Green's name", max_length=50, default="", blank=True)
+    p_green_alive = models.BooleanField("Green's alive", default=True)
+    p_green_exists = models.BooleanField("Green exists", default=False)
+    p_pink_name = models.CharField("Pink's name", max_length=50, default="", blank=True)
+    p_pink_alive = models.BooleanField("Pink's alive", default=True)
+    p_pink_exists = models.BooleanField("Pink exists", default=False)
+    p_orange_name = models.CharField("Orange's name", max_length=50, default="", blank=True)
+    p_orange_alive = models.BooleanField("Orange's alive", default=True)
+    p_orange_exists = models.BooleanField("Orange exists", default=False)
+    p_yellow_name = models.CharField("Yellow's name", max_length=50, default="", blank=True)
+    p_yellow_alive = models.BooleanField("Yellow's alive", default=True)
+    p_yellow_exists = models.BooleanField("Yellow exists", default=False)
+    p_black_name = models.CharField("Black's name", max_length=50, default="", blank=True)
+    p_black_alive = models.BooleanField("Black's alive", default=True)
+    p_black_exists = models.BooleanField("Black exists", default=False)
+    p_white_name = models.CharField("White's name", max_length=50, default="", blank=True)
+    p_white_alive = models.BooleanField("White's alive", default=True)
+    p_white_exists = models.BooleanField("White exists", default=False)
+    p_purple_name = models.CharField("Purple's name", max_length=50, default="", blank=True)
+    p_purple_alive = models.BooleanField("Purple's alive", default=True)
+    p_purple_exists = models.BooleanField("Purple exists", default=False)
+    p_brown_name = models.CharField("Brown's name", max_length=50, default="", blank=True)
+    p_brown_alive = models.BooleanField("Brown's alive", default=True)
+    p_brown_exists = models.BooleanField("Brown exists", default=False)
+    p_cyan_name = models.CharField("Cyan's name", max_length=50, default="", blank=True)
+    p_cyan_alive = models.BooleanField("Cyan's alive", default=True)
+    p_cyan_exists = models.BooleanField("Cyan exists", default=False)
+    p_lime_name = models.CharField("Lime's name", max_length=50, default="", blank=True)
+    p_lime_alive = models.BooleanField("Lime's alive", default=True)
+    p_lime_exists = models.BooleanField("Lime exists", default=False)
+    
+    
+
+    @property
+    def last_tracking_data(self):
+        return self.last_edited if self.tracker_connected else None
+
+    def get_tracker_url(self):
+        domain = get_discordbot_domain()
+        if domain:
+            return domain+reverse("discordbot:amongus-tracker-post", args=(self.pk ,))
+        else:
+            return None
+
+    def post_data(self, data:dict):
+        if "api_key" in data and data["api_key"] == str(self.api_key):
+            if "code" in data:
+                self.code = str(data["code"])
+            if "state" in data:
+                if "ingame" in data["state"]:
+                    self.state_ingame = bool(data["state"]["ingame"])
+                if "meeting" in data["state"]:
+                    self.state_meeting = bool(data["state"]["ingame"])
+            if "players" in data:
+                for c in data["players"]:
+                    if c in AMONGUS_PLAYER_COLORS:
+                        if "name" in data["players"][c]:
+                            setattr(self, f'p_{c}_name', data["players"][c]["name"])
+                        if "alive" in data["players"][c]:
+                            setattr(self, f'p_{c}_alive', data["players"][c]["alive"])
+                        if "exists" in data["players"][c]:
+                            setattr(self, f'p_{c}_exists', data["players"][c]["exists"])
+            self.tracker_connected = True
+            self.save()
+            return {"success": True}
+        else:
+            return {"error_code": "invalid-api-key", "error_message": "API Key is missing or wrong!"}
+
+    def get_data(self):
+        players = {}
+
+        for c in AMONGUS_PLAYER_COLORS:
+            if getattr(self, f'p_{c}_exists'):
+                players[c] = {
+                   "name": getattr(self, f'p_{c}_name'),
+                   "alive": getattr(self, f'p_{c}_alive'),
+                }
+
+        return {
+            "code": self.code,
+            "state": {
+                "ingame": self.state_ingame,
+                "meeting": self.state_meeting,
+            },
+            "players": players,
+            "last_tracking_data": self.last_tracking_data
+        }
+
+    def __str__(self):
+        return "AmongUs #"+str(self.pk)
+
+    class Meta:
+        verbose_name = 'AmongUs Game'
+        verbose_name_plural = 'AmongUs Games'
+        unique_together = ('guild', 'creator',)
+
+    objects = models.Manager()

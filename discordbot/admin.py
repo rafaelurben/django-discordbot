@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Server, User, Report, Member
+from .models import Server, User, Report, Member, AmongUsGame, AMONGUS_PLAYER_COLORS
 
 # Register your models here.
 
@@ -89,3 +89,24 @@ class UserAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request, obj=None):
         return False
+
+
+@admin.register(AmongUsGame)
+class AmongUsGameAdmin(admin.ModelAdmin):
+    list_display = ('id', 'code', 'state_ingame', 'state_meeting', 'creator')
+    ordering = ('code', )
+
+    readonly_fields = ("last_edited",)
+
+    fieldsets = [
+        ('Info', {'fields': ('code', )}),
+        ('Tracker', {'fields': ('tracker_connected', 'last_edited')}),
+        ('State', {'fields': ('state_ingame', 'state_meeting', )}),
+        ('Players', {'fields': 
+            tuple((f'p_{c}_name', f'p_{c}_alive', f'p_{c}_exists') for c in AMONGUS_PLAYER_COLORS)
+        }),
+    ]
+
+    def has_add_permission(self, request, obj=None):
+        return False
+

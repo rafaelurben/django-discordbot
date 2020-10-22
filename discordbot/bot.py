@@ -1,6 +1,8 @@
 from discord.ext import commands
-from discord import Embed, Activity, ActivityType, Status, Streaming, Game
+from discord import Embed, Activity, ActivityType, Status, Streaming, Game, HTTPException
 from discordbot.botmodules import serverdata, apis
+
+from datetime import datetime
 
 #
 
@@ -63,6 +65,7 @@ class MyContext(commands.Context):
     def getEmbed(self, title:str, description:str="", color:int=0x000000, fields:list=[], inline=True, thumbnailurl:str=None, authorurl:str="", authorname:str=None, footertext:str="Angefordert von USER", footerurl:str="AVATARURL", timestamp=False):
         EMBED = Embed(title=title, description=description, color=color)
         EMBED.set_footer(text=footertext.replace("USER", str(self.author.name+"#"+self.author.discriminator)), icon_url=footerurl.replace("AVATARURL", str(self.author.avatar_url)))
+        
         if timestamp:
             EMBED.timestamp = datetime.utcnow() if timestamp is True else timestamp
         for field in fields:
@@ -80,13 +83,35 @@ class MyContext(commands.Context):
         emoji = '\N{WHITE HEAVY CHECK MARK}' if value else '\N{CROSS MARK}'
         try:
             await self.message.add_reaction(emoji)
-        except discord.HTTPException:
+        except HTTPException:
             pass
 
 
 class MyBot(commands.Bot):
     async def get_context(self, message, *, cls=MyContext):
         return await super().get_context(message, cls=cls)
+
+    def getEmbed(self, title: str, description: str = "", color: int = 0x000000, fields: list = [], inline=True, thumbnailurl: str = None, authorurl: str = "", authorname: str = None, footertext: str = None, footerurl: str = None, timestamp=False):
+        EMBED = Embed(title=title, description=description, color=color)
+        if footertext:
+            if footerurl:
+                EMBED.set_footer(text=footertext, icon_url=footerurl)
+            else:
+                EMBED.set_footer(text=footertext)
+
+        if timestamp:
+            EMBED.timestamp = datetime.utcnow() if timestamp is True else timestamp
+        for field in fields:
+            EMBED.add_field(name=field[0], value=field[1], inline=bool(
+                field[2] if len(field) > 2 else inline))
+        if thumbnailurl:
+            EMBED.set_thumbnail(url=thumbnailurl.strip())
+        if authorname:
+            if authorurl and ("https://" in authorurl or "http://" in authorurl):
+                EMBED.set_author(name=authorname, url=authorurl.strip())
+            else:
+                EMBED.set_author(name=authorname)
+        return EMBED
 
 
 # create Bot

@@ -1,3 +1,5 @@
+# pylint: disable=unused-variable
+
 from discord.ext import commands
 from discord import Embed, User, Member, utils, PermissionOverwrite, Role
 
@@ -16,6 +18,12 @@ def setup(bot):
             return # keine Nachricht senden!
         elif isinstance(error, commands.CommandError):
             EMBED.add_field(name="Beschreibung",value="Bei einem Befehl ist ein Fehler aufgetreten!")
+            try:
+                from rich.traceback import install
+                install()
+                raise error
+            except (ModuleNotFoundError, ImportError):
+                print("Error:", error)
         elif isinstance(error, commands.CommandOnCooldown):
             EMBED.add_field(name="Beschreibung",value="Warte, bis du diesen Befehl erneut benutzen kannst!")
         elif isinstance(error, commands.DisabledCommand):
