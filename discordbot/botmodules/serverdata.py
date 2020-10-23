@@ -1,4 +1,6 @@
-import time, youtube_dl, os
+import time
+import os
+import youtube_dl
 from discord import PCMVolumeTransformer, FFmpegPCMAudio
 from discord.ext import commands
 

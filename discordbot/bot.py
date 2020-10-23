@@ -159,16 +159,10 @@ async def destroy(ctx):
 # Start
 
 def run(TOKEN):
-    bot.run(TOKEN,bot=True,reconnect=True)
+    bot.run(TOKEN, bot=True, reconnect=True)
 
 
 import sys, os
 
 if __name__ == "__main__":
-    if 'DISCORD_BOTTOKEN' in os.environ:
-        run(os.environ.get('DISCORD_BOTTOKEN'))
-    elif len(sys.argv) > 1:
-        run(sys.argv[1])
-    else:
-        print("[Bot] - No TOKEN found! Enter it manually...")
-        run(input("TOKEN: "))
+    print("[Bot] - You must run this bot via your manage.py file: python3.8 manage.py run-discorbot")
