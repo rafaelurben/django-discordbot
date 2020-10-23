@@ -13,7 +13,7 @@ def post(data):
     if "success" in j:
         return True
     else:
-        print("[AmongUs Tracker] Error: ", (j["error"] if "error" in j else "") + (" - MSG: "+j["error_message"] if "error_message" in j else ""))
+        print("[AmongUs Tracker] Error!", (" - " + j["error"] if "error" in j else "") + (" - MSG: "+j["error_message"] if "error_message" in j else ""))
         return False
 
 post({

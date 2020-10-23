@@ -1,3 +1,5 @@
+# pylint: disable=unused-variable
+
 from discord.ext import commands
 from discord import Embed, User, Member, utils, PermissionOverwrite, Role, PCMVolumeTransformer, FFmpegPCMAudio
 import os

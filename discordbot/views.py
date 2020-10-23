@@ -12,10 +12,13 @@ import json
 @require_POST
 @csrf_exempt
 def amongus_tracker_post(request, id):
-    data = json.loads(json.loads(request.body))
-    print(data, type(data))
+    try:
+        data = dict(json.loads(json.loads(request.body)))
+    except Exception as e:
+        return JsonResponse({"error": "invalid-data", "error_message": e})
+
     if AmongUsGame.objects.filter(id=id).exists():
         game = AmongUsGame.objects.get(id=id)
         return JsonResponse(game.post_data(data))
     else:
-        return JsonResponse({"error": "Game with this ID not found!"})
+        return JsonResponse({"error": "id-not-found", "error_message": "Game with this ID not found!"})

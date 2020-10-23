@@ -1,13 +1,13 @@
 # pylint: disable=no-member
 
 from discord.ext import commands, tasks
-from discord import Embed, utils, PermissionOverwrite, Color
+from discord import Embed, utils, PermissionOverwrite, Color, NotFound
 
 from django.utils import timezone
 
 from datetime import timedelta
 
-from discordbot.models import AmongUsGame, AMONGUS_PLAYER_COLORS
+from discordbot.models import AmongUsGame, AMONGUS_PLAYER_COLORS, AMONGUS_EMOJI_COLORS
 
 import requests
 import os
@@ -21,9 +21,9 @@ OVERRIDE_TALK = PermissionOverwrite(
     read_messages=True, connect=True, speak=True, use_voice_activation=True)
 
 
-ALIVE = '💚'
+ALIVE = '❤'
 DEAD = '💀'
-INEXISTENT = '❌'
+
 YES = '✅'
 NO = '❌'
 
@@ -48,7 +48,10 @@ class Games(commands.Cog):
 
     def cog_unload(self):
         print("[AmongUs Background Tasks] - Stopped!")
-        self.amongus_backgroundtasks.stop()
+        self.amongus_backgroundtasks.cancel()
+
+
+
 
     @commands.command(
         brief="Erhalte Aktuelles zu Fortnite",
@@ -222,37 +225,40 @@ class Games(commands.Cog):
 
     @tasks.loop(seconds=1.0)
     async def amongus_backgroundtasks(self):
+        def log(*args):
+            print('[AmongUs Background Tasks] -', *args)
+
         global amongus_last_update
         games = AmongUsGame.objects.filter(last_edited__gt=amongus_last_update)
         amongus_last_update = timezone.now()
 
         for game in games:
             try:
-                print('[AmongUs Background Tasks] - Updated', game)
+                log(f'Updating AmongUs #{ game.pk }...')
+
+                # Get channels / Create channels
 
                 textchannel = self.bot.get_channel(int(game.text_channel_id))
                 voicechannel = self.bot.get_channel(int(game.voice_channel_id))
 
                 if voicechannel is None:
+                    log(f"- Deleted AmongUs #{ game.pk } because voicechannel was not found!")
                     game.delete()
+                    if textchannel is not None:
+                        await textchannel.delete()
                     continue
                 elif textchannel is None:
+                    log(f"- Created new textchannel for AmongUs #{ game.pk }!")
                     category = await getAmongUsCategory(self.bot.get_guild(int(game.guild.id)))
-                    textchannel = await category.create_text_channel(name=f"amongus-{ game.pk }", reason="Textkanal war nicht mehr vorhanden!", topic=f"AmongUs Spiel - { game.pk }")
+                    textchannel = await category.create_text_channel(name=f"amongus-{ game.pk }", reason="Textkanal war nicht mehr vorhanden!", topic=f"AmongUs Spiel - ID: { game.pk }")
                 
-                    embed = self.bot.getEmbed(
-                        title=f"AmongUs Game { game.pk }",
-                        color=0xFEDE29,
-                    )
-                    msg = await textchannel.send(embed=embed)
-
                     game.text_channel_id = str(textchannel.id)
-                    game.text_message_id = str(msg.id)
                     game.save()
 
                 try:
                     msg = await textchannel.fetch_message(int(game.text_message_id))
                 except:
+                    log(f"- Created new message for AmongUs #{ game.pk }!")
                     embed = self.bot.getEmbed(
                         title=f"AmongUs Game { game.pk }",
                         color=0xFEDE29,
@@ -263,19 +269,59 @@ class Games(commands.Cog):
                     game.text_message_id = str(msg.id)
                     game.save()
 
+                    for emoji in AMONGUS_EMOJI_COLORS:
+                        await msg.add_reaction(emoji)
+
                 guild = textchannel.guild
 
-                tracker_connected = (YES if game.tracker_connected else NO)
-                last_edited = game.last_edited.strftime("%Y/%m/%d - %H:%M:%S %Z")
-                code = (game.code or "unbekannt")
-                ingame = (YES if game.state_ingame else NO)
-                inmeeting = (YES if game.state_meeting else NO)
+                # Mute / Unmute
+
+                if game.state_ingame:
+                    overwrites = {
+                        guild.default_role: OVERRIDE_MUTED
+                    }
+                    
+                    # if game.state_meeting:
+                    #    for c in AMONGUS_PLAYER_COLORS:
+                    #        r = utils.get(guild.roles, name="[AU] - "+c.upper())
+                    #        if r is not None and getattr(game, f"p_{c}_exists") and getattr(game, f"p_{c}_alive"):
+                    #            overwrites[r] = OVERRIDE_TALK
+                    await voicechannel.edit(overwrites=overwrites)
+                else:
+                    await voicechannel.edit(sync_permissions=True)
+
+                # Message
+
+                d = game.get_data()
+
+                id = d["id"]
+                last_tracking_data = str(d["last_tracking_data"].strftime("%Y/%m/%d - %H:%M:%S %Z") if d["last_tracking_data"] is not None else NO)
+                last_edited = d["last_edited"].strftime("%Y/%m/%d - %H:%M:%S %Z")
+                code = (d["code"] or "unbekannt")
+                ingame = (YES if d["state"]["ingame"] else NO)
+                inmeeting = (YES if d["state"]["meeting"] else NO)
+
+                fields = []
+                for c, i in d["players"].items():
+                    title = (AMONGUS_PLAYER_COLORS[c][2] if i["alive"] else DEAD) + " " + c.upper()
+
+                    if i["userid"]:
+                        try:
+                            member = self.bot.get_user(int(i["userid"])) or await self.bot.fetch_user(int(i["userid"]))
+                            mention = member.mention
+                        except NotFound:
+                            mention = None
+                    else:
+                        mention = None
+
+                    description = mention + (" ("+i["name"]+")" if i["name"] else "") if mention is not None else (i["name"] or "-")
+                    fields.append((title, description))
 
                 embed = self.bot.getEmbed(
-                    title=f"AmongUs Game { game.pk }",
-                    description=(f"""Infos über Gruppe Nr. { game.pk }
+                    title=f"AmongUs Game { id }",
+                    description=(f"""Infos über Gruppe Nr. { id }
 
-                        Tracker verbunden - { tracker_connected }  
+                        Letzte Trackerdaten - { last_tracking_data }  
                         Letzte Aktualisierung - { last_edited }
 
                         Code - { code }                  
@@ -285,36 +331,14 @@ class Games(commands.Cog):
 
                         Spieler:
                     """),
-                    footertext=f"{INEXISTENT} = Nicht vorhanden - {DEAD} = Tot - {ALIVE} = Lebend",
+                    footertext=f"{DEAD} = Tot - {ALIVE} = Lebend",
                     color=0xFEDE29,
                     inline=True,
-                    fields=list(
-                        (
-                            (((ALIVE if getattr(game, f"p_{c}_alive") else DEAD) if getattr(
-                                game, f"p_{c}_exists") else INEXISTENT) + " " + c.upper()),
-                            (getattr(game, f"p_{c}_name") or "-"),
-                        ) for c in AMONGUS_PLAYER_COLORS
-                    )
+                    fields=fields,
                 )
                 await msg.edit(embed=embed)
-
-                # Mute etc.
-
-                if game.state_ingame:
-                    overwrites = {
-                        guild.default_role: OVERRIDE_MUTED
-                    }
-                    
-                    if game.state_meeting:
-                        for c in AMONGUS_PLAYER_COLORS:
-                            r = utils.get(guild.roles, name="[AU] - "+c.upper())
-                            if r is not None and getattr(game, f"p_{c}_exists") and getattr(game, f"p_{c}_alive"):
-                                overwrites[r] = OVERRIDE_TALK
-                    await voicechannel.edit(overwrites=overwrites)
-                else:
-                    await voicechannel.edit(sync_permissions=True)
             except Exception as e:
-                print('[AmongUs Background Tasks] -', e)
+                log('Error:', e)
 
 
     @amongus_backgroundtasks.before_loop
@@ -341,53 +365,68 @@ class Games(commands.Cog):
                     ("/au create",      "Erstelle einen AmongUs Kanal"),
                     ("/au delete",      "Erstelle deinen AmongUs Kanal"),
                     ("/au reset",       "Setze die Rollen in deinem Sprachkanal zurück"),
-                    ("/au install",     "Erstelle alle benötigten Rollen - [ADMIN]"),
-                    ("/au uninstall",   "Lösche alle benötigten Rollen - [ADMIN]"),
+                    #("/au install",     "Erstelle alle benötigten Rollen - [ADMIN]"),
+                    #("/au uninstall",   "Lösche alle benötigten Rollen - [ADMIN]"),
+                    #("/au roles",       "Wähle deine Farbe"),
                 ]
             )
 
-    @amongus.command(
-        name="install",
-        aliases=[],
-    )
-    @commands.has_guild_permissions(manage_roles=True)
-    async def amongus_install(self, ctx):
-        for c in AMONGUS_PLAYER_COLORS:
-            if utils.get(ctx.guild.roles, name="[AU] - "+c.upper()) is None:
-                await ctx.guild.create_role(
-                    name="[AU] - "+c.upper(), 
-                    colour=Color.from_rgb(*AMONGUS_PLAYER_COLORS[c][1]),
-                    reason="Admin used /amongus install command",
-                    mentionable=True,
-                )
-        await ctx.sendEmbed(
-            title="AmongUs Installed!", 
-            color=0xFEDE29, 
-            description="AmongUs roles were successfully created!"
-        )
+    # @amongus.command(
+    #     name="install",
+    #     aliases=[],
+    # )
+    # @commands.has_guild_permissions(manage_roles=True)
+    # async def amongus_install(self, ctx):
+    #     for c in AMONGUS_PLAYER_COLORS:
+    #         if utils.get(ctx.guild.roles, name="[AU] - "+c.upper()) is None:
+    #             await ctx.guild.create_role(
+    #                 name="[AU] - "+c.upper(), 
+    #                 colour=Color.from_rgb(*AMONGUS_PLAYER_COLORS[c][1]),
+    #                 reason="Admin used /amongus install command",
+    #                 mentionable=True,
+    #             )
+    #     await ctx.sendEmbed(
+    #         title="AmongUs Installiert!", 
+    #         color=0xFEDE29, 
+    #         description="AmongUs Rollen wurden erfolgreich erstellt!"
+    #     )
 
-    @amongus.command(
-        name="uninstall",
-        aliases=['deinstall'],
-    )
-    @commands.has_guild_permissions(manage_roles=True)
-    async def amongus_uninstall(self, ctx):
-        for c in AMONGUS_PLAYER_COLORS:
-            r = utils.get(ctx.guild.roles, name="[AU] - "+c.upper())
-            if r is not None:
-                await r.delete(reason="Admin used /amongus uninstall command")
-        await ctx.sendEmbed(
-            title="AmongUs Uninstalled!", 
-            color=0xFEDE29, 
-            description="AmongUs roles were successfully deleted!"
-        )
+    # @amongus.command(
+    #     name="uninstall",
+    #     aliases=['deinstall'],
+    # )
+    # @commands.has_guild_permissions(manage_roles=True)
+    # async def amongus_uninstall(self, ctx):
+    #     for c in AMONGUS_PLAYER_COLORS:
+    #         r = utils.get(ctx.guild.roles, name="[AU] - "+c.upper())
+    #         if r is not None:
+    #             await r.delete(reason="Admin used /amongus uninstall command")
+    #     await ctx.sendEmbed(
+    #         title="AmongUs Deinstalliert!", 
+    #         color=0xFEDE29, 
+    #         description="AmongUs Rollen wurden erfolgreich gelöscht!"
+    #     )
 
-    @amongus.command(
-        name="roles",
-        aliases=['getroles'],
-    )
-    async def amongus_roles(self, ctx):
-        return
+    # @amongus.command(
+    #     name="roles",
+    #     aliases=['getroles'],
+    # )
+    # async def amongus_roles(self, ctx):
+    #     description = "Erhalte deine Rollen indem du auf diese Nachricht reagierst.\n"
+    #     reactions = []
+
+    #     for c in AMONGUS_PLAYER_COLORS:
+    #         r = utils.get(ctx.guild.roles, name="[AU] - "+c.upper())
+    #         if r is not None:
+    #             description += "\n"+AMONGUS_PLAYER_COLORS[c][2]+" "+c.upper()
+    #             reactions.append(AMONGUS_PLAYER_COLORS[c][2])
+
+    #     msg = await ctx.sendEmbed(
+    #         title="AmongUs Rollen",
+    #         description=description,
+    #     )
+    #     for r in reactions:
+    #         await msg.add_reaction(r)
 
     @amongus.command(
         name="create",
@@ -461,11 +500,12 @@ class Games(commands.Cog):
             voicechannel = ctx.guild.get_channel(int(game.voice_channel_id))
 
             if voicechannel is not None:
+                game.reset(save=True)
                 await voicechannel.edit(sync_permissions=True)
                 await ctx.sendEmbed(
-                    title="AmongUs Reset!",
+                    title="AmongUs Spiel zurückgesetzt!",
                     color=0xFEDE29,
-                    description="Your AmongUs channel roles have been reset!"
+                    description="Dein AmongUs Spiel wurde erfolgreich zurückgesetzt!"
                 )
             else:
                 raise commands.BadArgument(message="Der Sprachkanal zu deinem Spiel wurde nicht gefunden. Versuche dein Spiel mit `/amongus close` zu löschen")

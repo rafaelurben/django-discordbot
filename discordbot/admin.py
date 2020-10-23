@@ -96,14 +96,15 @@ class AmongUsGameAdmin(admin.ModelAdmin):
     list_display = ('id', 'code', 'state_ingame', 'state_meeting', 'creator')
     ordering = ('code', )
 
-    readonly_fields = ("last_edited",)
+    readonly_fields = ("last_tracking_data", "last_edited",)
 
     fieldsets = [
         ('Info', {'fields': ('code', )}),
-        ('Tracker', {'fields': ('tracker_connected', 'last_edited')}),
+        ('Times', {'fields': ('last_tracking_data', 'last_edited')}),
         ('State', {'fields': ('state_ingame', 'state_meeting', )}),
         ('Players', {'fields': 
-            tuple((f'p_{c}_name', f'p_{c}_alive', f'p_{c}_exists') for c in AMONGUS_PLAYER_COLORS)
+            tuple((f'p_{c}_name', f'p_{c}_alive', f'p_{c}_exists', f'p_{c}_userid') 
+            for c in AMONGUS_PLAYER_COLORS)
         }),
     ]
 
