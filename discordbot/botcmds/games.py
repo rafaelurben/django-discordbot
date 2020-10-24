@@ -27,6 +27,8 @@ DEAD = '💀'
 YES = '✅'
 NO = '❌'
 
+DELETE = '❌'
+
 amongus_last_update = timezone.now()-timedelta(days=1)
 
 #####
@@ -271,6 +273,7 @@ class Games(commands.Cog):
 
                     for emoji in AMONGUS_EMOJI_COLORS:
                         await msg.add_reaction(emoji)
+                    await msg.add_reaction(DELETE)
 
                 guild = textchannel.guild
 
@@ -362,71 +365,11 @@ class Games(commands.Cog):
                 color=0xFEDE29,
                 inline=False,
                 fields=[
-                    ("/au create",      "Erstelle einen AmongUs Kanal"),
-                    ("/au delete",      "Erstelle deinen AmongUs Kanal"),
-                    ("/au reset",       "Setze die Rollen in deinem Sprachkanal zurück"),
-                    #("/au install",     "Erstelle alle benötigten Rollen - [ADMIN]"),
-                    #("/au uninstall",   "Lösche alle benötigten Rollen - [ADMIN]"),
-                    #("/au roles",       "Wähle deine Farbe"),
+                    ("/au create",      "Erstelle ein AmongUs Spiel"),
+                    ("/au delete",      "Lösche dein AmongUs Spiel"),
+                    ("/au reset",       "Setze dein AmongUs Spiel zurück"),
                 ]
             )
-
-    # @amongus.command(
-    #     name="install",
-    #     aliases=[],
-    # )
-    # @commands.has_guild_permissions(manage_roles=True)
-    # async def amongus_install(self, ctx):
-    #     for c in AMONGUS_PLAYER_COLORS:
-    #         if utils.get(ctx.guild.roles, name="[AU] - "+c.upper()) is None:
-    #             await ctx.guild.create_role(
-    #                 name="[AU] - "+c.upper(), 
-    #                 colour=Color.from_rgb(*AMONGUS_PLAYER_COLORS[c][1]),
-    #                 reason="Admin used /amongus install command",
-    #                 mentionable=True,
-    #             )
-    #     await ctx.sendEmbed(
-    #         title="AmongUs Installiert!", 
-    #         color=0xFEDE29, 
-    #         description="AmongUs Rollen wurden erfolgreich erstellt!"
-    #     )
-
-    # @amongus.command(
-    #     name="uninstall",
-    #     aliases=['deinstall'],
-    # )
-    # @commands.has_guild_permissions(manage_roles=True)
-    # async def amongus_uninstall(self, ctx):
-    #     for c in AMONGUS_PLAYER_COLORS:
-    #         r = utils.get(ctx.guild.roles, name="[AU] - "+c.upper())
-    #         if r is not None:
-    #             await r.delete(reason="Admin used /amongus uninstall command")
-    #     await ctx.sendEmbed(
-    #         title="AmongUs Deinstalliert!", 
-    #         color=0xFEDE29, 
-    #         description="AmongUs Rollen wurden erfolgreich gelöscht!"
-    #     )
-
-    # @amongus.command(
-    #     name="roles",
-    #     aliases=['getroles'],
-    # )
-    # async def amongus_roles(self, ctx):
-    #     description = "Erhalte deine Rollen indem du auf diese Nachricht reagierst.\n"
-    #     reactions = []
-
-    #     for c in AMONGUS_PLAYER_COLORS:
-    #         r = utils.get(ctx.guild.roles, name="[AU] - "+c.upper())
-    #         if r is not None:
-    #             description += "\n"+AMONGUS_PLAYER_COLORS[c][2]+" "+c.upper()
-    #             reactions.append(AMONGUS_PLAYER_COLORS[c][2])
-
-    #     msg = await ctx.sendEmbed(
-    #         title="AmongUs Rollen",
-    #         description=description,
-    #     )
-    #     for r in reactions:
-    #         await msg.add_reaction(r)
 
     @amongus.command(
         name="create",
