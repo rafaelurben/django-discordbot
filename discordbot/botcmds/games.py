@@ -1,5 +1,7 @@
 # pylint: disable=no-member
 
+from asgiref.sync import sync_to_async
+
 from discord.ext import commands, tasks
 from discord import Embed, utils, PermissionOverwrite, Color, NotFound
 
@@ -32,6 +34,13 @@ DELETE = '❌'
 amongus_last_update = timezone.now()-timedelta(days=1)
 
 #####
+
+@sync_to_async
+def getUpdatedAmongUsGames():
+    global amongus_last_update
+    games = AmongUsGame.objects.filter(last_edited__gt=amongus_last_update)
+    amongus_last_update = timezone.now()
+    return list(games)
 
 async def getAmongUsCategory(guild):
     category = utils.get(guild.categories, name="AmongUs")
@@ -230,11 +239,7 @@ class Games(commands.Cog):
         def log(*args):
             print('[AmongUs Background Tasks] -', *args)
 
-        global amongus_last_update
-        games = AmongUsGame.objects.filter(last_edited__gt=amongus_last_update)
-        amongus_last_update = timezone.now()
-
-        for game in games:
+        for game in await getUpdatedAmongUsGames():
             try:
                 log(f'Updating AmongUs #{ game.pk }...')
 
@@ -251,7 +256,7 @@ class Games(commands.Cog):
                     continue
                 elif textchannel is None:
                     log(f"- Created new textchannel for AmongUs #{ game.pk }!")
-                    category = await getAmongUsCategory(self.bot.get_guild(int(game.guild.id)))
+                    category = await getAmongUsCategory(voicechannel.guild)
                     textchannel = await category.create_text_channel(name=f"amongus-{ game.pk }", reason="Textkanal war nicht mehr vorhanden!", topic=f"AmongUs Spiel - ID: { game.pk }")
                 
                     game.text_channel_id = str(textchannel.id)
@@ -279,18 +284,47 @@ class Games(commands.Cog):
 
                 # Mute / Unmute
 
+                vss = voicechannel.voice_states
+
                 if game.state_ingame:
+                    if game.state_meeting:
+                        # Unmute alive players
+                        for c in AMONGUS_PLAYER_COLORS:
+                            if getattr(game, f"p_{c}_exists") and getattr(game, f"p_{c}_alive"):
+                                m_id = getattr(game, f"p_{c}_userid")
+                                if m_id and (int(m_id) in vss):
+                                    vs = vss[int(m_id)]
+                                    if vs.mute:
+                                        m = vs.channel.guild.get_member(int(m_id))
+                                        if m is None:
+                                            m = await vs.channel.guild.fetch_member(int(m_id))
+                                        await m.edit(mute=False)
+                    else:
+                        # Mute all players
+                        for m_id in vss:
+                            vs = vss[m_id]
+                            if not vs.mute:
+                                m = vs.channel.guild.get_member(m_id)
+                                if m is None:
+                                    m = await vs.channel.guild.fetch_member(m_id)
+                                await m.edit(mute=True)
+
+                    # Don't allow new players to speak
                     overwrites = {
                         guild.default_role: OVERRIDE_MUTED
                     }
-                    
-                    # if game.state_meeting:
-                    #    for c in AMONGUS_PLAYER_COLORS:
-                    #        r = utils.get(guild.roles, name="[AU] - "+c.upper())
-                    #        if r is not None and getattr(game, f"p_{c}_exists") and getattr(game, f"p_{c}_alive"):
-                    #            overwrites[r] = OVERRIDE_TALK
                     await voicechannel.edit(overwrites=overwrites)
                 else:
+                    # Unmute all players
+                    for m_id in vss:
+                        vs = vss[m_id]
+                        if vs.mute:
+                            m = vs.channel.guild.get_member(m_id)
+                            if m is None:
+                                m = await vs.channel.guild.fetch_member(m_id)
+                            await m.edit(mute=False)
+
+                    # Allow new players to speak
                     await voicechannel.edit(sync_permissions=True)
 
                 # Message
