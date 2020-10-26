@@ -27,8 +27,8 @@ class AmongUsTracker():
 
 # Test
 
-URL = "http://localhost/discordbot/amongus/tracker/13/post"
-API_KEY = "10d20528-ccca-4ba2-9332-7bf38bf0538f"
+URL = ""
+API_KEY = ""
 
 AmongUsTracker(url=URL, apikey=API_KEY)._post({
     "state": {"ingame": False, "meeting": False},
