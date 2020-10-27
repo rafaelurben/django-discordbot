@@ -10,6 +10,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from discordbot.models import AmongUsGame, AMONGUS_PLAYER_COLORS, AMONGUS_EMOJI_COLORS
+from discordbot.botmodules.serverdata import DjangoConnection
 
 import requests
 import os
@@ -260,7 +261,7 @@ class Games(commands.Cog):
                     textchannel = await category.create_text_channel(name=f"amongus-{ game.pk }", reason="Textkanal war nicht mehr vorhanden!", topic=f"AmongUs Spiel - ID: { game.pk }")
                 
                     game.text_channel_id = str(textchannel.id)
-                    game.save()
+                    await DjangoConnection._saveAmongUsGame(game)
 
                 try:
                     msg = await textchannel.fetch_message(int(game.text_message_id))
@@ -274,7 +275,7 @@ class Games(commands.Cog):
                     msg = await textchannel.send(embed=embed)
 
                     game.text_message_id = str(msg.id)
-                    game.save()
+                    await DjangoConnection._saveAmongUsGame(game)
 
                     for emoji in AMONGUS_EMOJI_COLORS:
                         await msg.add_reaction(emoji)
@@ -355,8 +356,8 @@ class Games(commands.Cog):
                     fields.append((title, description))
 
                 embed = self.bot.getEmbed(
-                    title=f"AmongUs Game { id }",
-                    description=(f"""Infos über Gruppe Nr. { id }
+                    title=f"AmongUs Spiel (ID: { id })",
+                    description=(f"""Infos über dieses Spiel
 
                         Letzte Trackerdaten - { last_tracking_data }  
                         Letzte Aktualisierung - { last_edited }
@@ -370,7 +371,7 @@ class Games(commands.Cog):
                     """),
                     footertext=f"{DEAD} = Tot - {ALIVE} = Lebend",
                     color=0xFEDE29,
-                    inline=True,
+                    inline=False,
                     fields=fields,
                 )
                 await msg.edit(embed=embed)
@@ -422,18 +423,17 @@ class Games(commands.Cog):
                 raise commands.BadArgument(message=f"Du hast bereits ein AmongUs-Spiel auf diesem Server, jedoch konnte der Textkanal nicht mehr gefunden werden! (ID { game.pk })")
         else:
             category = await getAmongUsCategory(ctx.guild)
-            textchannel = await category.create_text_channel(name="amongus-loading", reason="Benutzer hat AmongUs-Spiel erstellt.", topic="Dieser AmongUS Kanal wird gerade erstellt...")
-            voicechannel = await category.create_voice_channel(name="AmongUs LOADING", reason="Benutzer hat AmongUs-Spiel erstellt.")
+            textchannel = await category.create_text_channel(name=f"au-{ctx.author.name}#{ctx.author.discriminator}", reason="Benutzer hat AmongUs-Spiel erstellt.", topic=f"AmongUs Spiel von {ctx.author.name}#{ctx.author.discriminator}")
+            voicechannel = await category.create_voice_channel(name=f"[AU] - {ctx.author.name}#{ctx.author.discriminator}", reason="Benutzer hat AmongUs-Spiel erstellt.")
             game = await ctx.database.createAmongUsGame(text_channel_id=str(textchannel.id), voice_channel_id=str(voicechannel.id))
-            await textchannel.edit(name=f"amongus-{ game.pk }", topic=f"AmongUs Spiel - { game.pk }")
-            await voicechannel.edit(name=f"AmongUs - { game.pk }")
 
             embed = ctx.getEmbed(
                 title=f"AmongUs Spiel erstellt ({ game.pk })", 
-                description="Konfiguriere die Tracker-Software mit folgender URL und folgendem API Key:", 
+                description="Konfiguriere die Tracker-Software mit folgenden Daten:", 
                 color=0xFEDE29,
                 fields=[
                     ("Url", str(game.get_tracker_url())),
+                    ("ID", str(game.pk)),
                     ("API-Key", str(game.api_key)),
                     ("Kanal", str(textchannel.mention))
                 ]
@@ -456,7 +456,7 @@ class Games(commands.Cog):
                 await voicechannel.delete(reason="AmongUs Spiel wurde gelöscht!")
 
             id = str(game.pk)
-            game.delete()
+            await ctx.database._deleteAmongUsGame(game)
 
             embed = ctx.getEmbed(
                 title=f"AmongUs Spiel gelöscht! ({ id })",

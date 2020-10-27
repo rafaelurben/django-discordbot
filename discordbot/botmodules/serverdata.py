@@ -261,6 +261,21 @@ class DjangoConnection():
 
     @classmethod
     @sync_to_async
+    def _saveAmongUsGame(self, game: AmongUsGame):
+        game.save()
+
+    @classmethod
+    @sync_to_async
+    def _resetAmongUsGame(self, game: AmongUsGame, save: bool = False):
+        game.reset(save=save)
+
+    @classmethod
+    @sync_to_async
+    def _deleteAmongUsGame(self, game: AmongUsGame):
+        game.delete()
+
+    @classmethod
+    @sync_to_async
     def _setAmongUsUser(self, game: AmongUsGame, userid: int, color: str, save: bool = False):
         game.set_user(userid=userid, color=color, save=save)
 
@@ -269,7 +284,3 @@ class DjangoConnection():
     def _removeAmongUsUser(self, game: AmongUsGame, userid: int, save: bool = False):
         game.remove_user(userid=userid, save=save)
 
-    @classmethod
-    @sync_to_async
-    def _resetAmongUsGame(self, game: AmongUsGame, save: bool = False):
-        game.reset(save=save)

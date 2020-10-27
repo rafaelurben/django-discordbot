@@ -225,9 +225,9 @@ class AmongUsGame(models.Model):
     def get_tracker_url(self):
         domain = get_discordbot_domain()
         if domain:
-            return domain+reverse("discordbot:amongus-tracker-post", args=(self.pk ,))
+            return domain+reverse("discordbot:amongus-tracker-post")
         else:
-            return None
+            return "Frage den Bot-Owner!"
 
     def reset(self, save=False):
         self.code = ""
@@ -262,7 +262,6 @@ class AmongUsGame(models.Model):
                         if "exists" in data["players"][c]:
                             setattr(self, f'p_{c}_exists', data["players"][c]["exists"])
                             
-            self.tracker_connected = True
             self.last_tracking_data = timezone.now()
             self.save()
             return {"success": True}
