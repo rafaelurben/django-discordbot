@@ -1,7 +1,7 @@
 from discord.ext import commands
 from discord import Embed, User, Member, opus, FFmpegPCMAudio, PCMVolumeTransformer, VoiceChannel
 from fuzzywuzzy import process
-import os, asyncio
+import os
 
 ###
 

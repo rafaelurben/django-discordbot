@@ -410,8 +410,8 @@ class Games(commands.Cog):
         aliases=['open', 'add'],
     )
     async def amongus_create(self, ctx):
-        if AmongUsGame.objects.filter(creator=ctx.database.user, guild=ctx.database.server).exists():
-            game = AmongUsGame.objects.get(creator=ctx.database.user, guild=ctx.database.server)
+        if await ctx.database.hasAmongUsGame():
+            game = await ctx.database.getAmongUsGame()
             textchannel = ctx.guild.get_channel(int(game.text_channel_id))
             voicechannel = ctx.guild.get_channel(int(game.voice_channel_id))
             if textchannel and voicechannel:
@@ -424,7 +424,7 @@ class Games(commands.Cog):
             category = await getAmongUsCategory(ctx.guild)
             textchannel = await category.create_text_channel(name="amongus-loading", reason="Benutzer hat AmongUs-Spiel erstellt.", topic="Dieser AmongUS Kanal wird gerade erstellt...")
             voicechannel = await category.create_voice_channel(name="AmongUs LOADING", reason="Benutzer hat AmongUs-Spiel erstellt.")
-            game = AmongUsGame.objects.create(creator=ctx.database.user, guild=ctx.database.server, text_channel_id=str(textchannel.id), voice_channel_id=str(voicechannel.id))
+            game = await ctx.database.createAmongUsGame(text_channel_id=str(textchannel.id), voice_channel_id=str(voicechannel.id))
             await textchannel.edit(name=f"amongus-{ game.pk }", topic=f"AmongUs Spiel - { game.pk }")
             await voicechannel.edit(name=f"AmongUs - { game.pk }")
 
@@ -446,8 +446,8 @@ class Games(commands.Cog):
         aliases=['delete', 'del'],
     )
     async def amongus_close(self, ctx):
-        if AmongUsGame.objects.filter(creator=ctx.database.user, guild=ctx.database.server).exists():
-            game = AmongUsGame.objects.get(creator=ctx.database.user, guild=ctx.database.server)
+        if await ctx.database.hasAmongUsGame():
+            game = await ctx.database.getAmongUsGame()
             textchannel = ctx.guild.get_channel(int(game.text_channel_id))
             voicechannel = ctx.guild.get_channel(int(game.voice_channel_id))
             if textchannel is not None:
@@ -472,8 +472,8 @@ class Games(commands.Cog):
         aliases=[],
     )
     async def amongus_reset(self, ctx):
-        if AmongUsGame.objects.filter(creator=ctx.database.user, guild=ctx.database.server).exists():
-            game = AmongUsGame.objects.get(creator=ctx.database.user, guild=ctx.database.server)
+        if await ctx.database.hasAmongUsGame():
+            game = await ctx.database.getAmongUsGame()
             voicechannel = ctx.guild.get_channel(int(game.voice_channel_id))
 
             if voicechannel is not None:

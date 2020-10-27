@@ -38,6 +38,7 @@ def morse_encrypt(message):
 
 # Morsecode zu Text
 def morse_decrypt(message):
+    i = 0
     message += ' '
     text = ''
     char = ''
@@ -50,7 +51,7 @@ def morse_decrypt(message):
             i += 1
             # Neues Wort
             if i == 2 :
-                 # Leerzeichen um neues Wort abzutrennen
+                # Leerzeichen um neues Wort abzutrennen
                 text += ' '
             else:
                 text += MORSE_CODE_DICT_INVERTED[char] if char in MORSE_CODE_DICT_INVERTED else "*"

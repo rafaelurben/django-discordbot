@@ -14,7 +14,7 @@ class Converters(commands.Cog):
         description="Wandle Morsecode um",
         aliases=["mors","morsecode"],
         help="Benutze /morse <Text> und erhalte den Text in Morsecode oder umgekehrt",
-        usage=""
+        usage="<Morsecode | Nachricht>"
         )
     async def morse(self, ctx):
         message = ctx.getargs()

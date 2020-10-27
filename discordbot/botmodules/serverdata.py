@@ -1,8 +1,14 @@
 import time
 import os
 import youtube_dl
+import asyncio
+
 from discord import PCMVolumeTransformer, FFmpegPCMAudio
 from discord.ext import commands
+
+from asgiref.sync import sync_to_async
+
+#####
 
 filespath = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "botfiles")
 
@@ -144,7 +150,7 @@ class Server():
 
 ### NEW
 
-from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member
+from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AmongUsGame
 
 class DjangoConnection():
     def __init__(self, dc_user, dc_guild):
@@ -154,7 +160,8 @@ class DjangoConnection():
         self._db_server = None
 
     @classmethod
-    def get_user(self, dc_user):
+    @sync_to_async
+    def fetch_user(self, dc_user):
         if not DB_User.objects.filter(id=str(dc_user.id)).exists():
             user = DB_User.objects.create(id=str(dc_user.id), name=dc_user.name+"#"+dc_user.discriminator)
         else:
@@ -164,8 +171,14 @@ class DjangoConnection():
                 user.save()
         return user
 
+    async def get_user(self):
+        if self._db_user is None:
+            self._db_user = await self.fetch_user(self.dc_user)
+        return self._db_user
+
     @classmethod
-    def get_server(self, dc_guild):
+    @sync_to_async
+    def fetch_server(self, dc_guild):
         if not DB_Server.objects.filter(id=str(dc_guild.id)).exists():
             server = DB_Server.objects.create(id=str(dc_guild.id), name=dc_guild.name)
         else:
@@ -175,26 +188,68 @@ class DjangoConnection():
                 server.save()
         return server
 
-    @property
-    def user(self):
-        if self._db_user is None:
-            self._db_user = self.get_user(self.dc_user)
-        return self._db_user
-
-    @property
-    def server(self):
+    async def get_server(self):
         if self._db_server is None:
-            self._db_server = self.get_server(self.dc_guild)
+            self._db_server = await self.fetch_server(self.dc_guild)
         return self._db_server
 
-    def createReport(self, dc_user, reason:str=""):
-        self.user.joinServer(self.server)
-        reporteduser = self.get_user(dc_user)
-        reporteduser.joinServer(self.server)
-        return DB_Report.objects.create(server=self.server, user=reporteduser, reported_by=self.user, reason=reason)
+    @classmethod
+    @sync_to_async
+    def _join_server(self, user, server):
+        user.joinServer(server)
 
-    def getReports(self, dc_user=None):
+
+    # Reports
+
+    @sync_to_async
+    def _createReport(self, **kwargs):
+        return DB_Report.objects.create(**kwargs)
+
+    async def createReport(self, dc_user, reason:str=""):
+        server = await self.get_server()
+        user = await self.get_user()
+        await self._join_server(user, server)
+        reporteduser = await self.fetch_user(dc_user)
+        await self._join_server(reporteduser, server)
+        return await self._createReport(server=server, user=reporteduser, reported_by=user, reason=reason)
+
+    @sync_to_async
+    def _getReports(self, server, **kwargs):
+        return server.getReports(**kwargs)
+
+    async def getReports(self, dc_user=None, **kwargs):
+        server = await self.get_server()
         if dc_user is None:
-            return self.server.getReports()
+            return await self._getReports(server, **kwargs)
         else:
-            return self.server.getReports(user=self.get_user(dc_user))
+            user = await self.fetch_user(dc_user)
+            return await self._getReports(server, user=user, **kwargs)
+
+    # AmongUs
+
+    @sync_to_async
+    def _getAmongUsGame(self, **kwargs):
+        return AmongUsGame.objects.get(**kwargs)
+
+    async def getAmongUsGame(self, **kwargs):
+        user = await self.get_user()
+        server = await self.get_server()
+        return await self._createAmongUsGame(creator=user, guild=server, **kwargs)
+
+    @sync_to_async
+    def _hasAmongUsGame(self, **kwargs):
+        return AmongUsGame.objects.filter(**kwargs).exists()
+
+    async def hasAmongUsGame(self, **kwargs):
+        user = await self.get_user()
+        server = await self.get_server()
+        return await self._hasAmongUsGame(creator=user, guild=server, **kwargs)
+
+    @sync_to_async
+    def _createAmongUsGame(self, **kwargs):
+        return AmongUsGame.objects.create(**kwargs)
+
+    async def createAmongUsGame(self, **kwargs):
+        user = await self.get_user()
+        server = await self.get_server()
+        return await self._createAmongUsGame(creator=user, guild=server, **kwargs)
