@@ -234,7 +234,7 @@ class Games(commands.Cog):
 
 
 
-    @tasks.loop(seconds=1.0)
+    @tasks.loop(seconds=0.5)
     async def amongus_backgroundtasks(self):
         def log(*args):
             print('[AmongUs Background Tasks] -', *args)
@@ -477,7 +477,7 @@ class Games(commands.Cog):
             voicechannel = ctx.guild.get_channel(int(game.voice_channel_id))
 
             if voicechannel is not None:
-                game.reset(save=True)
+                await ctx.database._resetAmongUsGame(game, save=True)
                 await voicechannel.edit(sync_permissions=True)
                 await ctx.sendEmbed(
                     title="AmongUs Spiel zurückgesetzt!",

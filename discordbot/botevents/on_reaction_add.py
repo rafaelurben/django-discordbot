@@ -6,6 +6,8 @@ import os
 
 from discordbot.models import AmongUsGame, AMONGUS_PLAYER_COLORS, AMONGUS_EMOJI_COLORS
 
+from discordbot.botmodules.serverdata import DjangoConnection
+
 #####
 
 DELETE = "❌"
@@ -20,13 +22,13 @@ def setup(bot):
 
             emoji = payload.emoji.name
 
-            if (emoji in AMONGUS_EMOJI_COLORS or emoji == DELETE) and AmongUsGame.objects.filter(text_message_id=payload.message_id).exists():
-                game = AmongUsGame.objects.get(text_message_id=payload.message_id)
+            if (emoji in AMONGUS_EMOJI_COLORS or emoji == DELETE) and await DjangoConnection._hasAmongUsGame(text_message_id=payload.message_id):
+                game = await DjangoConnection._getAmongUsGame(text_message_id=payload.message_id)
                 if emoji == DELETE:
-                    game.remove_user(userid=payload.user_id, save=True)
+                    await DjangoConnection._removeAmongUsUser(game=game, userid=payload.user_id, save=True)
                 else:
                     c = AMONGUS_EMOJI_COLORS[payload.emoji.name]
-                    game.set_user(userid=payload.user_id, color=c, save=True)
+                    await DjangoConnection._setAmongUsUser(game=game, userid=payload.user_id, color=c, save=True)
 
                 channel = await bot.fetch_channel(payload.channel_id)
                 message = await channel.fetch_message(payload.message_id)

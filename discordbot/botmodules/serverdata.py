@@ -201,6 +201,7 @@ class DjangoConnection():
 
     # Reports
 
+    @classmethod
     @sync_to_async
     def _createReport(self, **kwargs):
         return DB_Report.objects.create(**kwargs)
@@ -213,6 +214,7 @@ class DjangoConnection():
         await self._join_server(reporteduser, server)
         return await self._createReport(server=server, user=reporteduser, reported_by=user, reason=reason)
 
+    @classmethod
     @sync_to_async
     def _getReports(self, server, **kwargs):
         return server.getReports(**kwargs)
@@ -227,6 +229,7 @@ class DjangoConnection():
 
     # AmongUs
 
+    @classmethod
     @sync_to_async
     def _getAmongUsGame(self, **kwargs):
         return AmongUsGame.objects.get(**kwargs)
@@ -234,8 +237,9 @@ class DjangoConnection():
     async def getAmongUsGame(self, **kwargs):
         user = await self.get_user()
         server = await self.get_server()
-        return await self._createAmongUsGame(creator=user, guild=server, **kwargs)
+        return await self._getAmongUsGame(creator=user, guild=server, **kwargs)
 
+    @classmethod
     @sync_to_async
     def _hasAmongUsGame(self, **kwargs):
         return AmongUsGame.objects.filter(**kwargs).exists()
@@ -245,6 +249,7 @@ class DjangoConnection():
         server = await self.get_server()
         return await self._hasAmongUsGame(creator=user, guild=server, **kwargs)
 
+    @classmethod
     @sync_to_async
     def _createAmongUsGame(self, **kwargs):
         return AmongUsGame.objects.create(**kwargs)
@@ -253,3 +258,18 @@ class DjangoConnection():
         user = await self.get_user()
         server = await self.get_server()
         return await self._createAmongUsGame(creator=user, guild=server, **kwargs)
+
+    @classmethod
+    @sync_to_async
+    def _setAmongUsUser(self, game: AmongUsGame, userid: int, color: str, save: bool = False):
+        game.set_user(userid=userid, color=color, save=save)
+
+    @classmethod
+    @sync_to_async
+    def _removeAmongUsUser(self, game: AmongUsGame, userid: int, save: bool = False):
+        game.remove_user(userid=userid, save=save)
+
+    @classmethod
+    @sync_to_async
+    def _resetAmongUsGame(self, game: AmongUsGame, save: bool = False):
+        game.reset(save=save)
