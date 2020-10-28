@@ -32,6 +32,11 @@ NO = '❌'
 
 DELETE = '❌'
 
+AMONGUS_TRACKER_INSTALL = """Konfiguriere die Tracker-Software mit folgenden Daten:
+                
+Der [Tracker](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot/files/amongus/tracker.py) funktioniert vorerst nur für Windows uns ist (noch) sehr buggy!
+Benötigt werden Python, Pip und alle [requirements](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot/files/amongus/requirements.txt)"""
+
 amongus_last_update = timezone.now()-timedelta(days=1)
 
 #####
@@ -133,7 +138,7 @@ class Games(commands.Cog):
         brief="Hauptcommand für alle Minecraft Befehle",
         description='Alle Minecraft Befehle beginnen mit diesem Befehl',
         aliases=['mc'],
-        help="Um eine Liste aller AmongUs-Befehle zu erhalten, gib den Command ohne Argumente ein.",
+        help="Um eine Liste aller AmongUs-Befehle zu erhalten, gib den Command ohne Unterbefehl ein.",
         usage="<Unterbefehl> <Argument>"
     )
     async def minecraft(self, ctx):
@@ -308,7 +313,8 @@ class Games(commands.Cog):
                                 m = vs.channel.guild.get_member(m_id)
                                 if m is None:
                                     m = await vs.channel.guild.fetch_member(m_id)
-                                await m.edit(mute=True)
+                                if not m.bot:
+                                    await m.edit(mute=True)
 
                     # Don't allow new players to speak
                     overwrites = {
@@ -403,13 +409,15 @@ class Games(commands.Cog):
                     ("/au create",      "Erstelle ein AmongUs Spiel"),
                     ("/au delete",      "Lösche dein AmongUs Spiel"),
                     ("/au reset",       "Setze dein AmongUs Spiel zurück"),
+                    ("/au config",      "Erhalte nochmals die Konfigurationsdaten für den Tracker"),
                 ]
             )
 
     @amongus.command(
         name="create",
-        aliases=['open', 'add'],
+        aliases=['open', 'add', '+'],
     )
+    @commands.guild_only()
     async def amongus_create(self, ctx):
         if await ctx.database.hasAmongUsGame():
             game = await ctx.database.getAmongUsGame()
@@ -428,8 +436,8 @@ class Games(commands.Cog):
             game = await ctx.database.createAmongUsGame(text_channel_id=str(textchannel.id), voice_channel_id=str(voicechannel.id))
 
             embed = ctx.getEmbed(
-                title=f"AmongUs Spiel erstellt ({ game.pk })", 
-                description="Konfiguriere die Tracker-Software mit folgenden Daten:", 
+                title=f"AmongUs Spiel erstellt", 
+                description=AMONGUS_TRACKER_INSTALL,
                 color=0xFEDE29,
                 fields=[
                     ("Url", str(game.get_tracker_url())),
@@ -443,8 +451,9 @@ class Games(commands.Cog):
 
     @amongus.command(
         name="close",
-        aliases=['delete', 'del'],
+        aliases=['delete', 'del', '-'],
     )
+    @commands.guild_only()
     async def amongus_close(self, ctx):
         if await ctx.database.hasAmongUsGame():
             game = await ctx.database.getAmongUsGame()
@@ -471,6 +480,7 @@ class Games(commands.Cog):
         name="reset",
         aliases=[],
     )
+    @commands.guild_only()
     async def amongus_reset(self, ctx):
         if await ctx.database.hasAmongUsGame():
             game = await ctx.database.getAmongUsGame()
@@ -488,6 +498,30 @@ class Games(commands.Cog):
                 raise commands.BadArgument(message="Der Sprachkanal zu deinem Spiel wurde nicht gefunden. Versuche dein Spiel mit `/amongus close` zu löschen")
         else:
             raise commands.BadArgument(message="Du hast kein AmongUs-Spiel auf diesem Server!")
+
+    @amongus.command(
+        name="apikey",
+        aliases=['resend', 'config', 'tracker', 'key'],
+    )
+    @commands.guild_only()
+    async def amongus_apikey(self, ctx):
+        if await ctx.database.hasAmongUsGame():
+            game = await ctx.database.getAmongUsGame()
+
+            embed = ctx.getEmbed(
+                title=f"AmongUs Tracker Konfiguration",
+                description=AMONGUS_TRACKER_INSTALL,
+                color=0xFEDE29,
+                fields=[
+                    ("Url", str(game.get_tracker_url())),
+                    ("ID", str(game.pk)),
+                    ("API-Key", str(game.api_key)),
+                ]
+            )
+            await ctx.author.send(embed=embed)
+        else:
+            raise commands.CommandError("DU hast kein AmongUs Spiel!")
+            
 
 def setup(bot):
     bot.add_cog(Games(bot))

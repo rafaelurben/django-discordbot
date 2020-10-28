@@ -243,15 +243,15 @@ class AmongUsGame(models.Model):
 
     def post_data(self, data:dict):
         if "api_key" in data and data["api_key"] == str(self.api_key):
+            if "reset" in data and data["reset"]:
+                self.reset()
             if "code" in data:
                 self.code = str(data["code"])
             if "state" in data:
                 if "ingame" in data["state"]:
                     self.state_ingame = bool(data["state"]["ingame"])
                 if "meeting" in data["state"]:
-                    self.state_meeting = bool(data["state"]["ingame"])
-            if "reset" in data and data["reset"]:
-                self.reset()
+                    self.state_meeting = bool(data["state"]["meeting"])
             if "players" in data:
                 for c in data["players"]:
                     if c in AMONGUS_PLAYER_COLORS:
