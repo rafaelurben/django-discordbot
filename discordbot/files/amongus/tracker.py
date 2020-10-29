@@ -7,34 +7,17 @@ import sys
 from win10toast import ToastNotifier
 
 from rich import print
-from rich.style import Style
 from rich.table import Table
+from rich.text import Text
+from rich.style import Style
 
 ###
 
-DEBUG_COLORS = False
-DEBUG_REQUESTS = True
+DEBUG_COORD_COLOR_COMPARISON = False
+DEBUG_MEETING_COLORS = True
+DEBUG_REQUESTS = False
 
-###
-
-
-def samecolor(c1, c2, t=20):
-    return (abs(c1[0]-c2[0])+abs(c1[1]-c2[1])+abs(c1[2]-c2[2])) <= t
-
-def firstmatchingcolor(c1, cs, t=20):
-    for c in cs:
-        if samecolor(c1, c[0], t):
-            return c[1]
-    return None
-
-def matchesonecolor(c1, cs, t=10):
-    for c in cs:
-        if samecolor(c1, c, t):
-            return True
-    return False
-
-def log(*args, **kwargs):
-    print("[AmongUs Tracker] -", *args, *kwargs)
+IGNORE_CONNECTION_ERRORS = True
 
 ###
 
@@ -43,7 +26,7 @@ _X2 = 995
 _Y = 265
 _DY = 137
 
-COORDS_M_PLAYERS = [
+PLAYERCOORDS = [
     (_X1, _Y+0*_DY),
     (_X1, _Y+1*_DY),
     (_X1, _Y+2*_DY),
@@ -61,7 +44,7 @@ _DCY = -25
 
 COORDS_M_PLAYERS = [
     (c, (c[0]+_DCX, c[1]+_DCY)) 
-    for c in COORDS_M_PLAYERS
+    for c in PLAYERCOORDS
 ]
 
 ###
@@ -81,53 +64,90 @@ _ORIGINAL_AMONGUS_COLORS = {
     'lime':     ("#50EF3A", (80, 239, 58),   ":regional_indicator_l:",  '🇱'),
 }
 
-COLORS_M_ALIVE = [(108, 137, 151), (155, 205, 225)]
-COLORS_M_DEAD = [(131, 69, 58)]
+PLAYERCOLORS = {
+    "red": [
+        (125, 57, 64),
+        (192, 62, 72),
+        (109, 9, 9),
+    ],
+    "blue": [
+        (54, 72, 146),
+        (61, 89, 214),
+        (10, 25, 116),
+        (25, 28, 95),
+        (19, 46, 210),
+    ],
+    "green": [
+        (50, 103, 76),
+        (60, 150, 89),
+        (9, 71, 25),
+        (17, 128, 45),
+    ],
+    "pink": [
+        (146, 88, 137),
+        (225, 115, 202),
+        (130, 55, 108),
+        (238, 84, 187),
+    ],
+    "orange": [
+        (145, 106, 67),
+        (225, 144, 65),
+        (168, 88, 9),
+        (241, 125, 14),
+        (133, 69, 7),
+    ],
+    "yellow": [
+        (145, 152, 94),
+        (229, 232, 125),
+        (136, 136, 48),
+        (246, 246, 87),
+        (104, 106, 47),
+    ],
+    "black": [
+        (73, 82, 92),
+        (91, 103, 117),
+        (35, 39, 43),
+        (62, 71, 78),
+        (68, 81, 89)
+    ],
+    "white": [
+        (136, 146, 159),
+        (208, 221, 240),
+        (119, 124, 133),
+    ],
+    "purple": [
+        (86, 70, 135),
+        (125, 86, 195),
+        (59, 26, 104),
+        (107, 47, 188),
+    ],
+    "brown": [
+        (96, 83, 71),
+        (134, 106, 82),
+        (114, 73, 29),
+        (62, 40, 17),
+    ],
+    "cyan": [
+        (66, 156, 149),
+        (91, 242, 227),
+        (31, 141, 122),
+        (56, 255, 221),
+    ],
+    "lime": [
+        (80, 153, 84),
+        (107, 232, 102),
+        (47, 140, 33),
+        (104, 233, 106),
+        (40, 104, 36)
+    ],
+}
+
+COLORS_M_ALIVE = [(108, 137, 151), (155, 205, 225), (82, 112, 122)]
+COLORS_M_DEAD = [(131, 69, 58), (116, 25, 4), (99, 31, 8)]
 COLORS_M_NOPLAYER = [(171, 201, 229), (187, 211, 237)]
 
-COLORS_M_PLAYERS = [
-    # Grayed out
-    ((125, 57, 64), "red"),
-    ((54, 72, 146), "blue"),
-    ((50, 103, 76), "green"),
-    ((146, 88, 137), "pink"),
-    ((145, 106, 67), "orange"),
-    ((145, 152, 94), "yellow"),
-    ((73, 82, 92), "black"),
-    ((136, 146, 159), "white"),
-    ((87, 70, 135), "purple"),
-    ((96, 83, 71), "brown"),
-    ((66, 156, 149), "cyan"),
-    ((80, 153, 84), "lime"),
+COLORS_M_PLAYERS = [(color, c) for c, colors in PLAYERCOLORS.items() for color in colors]
 
-    # Light
-    ((192, 62, 72), "red"),
-    ((61, 89, 214), "blue"),
-    ((60, 150, 89), "green"),
-    ((225, 115, 202), "pink"),
-    ((225, 144, 65), "orange"),
-    ((229, 232, 125), "yellow"),
-    ((91, 103, 117), "black"),
-    ((208, 221, 240), "white"),
-    ((125, 86, 195), "purple"),
-    ((134, 106, 82), "brown"),
-    ((91, 242, 227), "cyan"),
-    ((107, 232, 102), "lime"),
-
-    # While dead
-    ((109, 9, 9), "red"),
-    ((10, 25, 116), "blue"),
-    ((9, 71, 25), "green"),
-    ((130, 55, 108), "pink"),
-    ((168, 88, 9), "orange"),
-    ((136, 136, 48), "yellow"),
-    ((35, 39, 43), "black"),
-    ((119, 124, 133), "white"),
-    ((59, 26, 104), "purple"),
-    #(, "brown"),
-    ((31, 141, 122), "cyan"),
-    ((47, 140, 33), "lime"),
-]
 
 ###
 
@@ -146,13 +166,58 @@ COLORS_MEETING = ((143, 151, 164), (143, 151, 164), (171, 201, 229))
 COORDS_SHHHHHHH = ((1120, 630), (1320, 590), (1300, 450))
 COLORS_SHHHHHHH = ((198, 0, 1), (255, 129, 52), (255, 213, 77))
 
-COORDS_CHAT = ((1500, 1000), (1000, 1000))
-COLORS_CHAT = ((255, 255, 255), (255, 255, 255))
+COORDS_CHAT = ((1300, 913), (1100, 913), (1364, 913))
+COLORS_CHAT = ((255, 255, 255), (255, 255, 255), (2, 113, 228))
 
 ###
 
 toaster = ToastNotifier()
 toast = toaster.show_toast
+
+###
+
+
+def render(obj):
+    if isinstance(obj, bool):
+        return Text("True", style="green") if obj else Text("False", style="red")
+    elif obj is None:
+        return Text("None", style="blue")
+    else:
+        return str(obj)
+
+
+def log(*args, **kwargs):
+    print("[AmongUs Tracker] -", *args, *kwargs)
+
+
+###
+
+
+def samecolor(c1, c2, maxdiff=20):
+    diff = (abs(c1[0]-c2[0])+abs(c1[1]-c2[1])+abs(c1[2]-c2[2]))
+    return True if diff == 0 else diff if diff < maxdiff else False
+
+
+def bestmatchingcolor(c1, cs, maxdiff=20):
+    best_c = None
+    best_diff = None
+
+    for c in cs:
+        diff = samecolor(c1, c[0], maxdiff)
+        if diff == True:
+            return c[1]
+        elif bool(diff) and (best_diff is None or diff < best_diff):
+            best_c = c[1]
+            best_diff = diff
+    return best_c
+
+
+def matchesonecolor(c1, cs, maxdiff=10):
+    for c in cs:
+        if samecolor(c1, c, maxdiff):
+            return True
+    return False
+
 
 ###
 
@@ -167,6 +232,10 @@ class AmongUsTracker():
 
         self.last_state = "unknown"
 
+    @property
+    def screenshot(self):
+        return pyautogui.screenshot(region=(*self.topleft, *self.size))
+
     # Post data
 
     def _post(self, data, **kwargs):
@@ -179,15 +248,15 @@ class AmongUsTracker():
             }
 
             if DEBUG_REQUESTS:
-                print("Post data:", data)
+                print("[DEBUG] - POST Data:", data)
 
             r = requests.post(url=self.url, json=json.dumps(data))
             j = r.json()
 
             if "success" in j:
-                log("Successfully posted data to server!")
+                log("POST - Successfully posted data to server!")
             elif "error" in j:
-                log("Error received from server:", j["error"] + (" - "+j["error_message"] if "error_message" in j else ""))
+                log("POST - Error received from server:", j["error"] + (" - "+j["error_message"] if "error_message" in j else ""))
                 if j["error"] == "invalid-api-key":
                     toast(title="[AmongUsTracker] Error!",
                           msg="Invalid API-Key! Please check your API key!")
@@ -197,36 +266,38 @@ class AmongUsTracker():
                           msg="ID not found! Please check that your ID is correct!")
                     sys.exit()
                 elif j["error"] == "invalid-data":
-                    log("THIS IS A BUG!")
-        except ConnectionError as e:
-            log("ConnectionError:", e)
-            toast(title="[AmongUsTracker] Error!",
-                  msg="A ConnectionError occured! Please check your connection!")
+                    log("POST - THIS MIGHT BE A SERVER-SIDE BUG!")
+        except (ConnectionError, requests.exceptions.ConnectionError) as e:
+            log("POST - ConnectionError:", e)
+            if not IGNORE_CONNECTION_ERRORS:
+                toast(title="[AmongUsTracker] Error!",
+                    msg="A ConnectionError occured! Please check your connection!")
+                sys.exit()
         except ValueError as e:
-            log("ValueError:", e)
+            log("POST - ValueError:", e)
             toast(title="[AmongUsTracker] Error!",
                   msg="Didn't receive a valid response! Are you sure the url is correct?")
+            sys.exit()
 
     def post(self, data={}, **kwargs):
         thread = threading.Thread(target=self._post, args=(data,), kwargs=kwargs)
         thread.start()
-        log("Posting in background...")
+        log("POST - Posting in background...")
 
     # Detect state
 
-    def _compare_coord_colors(self, coordlist, colorlist, screenshot=None, debugtitle=""):
-        if screenshot is None:
-            screenshot = pyautogui.screenshot(region=(*self.topleft, *self.size))
+    def _compare_coord_colors(self, coordlist, colorlist, screenshot=None, debugtitle="", maxdiff=20):
+        screenshot = screenshot or self.screenshot
 
         colors = tuple(screenshot.getpixel(c) for c in coordlist)
 
         same = True
         for i in range(len(colors)):
-            if not samecolor(colors[i], colorlist[i], 20):
+            if not bool(samecolor(colors[i], colorlist[i], maxdiff)):
                 same = False
                 break
 
-        if DEBUG_COLORS:
+        if DEBUG_COORD_COLOR_COMPARISON:
             print(debugtitle, same, colors, colorlist)
 
         return same
@@ -249,63 +320,106 @@ class AmongUsTracker():
     def _is_meeting_screen(self, screenshot=None):
         return self._compare_coord_colors(COORDS_MEETING, COLORS_MEETING, screenshot, "Meeting")
 
-    def _is_textbox_open(self, screenshot=None):
+    def _is_chat_open(self, screenshot=None):
         return self._compare_coord_colors(COORDS_CHAT, COLORS_CHAT, screenshot, "Chat")
 
-    def _get_state(self):
-        im = pyautogui.screenshot(region=(*self.topleft, *self.size))
+    def _get_state(self, screenshot=None):
+        screenshot = screenshot or self.screenshot
         
-        if self._is_textbox_open(im):
-            return self.last_state
-        elif self._is_discuss_screen(im):
+        if self._is_chat_open(screenshot):
+            return "chat"
+        elif self._is_discuss_screen(screenshot):
             return "discuss"
-        elif self._is_meeting_screen(im):
+        elif self._is_meeting_screen(screenshot):
             return "meeting"
-        elif self._is_end_screen(im):
+        elif self._is_end_screen(screenshot):
             return "end"
-        elif self._is_shhhhhhh_screen(im):
+        elif self._is_shhhhhhh_screen(screenshot):
             return "start"
         else:
             return "unknown"
 
-    def _get_meeting_players(self):
-        im = pyautogui.screenshot(region=(*self.topleft, *self.size))
+    def _get_meeting_players(self, screenshot=None):
+        screenshot = screenshot or self.screenshot
 
-        players = {}
+        error = False
+        
+        colors = []
         for i in range(len(COORDS_M_PLAYERS)):
             coords = COORDS_M_PLAYERS[i]
-            c1 = im.getpixel(coords[0])
-            if not matchesonecolor(c1, COLORS_M_NOPLAYER):
-                c2 = im.getpixel(coords[1])
-                color = firstmatchingcolor(c2, COLORS_M_PLAYERS, 50)
-                if color is not None:
-                    if matchesonecolor(c1, COLORS_M_ALIVE, 50):
-                        players[color] = {
-                            "exists": True,
-                            "alive": True,
-                        }
-                    elif matchesonecolor(c1, COLORS_M_DEAD, 50):
-                        players[color] = {
-                            "exists": True,
-                            "alive": False,
-                        }
-                    else:
-                        print(f"[AmongUs Tracker] - Unknown state for {i+1}/10 - {color}: {c1}")
-                else:
-                    print(f"[AmongUs Tracker] - Unknown color for {i+1}/10: {c2}")
-        return players
+
+            c_state = screenshot.getpixel(coords[0])
+            alive = matchesonecolor(c_state, COLORS_M_ALIVE, 50)
+            dead = matchesonecolor(c_state, COLORS_M_DEAD, 50)
+            inexistant = matchesonecolor(c_state, COLORS_M_NOPLAYER, 10)
+
+            c_color = screenshot.getpixel(coords[1])
+            color = bestmatchingcolor(c_color, COLORS_M_PLAYERS, 25)
+
+            colors.append({
+                "i": i+1,
+                "c_state": c_state, 
+                "alive": True if alive else False if dead else None, 
+                "exists": False if inexistant else True if (alive or dead) else None, 
+                "c_color": c_color, 
+                "color": color,
+            })
+
+            if not inexistant and not alive and not dead:
+                error = True
+
+        players = {}
+        for p in colors:
+            i, color, c_state, c_color = p["i"], p["color"], p["c_state"], p["c_color"]
+            if p["color"] is not None:
+                if p["alive"] == True:
+                    players[color] = {
+                        "exists": True,
+                        "alive": True,
+                    }
+                elif p["alive"] == False:
+                    players[color] = {
+                        "exists": True,
+                        "alive": False,
+                    }
+
+        if DEBUG_MEETING_COLORS:
+            tb = Table("i", "cs", "c_state", "exists", "alive", "cc", "c_color", "color")
+            for p in colors:
+                tb.add_row(
+                    render(p["i"]),
+                    Text("  ", style=Style(bgcolor="rgb"+str(p["c_state"]))),
+                    render(p["c_state"]),
+                    render(p["exists"]),
+                    render(p["alive"]),
+                    Text("  ", style=Style(bgcolor="rgb"+str(p["c_color"]))),
+                    render(p["c_color"]),
+                    render(p["color"]),
+                ) 
+            print(tb)
+        
+        if error:
+            log("MEETING PLAYERS - Skipping due to possibly corrupted screenshot!")
+            return None
+        else:
+            log("MEETING PLAYERS - Detected probably valid playerdata.")
+            return players
 
     # Actions
 
-    def post_meeting_players(self):
-        data = {
-            "state": {
-                "ingame": True,
-                "meeting": True
-            },
-            "players": self._get_meeting_players(),
-        }
-        self.post(data)
+    def post_meeting_players(self, screenshot=None):
+        players = self._get_meeting_players(screenshot)
+        if players is not None:
+            data = {
+                "state": {
+                    "ingame": True,
+                    "meeting": True
+                },
+                "players": players,
+            }
+            self.post(data)
+            return True
+        return False
         
     def post_reset(self):
         self.post({"reset": True})
@@ -314,51 +428,57 @@ class AmongUsTracker():
         self.post({"state": {"ingame": True, "meeting": False}}, **kwargs)
 
     def post_state(self):
-        state = self._get_state()
+        screenshot = self.screenshot
+
+        state = self._get_state(screenshot)
         oldstate = self.last_state
 
         self.last_state = state
 
         if not oldstate == state:
-            if state == "end":
-                log("Game ended!")
+            if state == "chat":
+                log("STATE - Chat opened...")
+            elif state == "end":
+                log("STATE - Game ended!")
                 self.post_reset()
                 toast(title="[AmongUsTracker] Game ended!",
                       msg="Successfully detected game end!",
                       threaded=True, duration=2)
             elif state == "start":
-                log("Game started!")
+                log("STATE - Game started!")
                 self.post_ingame(reset=True)
                 toast(title="[AmongUsTracker] Game started!",
                       msg="Successfully detected game start!", 
                       threaded=True, duration=2)
             elif state == "discuss":
-                log("Meeting starts soon!")
+                log("STATE - Meeting starts soon!")
             elif state == "meeting":
-                log("Meeting started!")
-                time.sleep(0.2)
-                self.post_meeting_players()
+                log("STATE - Meeting started!")
+                if not self.post_meeting_players(screenshot):
+                    self.last_state = oldstate
             elif oldstate == "meeting":
-                log("Meeting ended!")
+                log("STATE - Meeting ended!")
                 self.post_ingame()
+            elif oldstate == "end":
+                self.last_state = "end"
             else:
-                print(f"[AmongUs Tracker] - State changed to {state}!")
+                log(f"STATE - State changed to {state}!")
 
     # Mainloop
 
     def main(self, speed=0.05):
         self._post({"test": True})
 
-        log("Started tracking!")
+        log("TRACKER - Started tracking!")
 
         while True:
             self.post_state()
             time.sleep(speed)
 
 if __name__ == "__main__":
-    URL = "http://localhost/discordbot/amongus/tracker/post"
-    ID = 16
-    API_KEY = "2d8f5dd5-275b-411b-b302-f55919867ee9"
+    URL = "https://rafaelurben.herokuapp.com/discordbot/amongus/tracker/post"
+    ID = 0
+    API_KEY = ""
 
     tracker = AmongUsTracker(url=URL, id=ID, apikey=API_KEY)
     tracker.main(speed=0.1)
