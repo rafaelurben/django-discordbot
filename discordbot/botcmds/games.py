@@ -3,13 +3,13 @@
 from asgiref.sync import sync_to_async
 
 from discord.ext import commands, tasks
-from discord import Embed, utils, PermissionOverwrite, Color, NotFound
+from discord import Embed, utils, PermissionOverwrite, Color, NotFound, User
 
 from django.utils import timezone
 
 from datetime import timedelta
 
-from discordbot.models import AmongUsGame, AMONGUS_PLAYER_COLORS, AMONGUS_EMOJI_COLORS
+from discordbot.models import AmongUsGame, AMONGUS_PLAYER_COLORS, AMONGUS_EMOJI_COLORS, VierGewinntGame, VIERGEWINNT_NUMBER_EMOJIS
 from discordbot.botmodules.serverdata import DjangoConnection
 
 import requests
@@ -68,7 +68,7 @@ class Games(commands.Cog):
         self.amongus_backgroundtasks.cancel()
 
 
-
+    # Fortnite
 
     @commands.command(
         brief="Erhalte Aktuelles zu Fortnite",
@@ -131,8 +131,7 @@ class Games(commands.Cog):
             raise commands.BadArgument(message="Scheinbar ist dieser Befehl nicht richtig konfiguriert.")
 
 
-
-
+    # Minecraft
 
     @commands.group(
         brief="Hauptcommand für alle Minecraft Befehle",
@@ -237,8 +236,8 @@ class Games(commands.Cog):
 
 
 
-
-
+    # AmongUs
+    ## AmongUs Tasks
 
     @tasks.loop(seconds=0.5)
     async def amongus_backgroundtasks(self):
@@ -384,12 +383,13 @@ class Games(commands.Cog):
             except Exception as e:
                 log('Error:', e)
 
-
     @amongus_backgroundtasks.before_loop
     async def amongus_backgroundtasks_before(self):
         print('[AmongUs Background Tasks] - Waiting for bot to be ready...')
         await self.bot.wait_until_ready()
         print('[AmongUs Background Tasks] - Started!')
+
+    ## AmongUs Commands
 
     @commands.group(
         brief="Hauptcommand für alle AmongUs Befehle",
@@ -448,7 +448,6 @@ class Games(commands.Cog):
             )
             await ctx.author.send(embed=embed)
 
-
     @amongus.command(
         name="close",
         aliases=['delete', 'del', '-'],
@@ -487,7 +486,8 @@ class Games(commands.Cog):
             voicechannel = ctx.guild.get_channel(int(game.voice_channel_id))
 
             if voicechannel is not None:
-                await ctx.database._resetAmongUsGame(game, save=True)
+                game.reset()
+                await ctx.database._saveAmongUsGame(game)
                 await voicechannel.edit(sync_permissions=True)
                 await ctx.sendEmbed(
                     title="AmongUs Spiel zurückgesetzt!",
@@ -521,7 +521,54 @@ class Games(commands.Cog):
             await ctx.author.send(embed=embed)
         else:
             raise commands.CommandError("DU hast kein AmongUs Spiel!")
-            
+
+
+    # VierGewinnt
+
+    @commands.group(
+        brief="Hauptcommand für alle VierGewinnt Befehle",
+        description='Alle VierGewinnt-Befehle beginnen mit diesem Befehl.',
+        aliases=['fourinarow', '4gewinnt', '4inarow', '4row', '4win'],
+        help="Um eine Liste aller VierGewinnt-Befehle zu erhalten, gib den Command ohne Argumente ein.",
+        usage="<Unterbefehl> [Argumente]"
+    )
+    @commands.guild_only()
+    async def viergewinnt(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.sendEmbed(
+                title="VierGewinnt Befehle",
+                description=f"""Alle AmongUs Befehle können ebenfalls mit `/viergewinnt` verwendet werden.""",
+                color=0x0078D7,
+                inline=False,
+                fields=[
+                    ("/4gewinnt duell <Mitglied>", "Duelliere einen anderen Spieler"),
+                ]
+            )
+
+    @viergewinnt.command(
+        name="duell",
+        aliases=['battle', 'duel'],
+    )
+    @commands.guild_only()
+    async def viergewinnt_duell(self, ctx, user:User, width:int=7, height:int=6):
+        msg = await ctx.sendEmbed(
+            title="Vier Gewinnt",
+            color=0x0078D7,
+            description=f"Duell gegen {user.mention} wird erstellt..."
+        )
+
+        game = await ctx.database._createVierGewinntGame(channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=str(user.id), width=width, height=height)
+
+        embed = ctx.bot.getEmbed(
+            title=f"Vier Gewinnt (#{game.pk})",
+            color=0x0078D7,
+            description=game.get_description()
+        )
+
+        await msg.edit(embed=embed)
+
+        for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
+            await msg.add_reaction(emoji)
 
 def setup(bot):
     bot.add_cog(Games(bot))

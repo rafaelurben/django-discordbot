@@ -1,4 +1,4 @@
-# pylint: disable=no-member
+# pylint: disable=no-member, unsubscriptable-object
 
 from django.db import models
 from django.conf import settings
@@ -8,14 +8,14 @@ from django.utils import timezone
 import time
 import uuid
 
-###
+# Helper functions
 
 
 def get_discordbot_domain():
     return getattr(settings, "DISCORDBOT_DOMAIN", None)
 
 
-# Create your models here.
+# Basic
 
 class Member(models.Model):
     server = models.ForeignKey("Server", on_delete=models.CASCADE)
@@ -111,6 +111,7 @@ class User(models.Model):
     
     objects = models.Manager()
 
+# Support
 
 class Report(models.Model):
     server = models.ForeignKey("Server", on_delete=models.CASCADE, related_name="reports")
@@ -136,6 +137,10 @@ class Report(models.Model):
         verbose_name_plural = "Reports"
 
     objects = models.Manager()
+
+# Games
+
+## AmongUs
 
 AMONGUS_PLAYER_COLORS = {
     'red':      ("#C51111", (179, 17, 17),   ":heart:",                 '❤'),
@@ -229,7 +234,7 @@ class AmongUsGame(models.Model):
         else:
             return "Frage den Bot-Owner!"
 
-    def reset(self, save=False):
+    def reset(self):
         self.code = ""
         self.state_ingame = False
         self.state_meeting = False
@@ -237,9 +242,6 @@ class AmongUsGame(models.Model):
             setattr(self, f'p_{c}_name', "")
             setattr(self, f'p_{c}_exists', False)
             setattr(self, f'p_{c}_alive', True)
-        
-        if save:
-            self.save()
 
     def post_data(self, data:dict):
         if "api_key" in data and data["api_key"] == str(self.api_key):
@@ -313,5 +315,177 @@ class AmongUsGame(models.Model):
         verbose_name = 'AmongUs Game'
         verbose_name_plural = 'AmongUs Games'
         unique_together = ('guild', 'creator',)
+
+    objects = models.Manager()
+
+
+## VierGewinnt
+
+VIERGEWINNT_PLAYER_EMOJIS = ["⬛", "🟥", "🟨"]
+VIERGEWINNT_WALL_EMOJI = "🟦"
+VIERGEWINNT_NUMBER_EMOJIS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"]
+
+def VIERGEWINNT_DEFAULT_GAME():
+    return [[0 for _ in range(7)] for _ in range(6)]
+
+class VierGewinntGame(models.Model):
+    width = models.PositiveSmallIntegerField("Width", default=7)
+    height = models.PositiveSmallIntegerField("Height", default=6)
+
+    game = models.JSONField("Game", default=VIERGEWINNT_DEFAULT_GAME)
+
+    finished = models.BooleanField("Finished", default=False)
+
+    current_player = models.PositiveSmallIntegerField("Current player", default=1)
+
+    player_1_id = models.CharField("Player 1 ID", max_length=32)
+    player_2_id = models.CharField("Player 2 ID", max_length=32, default=None, null=True)
+    winner_id = models.CharField("Winner ID", max_length=32, default=None, null=True)
+
+    channel_id = models.CharField("Channel ID", max_length=32)
+    message_id = models.CharField("Message ID", max_length=32)
+
+    time_created = models.DateTimeField("Time created", auto_now_add=True)
+    time_edited = models.DateTimeField("Time edited", auto_now=True)
+
+    # Create
+
+    @classmethod
+    def create(self, width:int=7, height:int=6, **kwargs):
+        width = 10 if width > 10 else 0 if width < 1 else width
+        height = 1 if height < 1 else height
+        kwargs["game"] = [[0 for _ in range(width)] for _ in range(height)]
+        return self.objects.create(width=width, height=height, **kwargs)
+
+    # Show
+
+    def _get_gameboard(self):
+        W = VIERGEWINNT_WALL_EMOJI
+        P = VIERGEWINNT_PLAYER_EMOJIS
+        N = VIERGEWINNT_NUMBER_EMOJIS
+
+        firstline = (W+"".join(N[:int(self.width)])+W+"\n")
+        gamelines = "\n".join([(W+"".join([P[p] for p in row])+W) for row in self.rows])+"\n"
+        lastline = (W*(self.width+2))
+        
+        return firstline + gamelines + lastline
+
+    def _get_players(self):
+        return "\n".join([
+            VIERGEWINNT_PLAYER_EMOJIS[i]+" <@"+getattr(self, "player_"+str(i)+"_id")+">" 
+            for i in range(1, 2+1)
+        ])
+
+    def _get_game_info(self):
+        if self.finished:
+            if self.winner_id:
+                return f"Das Spiel ist beendet! Gewonnen hat <@{self.winner_id}>"
+            return "Das Spiel ist beendet! Unentschieden!"
+        else:
+            return "<@"+getattr(self, "player_"+str(self.current_player)+"_id")+"> ist an der Reihe!" 
+
+    def get_description(self):
+        return self._get_game_info()+"\n\n"+self._get_players()+"\n\n"+self._get_gameboard()
+
+    # Get
+
+    @property
+    def rows(self):
+        return self.game
+
+    @property
+    def cols(self):
+        return [[self.rows[h][w] for h in range(self.height)] for w in range(self.width)]
+
+    @property
+    def dias(self):
+        dias = []
+        w = 0 
+        h = self.height-1
+        while w < self.width:
+            dia = []
+            _w, _h = w, h
+
+            while _w < self.width and _h < self.height:
+                dia.append(self.rows[_h][_w])
+                _w += 1
+                _h += 1
+
+            dias.append(dia)
+            if h > 0:
+                h -= 1
+            else:
+                w += 1
+        w = 0
+        h = 0
+        while w < self.width:
+            dia = []
+            _w, _h = w, h
+
+            while _w < self.width and _h >= 0:
+                dia.append(self.rows[_h][_w])
+                _w += 1
+                _h -= 1
+
+            dias.append(dia)
+            if h < self.height-1:
+                h += 1
+            else:
+                w += 1
+        return dias
+
+    # Checks
+
+    def _next_player(self):
+        self.current_player = (self.current_player+1 if self.current_player < 2 else 1)
+
+    def _can_add_to_column(self, n: int):
+        if n >= self.width:
+            return None
+        return not self.rows[0][n]
+
+    def _add_to_column(self, n:int):
+        if self._can_add_to_column(n):
+            for h in range(self.height-1, -1, -1):
+                if not self.game[h][n]:
+                    self.rows[h][n] = self.current_player
+                    self._next_player()
+                    return True
+        else:
+            return False
+
+    # Checks
+
+    def _is_full(self):
+        return not 0 in self.rows[0]
+
+    def _get_winner(self):
+        for ls in [self.rows, self.cols, self.dias]:
+            for l in ls:
+                for i in range(len(l)-3):
+                    if (not l[i] == 0) and (l[i] == l[i+1]) and (l[i+1] == l[i+2]) and (l[i+2] == l[i+3]):
+                        return l[i]
+        return 0
+
+    # Process Input
+
+    def process(self, col:int, playerid):
+        if not (self.finished or self.winner_id):
+            if getattr(self, "player_"+str(self.current_player)+"_id", None) == str(playerid):
+                if self._add_to_column(col):
+                    w = self._get_winner()
+                    if w:
+                        self.winner_id = getattr(self, "player_"+str(w)+"_id", None)
+                        self.finished = True
+                    elif self._is_full():
+                        self.finished = True
+                    return True
+        return False
+
+    # Meta
+
+    class Meta:
+        verbose_name = 'VierGewinnt Game'
+        verbose_name_plural = 'VierGewinnt Games'
 
     objects = models.Manager()

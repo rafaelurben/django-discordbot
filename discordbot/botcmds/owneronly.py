@@ -15,6 +15,7 @@ class Owneronly(commands.Cog):
         msg = await ctx.sendEmbed(title="Reload", color=self.color, fields=[("Status", "Reloading")])
         EMBED = ctx.getEmbed(title="Reload", color=self.color, fields=[])
         if extension in extensions:
+            print("[Bot] - Reloading"+extension+"...")
             try:
                 self.bot.unload_extension(extensionfolder+"."+extension)
             except:
@@ -25,6 +26,7 @@ class Owneronly(commands.Cog):
                 pass
             EMBED.add_field(name="Status",value="Reloaded category "+extension.upper()+"!")
         else:
+            print("[Bot] - Reloading all extensions...")
             for extension in extensions:
                 try:
                     self.bot.unload_extension(extensionfolder+"."+extension)

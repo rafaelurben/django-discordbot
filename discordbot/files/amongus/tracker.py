@@ -1,3 +1,6 @@
+# 2020 - Rafael Urben
+# https://github.com/rafaelurben/django-discordbot/tree/master/discordbot/files/amongus
+
 import json
 import threading
 import time

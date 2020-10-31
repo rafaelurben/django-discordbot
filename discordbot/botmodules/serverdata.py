@@ -150,7 +150,7 @@ class Server():
 
 ### NEW
 
-from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AmongUsGame
+from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AmongUsGame, VierGewinntGame
 
 class DjangoConnection():
     def __init__(self, dc_user, dc_guild):
@@ -266,11 +266,6 @@ class DjangoConnection():
 
     @classmethod
     @sync_to_async
-    def _resetAmongUsGame(self, game: AmongUsGame, save: bool = False):
-        game.reset(save=save)
-
-    @classmethod
-    @sync_to_async
     def _deleteAmongUsGame(self, game: AmongUsGame):
         game.delete()
 
@@ -284,3 +279,24 @@ class DjangoConnection():
     def _removeAmongUsUser(self, game: AmongUsGame, userid: int, save: bool = False):
         game.remove_user(userid=userid, save=save)
 
+    # VierGewinnt
+
+    @classmethod
+    @sync_to_async
+    def _getVierGewinntGame(self, **kwargs):
+        return VierGewinntGame.objects.get(**kwargs)
+
+    @classmethod
+    @sync_to_async
+    def _hasVierGewinntGame(self, **kwargs):
+        return VierGewinntGame.objects.filter(**kwargs).exists()
+
+    @classmethod
+    @sync_to_async
+    def _createVierGewinntGame(self, **kwargs):
+        return VierGewinntGame.create(**kwargs)
+
+    @classmethod
+    @sync_to_async
+    def _saveVierGewinntGame(self, game: AmongUsGame):
+        game.save()

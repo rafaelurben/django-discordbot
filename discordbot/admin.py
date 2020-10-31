@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Server, User, Report, Member, AmongUsGame, AMONGUS_PLAYER_COLORS
+from .models import Server, User, Report, Member, AmongUsGame, AMONGUS_PLAYER_COLORS, VierGewinntGame
 
 # Register your models here.
 
@@ -111,3 +111,4 @@ class AmongUsGameAdmin(admin.ModelAdmin):
     def has_add_permission(self, request, obj=None):
         return False
 
+admin.site.register(VierGewinntGame)
