@@ -418,7 +418,7 @@ class AmongUsTracker():
                     render(p["color"]),
                 ) 
             print(tb)
-        
+
         if error:
             log("MEETING PLAYERS - Skipping due to possibly corrupted screenshot!")
             return None
@@ -480,17 +480,17 @@ class AmongUsTracker():
                 log("STATE - Meeting started!")
                 time.sleep(0.5)
                 if not self.post_meeting_players(self.screenshot):
-                if not self.post_meeting_players(screenshot):
-                    self.last_state = oldstate
+                    if not self.post_meeting_players(screenshot):
+                        self.last_state = oldstate
             else:
                 if oldstate in ["meeting", "chat"]:
                     log("STATE - Meeting ended! (Sleep 6s)")
                     time.sleep(6)
-                self.post_ingame()
+                    self.post_ingame()
                 elif oldstate in ["end", "homescreen"]:
                     self.last_state = oldstate
-            else:
-                log(f"STATE - State changed to {state}!")
+                else:
+                    log(f"STATE - State changed to {state}!")
 
     # Mainloop
 
@@ -509,7 +509,7 @@ if __name__ == "__main__":
     API_KEY = ""
 
     try:
-    tracker = AmongUsTracker(url=URL, id=ID, apikey=API_KEY)
-    tracker.main(speed=0.1)
+        tracker = AmongUsTracker(url=URL, id=ID, apikey=API_KEY)
+        tracker.main(speed=0.1) 
     except KeyboardInterrupt:
         log("KeyboardInterrupt")
