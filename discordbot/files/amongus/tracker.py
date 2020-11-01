@@ -72,6 +72,8 @@ PLAYERCOLORS = {
         (125, 57, 64),
         (192, 62, 72),
         (109, 9, 9),
+        (198, 17, 17),
+        (81, 21, 22),
     ],
     "blue": [
         (54, 72, 146),
@@ -141,13 +143,14 @@ PLAYERCOLORS = {
         (107, 232, 102),
         (47, 140, 33),
         (104, 233, 106),
-        (40, 104, 36)
+        (40, 104, 36),
+        (78, 233, 55),
     ],
 }
 
 COLORS_M_ALIVE = [(108, 137, 151), (155, 205, 225), (82, 112, 122)]
-COLORS_M_DEAD = [(131, 69, 58), (116, 25, 4), (99, 31, 8)]
-COLORS_M_NOPLAYER = [(171, 201, 229), (187, 211, 237)]
+COLORS_M_DEAD = [(131, 69, 58), (116, 25, 4), (99, 31, 8), (82, 112, 122)]
+COLORS_M_NOPLAYER = [(171, 201, 229), (187, 211, 237), (156, 183, 209)]
 
 COLORS_M_PLAYERS = [(color, c) for c, colors in PLAYERCOLORS.items() for color in colors]
 
@@ -171,6 +174,12 @@ COLORS_SHHHHHHH = ((198, 0, 1), (255, 129, 52), (255, 213, 77))
 
 COORDS_CHAT = ((1300, 913), (1100, 913), (1364, 913))
 COLORS_CHAT = ((255, 255, 255), (255, 255, 255), (2, 113, 228))
+
+COORDS_HOMESCREEN = ((779, 989), (1148, 977))
+COLORS_HOMESCREEN = ((232, 240, 242), (85, 102, 102))
+
+COORDS_HOMESCREEN2 = ((194, 1013), (532, 282))
+COLORS_HOMESCREEN2 = ((255, 255, 255), (52, 68, 95))
 
 ###
 
@@ -314,8 +323,12 @@ class AmongUsTracker():
     def _is_victory_screen(self, screenshot=None):
         return self._compare_coord_colors(COORDS_VICTORY, COLORS_VICTORY, screenshot, "Victory")
 
+    def _is_homescreen(self, screenshot=None):
+        return (self._compare_coord_colors(COORDS_HOMESCREEN, COLORS_HOMESCREEN, screenshot, "Homescreen") or 
+                self._compare_coord_colors(COORDS_HOMESCREEN2, COLORS_HOMESCREEN2, screenshot, "Homescreen 2"))
+
     def _is_end_screen(self, screenshot=None):
-        return self._is_defeat_screen(screenshot) or self._is_victory_screen(screenshot)
+        return self._is_defeat_screen(screenshot) or self._is_victory_screen(screenshot) or self._is_homescreen(screenshot)
 
     def _is_shhhhhhh_screen(self, screenshot=None):
         return self._compare_coord_colors(COORDS_SHHHHHHH, COLORS_SHHHHHHH, screenshot, "Shhhhhhh")
@@ -331,6 +344,8 @@ class AmongUsTracker():
         
         if self._is_chat_open(screenshot):
             return "chat"
+        elif self._is_homescreen(screenshot):
+            return "homescreen"
         elif self._is_discuss_screen(screenshot):
             return "discuss"
         elif self._is_meeting_screen(screenshot):
@@ -373,14 +388,17 @@ class AmongUsTracker():
 
         players = {}
         for p in colors:
-            i, color, c_state, c_color = p["i"], p["color"], p["c_state"], p["c_color"]
-            if p["color"] is not None:
-                if p["alive"] == True:
+            color, alive = p["color"], p["alive"]
+            if color is not None:
+                if color in players:
+                    error = True
+                    
+                if alive == True:
                     players[color] = {
                         "exists": True,
                         "alive": True,
                     }
-                elif p["alive"] == False:
+                elif alive == False:
                     players[color] = {
                         "exists": True,
                         "alive": False,
@@ -447,6 +465,9 @@ class AmongUsTracker():
                 toast(title="[AmongUsTracker] Game ended!",
                       msg="Successfully detected game end!",
                       threaded=True, duration=2)
+            elif state == "homescreen":
+                log("STATE - Home screen detected! (Reset)")
+                self.post_reset()
             elif state == "start":
                 log("STATE - Game started!")
                 self.post_ingame(reset=True)
@@ -457,20 +478,24 @@ class AmongUsTracker():
                 log("STATE - Meeting starts soon!")
             elif state == "meeting":
                 log("STATE - Meeting started!")
+                time.sleep(0.5)
+                if not self.post_meeting_players(self.screenshot):
                 if not self.post_meeting_players(screenshot):
                     self.last_state = oldstate
-            elif oldstate == "meeting":
-                log("STATE - Meeting ended!")
+            else:
+                if oldstate in ["meeting", "chat"]:
+                    log("STATE - Meeting ended! (Sleep 6s)")
+                    time.sleep(6)
                 self.post_ingame()
-            elif oldstate == "end":
-                self.last_state = "end"
+                elif oldstate in ["end", "homescreen"]:
+                    self.last_state = oldstate
             else:
                 log(f"STATE - State changed to {state}!")
 
     # Mainloop
 
     def main(self, speed=0.05):
-        self._post({"test": True})
+        self.post_reset()
 
         log("TRACKER - Started tracking!")
 
@@ -483,5 +508,8 @@ if __name__ == "__main__":
     ID = 0
     API_KEY = ""
 
+    try:
     tracker = AmongUsTracker(url=URL, id=ID, apikey=API_KEY)
     tracker.main(speed=0.1)
+    except KeyboardInterrupt:
+        log("KeyboardInterrupt")

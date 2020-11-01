@@ -4,6 +4,11 @@ from discordbot.botmodules import serverdata, apis
 
 from datetime import datetime
 
+from rich.traceback import install as install_traceback
+install_traceback()
+from rich.pretty import install as install_pretty
+install_pretty()
+
 #
 
 extensionfolder = "discordbot.botcmds"

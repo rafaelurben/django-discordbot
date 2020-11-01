@@ -23,6 +23,7 @@ class Moderation(commands.Cog):
         try:
             await ctx.message.channel.purge()
         except Exception as e:
+            print("[Clearchat] - Error:", e)
             pass
 
 
@@ -84,12 +85,12 @@ class Moderation(commands.Cog):
         Grund = ctx.getargs()
         if Grund.rstrip() == "":
             Grund = "Leer"
-        User = self.bot.get_user(userid)
-        if User is None:
+        user = self.bot.get_user(userid)
+        if user is None:
             raise commands.BadArgument(message="Benutzer wurde nicht gefunden!")
         try:
-            await ctx.guild.unban(User,reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
-            await ctx.sendEmbed(title="Benutzer Entbannt", color=self.color, fields=[("Betroffener",member.mention),("Grund",Grund)])
+            await ctx.guild.unban(user,reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
+            await ctx.sendEmbed(title="Benutzer Entbannt", color=self.color, fields=[("Betroffener",user.mention),("Grund",Grund)])
         except:
             raise commands.BadArgument(message="Benutzer wurde nicht gefunden!")
 

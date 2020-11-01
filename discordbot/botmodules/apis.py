@@ -49,22 +49,34 @@ class Minecraft():
 
 
 class Fortnite():
-    __API_HEADERS = headers = {'TRN-Api-Key': os.environ.get("TRNAPIKEY")}
+    @classmethod
+    def __get_headers(self):
+        key = os.environ.get("TRNAPIKEY", None)
+        if key is None:
+            raise commands.CommandError(message="Der Fortnite-Befehl ist leider deaktiviert (nicht konfiguriert)!") 
+        else:
+            return {'TRN-Api-Key': key}
+
+    @classmethod
+    def __get_json(self, url, **kwargs):
+        try:
+            r = requests.get(url, headers=self.__get_headers())
+            j = r.json(**kwargs)
+            return j
+        except (KeyError, ValueError) as e:
+            print("[Fortnite API] - Error:", e)
 
     @classmethod
     def getStore(self):
-        r = requests.get('https://api.fortnitetracker.com/v1/store', headers=self.__API_HEADERS)
-        return r.json()
+        return self.__get_json('https://api.fortnitetracker.com/v1/store')
 
     @classmethod
     def getChallenges(self):
-        r = requests.get('https://api.fortnitetracker.com/v1/challenges', headers=self.__API_HEADERS)
-        return r.json()["items"]
+        return self.__get_json('https://api.fortnitetracker.com/v1/challenges')["items"]
 
     @classmethod
     def getStats(self, platform:str, playername:str):
-        if platform.lower() in ["pc","xbl","psn"]:
-            r = requests.get(("https://api.fortnitetracker.com/v1/profile/%s/%s" % (platform.lower(),playername)), headers=self.__API_HEADERS)
-            return r.json()
+        if platform.lower() in ["kbm","gamepad","touch"]:
+            return self.__get_json(("https://api.fortnitetracker.com/v1/profile/%s/%s" % (platform.lower(), playername)))
         else:
-            raise commands.BadArgument("Die Plattform '"+platform+"' existiert nicht! Benutze pc, xbl oder psn!")
+            raise commands.BadArgument("Die Plattform '"+platform+"' existiert nicht! Benutze kbm, gamepad oder touch!")

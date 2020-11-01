@@ -18,12 +18,6 @@ def setup(bot):
             return # keine Nachricht senden!
         elif isinstance(error, commands.CommandError):
             EMBED.add_field(name="Beschreibung", value="Bei einem Befehl ist ein Fehler aufgetreten!")
-            try:
-                from rich.traceback import install
-                install()
-                raise error
-            except (ModuleNotFoundError, ImportError):
-                print("Error:", error)
         elif isinstance(error, commands.CommandOnCooldown):
             EMBED.add_field(name="Beschreibung", value="Warte, bis du diesen Befehl erneut benutzen kannst!")
         elif isinstance(error, commands.DisabledCommand):
@@ -48,7 +42,11 @@ def setup(bot):
         else:
             EMBED.add_field(name="Beschreibung", value="Es ist ein unbekannter Fehler aufgetreten! Vermutlich liegt er nicht bei dir, also melde ihn am besten einen Admin.")
             print("[Command] - Bei '"+ctx.message.content+"' von '"+ctx.message.author.name+"#"+ctx.message.author.discriminator+"' ist ein Fehler aufgetreten: "+str(error))
+        
         if not error == "":
             EMBED.add_field(name="Text", value=str(error) if len(str(error)) < 1024 else str(error)[-1024:-1])
         EMBED.add_field(name="Nachricht", value=ctx.message.content, inline=False)
         await ctx.send(embed=EMBED)
+
+        if type(error) in [commands.CommandError]:
+            raise error

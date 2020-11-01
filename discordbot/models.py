@@ -271,15 +271,13 @@ class AmongUsGame(models.Model):
             return {"error": "invalid-api-key", "error_message": "API Key is missing or wrong!"}
 
     def get_data(self):
-        players = {}
-
-        for c in AMONGUS_PLAYER_COLORS:
-            if getattr(self, f'p_{c}_exists'):
-                players[c] = {
-                   "name": getattr(self, f'p_{c}_name'),
-                   "alive": getattr(self, f'p_{c}_alive'),
-                   "userid": getattr(self, f'p_{c}_userid'),
-                }
+        players = {c: {
+                "name": getattr(self, f'p_{c}_name'),
+                "alive": getattr(self, f'p_{c}_alive'),
+                "userid": getattr(self, f'p_{c}_userid'),
+                "exists": getattr(self, f'p_{c}_exists'),
+            } for c in AMONGUS_PLAYER_COLORS
+        }
 
         return {
             "id": self.pk,
@@ -292,6 +290,8 @@ class AmongUsGame(models.Model):
             "last_edited": self.last_edited,
             "last_tracking_data": self.last_tracking_data,
         }
+
+    # User
 
     def remove_user(self, userid, save=False):
         for c in AMONGUS_PLAYER_COLORS:
@@ -308,6 +308,7 @@ class AmongUsGame(models.Model):
         if save:
             self.save()
 
+
     def __str__(self):
         return "AmongUs #"+str(self.pk)
 
@@ -323,7 +324,7 @@ class AmongUsGame(models.Model):
 
 VIERGEWINNT_PLAYER_EMOJIS = ["⬛", "🟥", "🟨"]
 VIERGEWINNT_WALL_EMOJI = "🟦"
-VIERGEWINNT_NUMBER_EMOJIS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"]
+VIERGEWINNT_NUMBER_EMOJIS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
 def VIERGEWINNT_DEFAULT_GAME():
     return [[0 for _ in range(7)] for _ in range(6)]
@@ -352,8 +353,8 @@ class VierGewinntGame(models.Model):
 
     @classmethod
     def create(self, width:int=7, height:int=6, **kwargs):
-        width = 10 if width > 10 else 0 if width < 1 else width
-        height = 1 if height < 1 else height
+        width = 10 if width > 10 else 4 if width < 4 else width
+        height = 4 if height < 4 else 14 if height > 14 else height
         kwargs["game"] = [[0 for _ in range(width)] for _ in range(height)]
         return self.objects.create(width=width, height=height, **kwargs)
 
@@ -364,11 +365,10 @@ class VierGewinntGame(models.Model):
         P = VIERGEWINNT_PLAYER_EMOJIS
         N = VIERGEWINNT_NUMBER_EMOJIS
 
-        firstline = (W+"".join(N[:int(self.width)])+W+"\n")
+        numberline = (W+"".join(N[:int(self.width)])+W+"\n")
         gamelines = "\n".join([(W+"".join([P[p] for p in row])+W) for row in self.rows])+"\n"
-        lastline = (W*(self.width+2))
         
-        return firstline + gamelines + lastline
+        return numberline + gamelines + numberline
 
     def _get_players(self):
         return "\n".join([
@@ -382,7 +382,7 @@ class VierGewinntGame(models.Model):
                 return f"Das Spiel ist beendet! Gewonnen hat <@{self.winner_id}>"
             return "Das Spiel ist beendet! Unentschieden!"
         else:
-            return "<@"+getattr(self, "player_"+str(self.current_player)+"_id")+"> ist an der Reihe!" 
+            return VIERGEWINNT_PLAYER_EMOJIS[self.current_player]+" ist an der Reihe!" 
 
     def get_description(self):
         return self._get_game_info()+"\n\n"+self._get_players()+"\n\n"+self._get_gameboard()
@@ -434,7 +434,7 @@ class VierGewinntGame(models.Model):
                 w += 1
         return dias
 
-    # Checks
+    # Functions
 
     def _next_player(self):
         self.current_player = (self.current_player+1 if self.current_player < 2 else 1)

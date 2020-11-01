@@ -26,16 +26,18 @@ OVERRIDE_TALK = PermissionOverwrite(
 
 ALIVE = '❤'
 DEAD = '💀'
+UNKNOWN = '❓'
 
 YES = '✅'
 NO = '❌'
 
 DELETE = '❌'
 
-AMONGUS_TRACKER_INSTALL = """Konfiguriere die Tracker-Software mit folgenden Daten:
+AMONGUS_TRACKER_INSTALL = """Konfiguriere den Tracker mit folgenden Daten:
                 
-Der [Tracker](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot/files/amongus/tracker.py) funktioniert vorerst nur für Windows uns ist (noch) sehr buggy!
-Benötigt werden Python, Pip und alle [requirements](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot/files/amongus/requirements.txt)"""
+Der Tracker kann [hier](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot/files/amongus/tracker.py) heruntergeladen werden. Er funktioniert vorerst nur für Windows uns ist (noch) buggy!
+Bisher ist er auch auf die Bildschirmgrösse 1920x1080p beschränkt. Getestet wurde mit LDPlayer im Vollbildmodus.
+Benötigt werden Python, Pip und alle [requirements](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot/files/amongus/requirements.txt)."""
 
 amongus_last_update = timezone.now()-timedelta(days=1)
 
@@ -70,65 +72,82 @@ class Games(commands.Cog):
 
     # Fortnite
 
-    @commands.command(
-        brief="Erhalte Aktuelles zu Fortnite",
-        description='Sieh dir den Shop, die Herausforderungen oder die Statistiken eines Spielers an',
+    @commands.group(
+        brief="Hauptcommand für alle Fortnite Befehle",
+        description='Erhalte aktuelle Fortnite-Infos',
         aliases=['fn'],
-        help="Beachte bitte, das dies noch die alten Stats sind! (Platformen: pc/xbl/psn)",
-        usage="store/challenges/stats <Plattform> <Spielername>"
+        help="Um eine Liste aller Fortnite-Befehle zu erhalten, gib den Command ohne Unterbefehl ein.",
+        usage="<Unterbefehl> [Argument(e)]"
     )
-    async def fortnite(self, ctx, Unterbefehl:str, platform:str="", playername:str=""):
-        api = ctx.apis.Fortnite
+    async def fortnite(self, ctx):  
+        if ctx.invoked_subcommand is None:
+            await ctx.sendEmbed(
+                title="Fortnite Befehle",
+                description=f"""Alle Fortnite Befehle können ebenfalls mit `/fn` verwendet werden.""",
+                color=self.color,
+                inline=False,
+                fields=[
+                    ("/fortnite store",                     "Erhalte den aktuellen Fortnite Store"),
+                    ("/fortnite challenges",                "Erhalte die aktuellen Challenges"),
+                    ("/fortnite stats <Platform> <Name>",   "Erhalte die Stats eines Spielers auf einer Platform (kbm/gamepad/touch)"),
+                ]
+            )
 
+    @fortnite.command(
+        name="store",
+        aliases=['shop']
+    )
+    async def fortnite_store(self, ctx):
+        JSON = ctx.apis.Fortnite.getStore()
+        await ctx.sendEmbed(
+            title="Fortnite Item Shop",
+            color=self.color,
+            authorurl="http://fortnitetracker.com/",
+            authorname="Powered by Fortnitetracker"
+        )
+        for i in range(len(JSON)):
+            await ctx.sendEmbed(
+                title=str(JSON[i]["name"]),
+                description=("Rarity: %s \n vBucks: %s" % (JSON[i]["rarity"],JSON[i]["vBucks"])),
+                color=self.color,
+                thumbnailurl=str(JSON[i]["imageUrl"]),
+                footertext="",
+                footerurl="",
+            )
+
+    @fortnite.command(
+        name="challenges",
+        aliases=[]
+    )
+    async def fortnite_challenges(self, ctx):
+        JSON = ctx.apis.Fortnite.getChallenges()
+        await ctx.sendEmbed(
+            title="Fortnite Challenges",
+            color=self.color,
+            fields=[((JSON[i]["metadata"][1]["value"]+" ("+JSON[i]["metadata"][3]["value"]+")"),(JSON[i]["metadata"][5]["value"]+" Battlepassstars")) for i in range(len(JSON))],
+            thumbnailurl=str(JSON[0]["metadata"][4]["value"]),
+            authorurl="http://fortnitetracker.com/",
+            authorname="Powered by Fortnitetracker",
+            inline=False
+        )
+
+    @fortnite.command(
+        name="stats",
+        aliases=[]
+    )
+    async def fortnite_stats(self, ctx, platform:str, playername:str):
+        JSON = ctx.apis.Fortnite.getStats(platform, playername)
         try:
-            if Unterbefehl == "store" or Unterbefehl == "shop": #Fortnite Store
-                JSON = api.getStore()
-                await ctx.sendEmbed(
-                    title="Fortnite Item Shop",
-                    color=self.color,
-                    authorurl="http://fortnitetracker.com/",
-                    authorname="Powered by Fortnitetracker"
-                )
-                for i in range(len(JSON)):
-                    await ctx.sendEmbed(
-                        title=str(JSON[i]["name"]),
-                        description=("Rarity: %s \n vBucks: %s" % (JSON[i]["rarity"],JSON[i]["vBucks"])),
-                        color=self.color,
-                        thumbnailurl=str(JSON[i]["imageUrl"])
-                    )
-
-            elif Unterbefehl == "challenges" or Unterbefehl == "c": #Fortnite Challenges
-                JSON = api.getChallenges()
-                await ctx.sendEmbed(
-                    title="Fortnite Challenges",
-                    color=self.color,
-                    fields=[((JSON[i]["metadata"][1]["value"]+" ("+JSON[i]["metadata"][3]["value"]+")"),(JSON[i]["metadata"][5]["value"]+" Battlepassstars")) for i in range(len(JSON))],
-                    thumbnailurl=str(JSON[0]["metadata"][4]["value"]),
-                    authorurl="http://fortnitetracker.com/",
-                    authorname="Powered by Fortnitetracker",
-                    inline=False
-                )
-
-            elif Unterbefehl == "stats": #Fortnite Stats
-                if not platform == "" and not playername == "":
-                    JSON = api.getStats(platform, playername)
-                    try:
-                        await ctx.sendEmbed(
-                            title="Fortnite Stats von "+JSON["epicUserHandle"]+" auf "+JSON["platformNameLong"],
-                            description=("Account Id: "+JSON["accountId"]),
-                            color=self.color,
-                            fields=[(JSON["lifeTimeStats"][i]["key"], JSON["lifeTimeStats"][i]["value"]) for i in range(len(JSON["lifeTimeStats"]))],
-                            authorurl="http://fortnitetracker.com/",
-                            authorname="Powered by Fortnitetracker"
-                        )
-                    except KeyError:
-                        raise commands.BadArgument(message="Spieler wurde auf der angegebenen Platform nicht gefunden!")
-                else:
-                    raise commands.BadArgument(message="Platform und/oder Spieler wurde nicht angegeben!")
-            else:
-                raise commands.BadArgument(message="Unbekannter Unterbefehl!")
+            await ctx.sendEmbed(
+                title="Fortnite Stats von "+JSON["epicUserHandle"]+" auf "+JSON["platformNameLong"],
+                description=("Account Id: "+JSON["accountId"]),
+                color=self.color,
+                fields=[(JSON["lifeTimeStats"][i]["key"], JSON["lifeTimeStats"][i]["value"]) for i in range(len(JSON["lifeTimeStats"]))],
+                authorurl="http://fortnitetracker.com/",
+                authorname="Powered by Fortnitetracker"
+            )
         except KeyError:
-            raise commands.BadArgument(message="Scheinbar ist dieser Befehl nicht richtig konfiguriert.")
+            raise commands.BadArgument(message="Spieler wurde auf der angegebenen Platform nicht gefunden!")
 
 
     # Minecraft
@@ -144,14 +163,15 @@ class Games(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.sendEmbed(
                 title="Minecraft Befehle",
-                description=f"""Alle Minecraft Befehle können ebenfalls mit `/minecraft` verwendet werden.""",
+                description=f"""Erhalte Infos über Minecraft-Spieler.""",
                 color=0x00AA00,
                 inline=False,
                 fields=[
-                    ("/mc uuid <Name>",   "Erhalte die UUID eines Spielers"),
-                    ("/mc names <UUID>",  "Erhalte alte Namen eines Spielers"),
-                    ("/mc skin <UUID>",   "Erhalte den Skin eines Spielers"),
-                    ("/mc player <Name>", "Erhalte alle Infos über einen Spieler"),
+                    ("/minecraft uuid <Name>",   "Erhalte die UUID eines Spielers"),
+                    ("/minecraft names <UUID>",  "Erhalte alte Namen eines Spielers"),
+                    ("/minecraft skin <UUID>",   "Erhalte den Skin eines Spielers"),
+                    ("/minecraft player <Name>",
+                     "Erhalte alle Infos über einen Spieler"),
                 ]
             )
 
@@ -255,7 +275,7 @@ class Games(commands.Cog):
 
                 if voicechannel is None:
                     log(f"- Deleted AmongUs #{ game.pk } because voicechannel was not found!")
-                    game.delete()
+                    await DjangoConnection._deleteAmongUsGame(game)
                     if textchannel is not None:
                         await textchannel.delete()
                     continue
@@ -344,10 +364,11 @@ class Games(commands.Cog):
                 ingame = (YES if d["state"]["ingame"] else NO)
                 inmeeting = (YES if d["state"]["meeting"] else NO)
 
-                fields = []
-                for c, i in d["players"].items():
-                    title = (AMONGUS_PLAYER_COLORS[c][2] if i["alive"] else DEAD) + " " + c.upper()
+                p_alive = []
+                p_dead = []
+                p_unknown = []
 
+                for c, i in d["players"].items():
                     if i["userid"]:
                         try:
                             member = self.bot.get_user(int(i["userid"])) or await self.bot.fetch_user(int(i["userid"]))
@@ -357,8 +378,20 @@ class Games(commands.Cog):
                     else:
                         mention = None
 
-                    description = mention + (" ("+i["name"]+")" if i["name"] else "") if mention is not None else (i["name"] or "-")
-                    fields.append((title, description))
+                    description = AMONGUS_PLAYER_COLORS[c][2] + " " + c.upper() + " "
+                    description += ("- " + (mention if mention else "") + (" ("+i["name"]+")" if i["name"] else "")) if mention or i["name"] else ""
+
+                    if i["exists"]:
+                        if i["alive"]:
+                            p_alive.append("- "+description)
+                        else:
+                            p_dead.append("- "+description)
+                    else:
+                        p_unknown.append("- "+description)
+
+                t_alive = "\n".join(p_alive)
+                t_dead = "\n".join(p_dead)
+                t_unknown = "\n".join(p_unknown)
 
                 embed = self.bot.getEmbed(
                     title=f"AmongUs Spiel (ID: { id })",
@@ -373,11 +406,20 @@ class Games(commands.Cog):
                         In meeting - { inmeeting }
 
                         Spieler:
+
+                        {ALIVE} [Lebend]
+
+                        { t_alive }
+
+                        {DEAD} [Tot]
+
+                        { t_dead }
+
+                        {UNKNOWN} [Unbekannt]
+
+                        { t_unknown }
                     """),
-                    footertext=f"{DEAD} = Tot - {ALIVE} = Lebend",
                     color=0xFEDE29,
-                    inline=False,
-                    fields=fields,
                 )
                 await msg.edit(embed=embed)
             except Exception as e:
@@ -393,7 +435,7 @@ class Games(commands.Cog):
 
     @commands.group(
         brief="Hauptcommand für alle AmongUs Befehle",
-        description='Alle AmongUs-Befehle beginnen mit diesem Befehl.',
+        description='Mute und entmute dich und deine Freunde automatisch währende eines AmongUs-Spiels.',
         aliases=['au'],
         help="Um eine Liste aller AmongUs-Befehle zu erhalten, gib den Command ohne Argumente ein.",
         usage="<Unterbefehl> [Argumente]"
@@ -402,14 +444,14 @@ class Games(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.sendEmbed(
                 title="AmongUs Befehle",
-                description=f"""Alle AmongUs Befehle können ebenfalls mit `/amongus` verwendet werden.""",
+                description=f"""Alle AmongUs Befehle können ebenfalls mit `/au` verwendet werden.""",
                 color=0xFEDE29,
                 inline=False,
                 fields=[
-                    ("/au create",      "Erstelle ein AmongUs Spiel"),
-                    ("/au delete",      "Lösche dein AmongUs Spiel"),
-                    ("/au reset",       "Setze dein AmongUs Spiel zurück"),
-                    ("/au config",      "Erhalte nochmals die Konfigurationsdaten für den Tracker"),
+                    ("/amongus create",  "Erstelle ein AmongUs Spiel"),
+                    ("/amongus delete",  "Lösche dein AmongUs Spiel"),
+                    ("/amongus reset",   "Setze dein AmongUs Spiel zurück"),
+                    ("/amongus config",  "Erhalte nochmals die Konfigurationsdaten für den Tracker"),
                 ]
             )
 
@@ -520,14 +562,14 @@ class Games(commands.Cog):
             )
             await ctx.author.send(embed=embed)
         else:
-            raise commands.CommandError("DU hast kein AmongUs Spiel!")
+            raise commands.BadArgument("Du hast kein AmongUs Spiel!")
 
 
     # VierGewinnt
 
     @commands.group(
         brief="Hauptcommand für alle VierGewinnt Befehle",
-        description='Alle VierGewinnt-Befehle beginnen mit diesem Befehl.',
+        description='Spiele Vier Gewinnt direkt in Discord.',
         aliases=['fourinarow', '4gewinnt', '4inarow', '4row', '4win'],
         help="Um eine Liste aller VierGewinnt-Befehle zu erhalten, gib den Command ohne Argumente ein.",
         usage="<Unterbefehl> [Argumente]"
@@ -537,11 +579,11 @@ class Games(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.sendEmbed(
                 title="VierGewinnt Befehle",
-                description=f"""Alle AmongUs Befehle können ebenfalls mit `/viergewinnt` verwendet werden.""",
+                description=f"""Alle AmongUs Befehle können ebenfalls mit `/4row` verwendet werden.""",
                 color=0x0078D7,
                 inline=False,
                 fields=[
-                    ("/4gewinnt duell <Mitglied>", "Duelliere einen anderen Spieler"),
+                    ("/viergewinnt duell <Mitglied> [Breite 4-10] [Höhe 4-14]", "Duelliere einen anderen Spieler"),
                 ]
             )
 

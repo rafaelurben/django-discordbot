@@ -27,7 +27,11 @@ REGELN = {
     "6) Empfehlungen":
         [
             "Habt Spass!"
-        ]
+        ],
+    "7) Sprachkanäle":
+        [
+            "Channel Hopping unterlassen"
+        ],
 }
 
 
