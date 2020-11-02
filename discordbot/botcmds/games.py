@@ -275,7 +275,7 @@ class Games(commands.Cog):
 
                 if voicechannel is None:
                     log(f"- Deleted AmongUs #{ game.pk } because voicechannel was not found!")
-                    await DjangoConnection._deleteAmongUsGame(game)
+                    await DjangoConnection._delete(game)
                     if textchannel is not None:
                         await textchannel.delete()
                     continue
@@ -285,7 +285,7 @@ class Games(commands.Cog):
                     textchannel = await category.create_text_channel(name=f"amongus-{ game.pk }", reason="Textkanal war nicht mehr vorhanden!", topic=f"AmongUs Spiel - ID: { game.pk }")
                 
                     game.text_channel_id = str(textchannel.id)
-                    await DjangoConnection._saveAmongUsGame(game)
+                    await DjangoConnection._save(game)
 
                 try:
                     msg = await textchannel.fetch_message(int(game.text_message_id))
@@ -299,7 +299,7 @@ class Games(commands.Cog):
                     msg = await textchannel.send(embed=embed)
 
                     game.text_message_id = str(msg.id)
-                    await DjangoConnection._saveAmongUsGame(game)
+                    await DjangoConnection._save(game)
 
                     for emoji in AMONGUS_EMOJI_COLORS:
                         await msg.add_reaction(emoji)
@@ -506,7 +506,7 @@ class Games(commands.Cog):
                 await voicechannel.delete(reason="AmongUs Spiel wurde gelöscht!")
 
             id = str(game.pk)
-            await ctx.database._deleteAmongUsGame(game)
+            await ctx.database._delete(game)
 
             embed = ctx.getEmbed(
                 title=f"AmongUs Spiel gelöscht! ({ id })",
@@ -529,7 +529,7 @@ class Games(commands.Cog):
 
             if voicechannel is not None:
                 game.reset()
-                await ctx.database._saveAmongUsGame(game)
+                await ctx.database._save(game)
                 await voicechannel.edit(sync_permissions=True)
                 await ctx.sendEmbed(
                     title="AmongUs Spiel zurückgesetzt!",
@@ -584,6 +584,7 @@ class Games(commands.Cog):
                 inline=False,
                 fields=[
                     ("/viergewinnt duell <Mitglied> [Breite 4-10] [Höhe 4-14]", "Duelliere einen anderen Spieler"),
+                    ("/viergewinnt challenge [Breite 4-10] [Höhe 4-14]",        "Duelliere einen Bot"),
                 ]
             )
 
@@ -600,6 +601,31 @@ class Games(commands.Cog):
         )
 
         game = await ctx.database._createVierGewinntGame(channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=str(user.id), width=width, height=height)
+
+        embed = ctx.bot.getEmbed(
+            title=f"Vier Gewinnt (#{game.pk})",
+            color=0x0078D7,
+            description=game.get_description()
+        )
+
+        await msg.edit(embed=embed)
+
+        for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
+            await msg.add_reaction(emoji)
+
+    @viergewinnt.command(
+        name="challenge",
+        aliases=['bot', 'botduel', 'botduell'],
+    )
+    @commands.guild_only()
+    async def viergewinnt_challenge(self, ctx, width: int = 7, height: int = 6):
+        msg = await ctx.sendEmbed(
+            title="Vier Gewinnt",
+            color=0x0078D7,
+            description=f"Challenge gegen einen Bot wird erstellt..."
+        )
+
+        game = await ctx.database._createVierGewinntGame(channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=None, width=width, height=height)
 
         embed = ctx.bot.getEmbed(
             title=f"Vier Gewinnt (#{game.pk})",

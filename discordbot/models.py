@@ -5,6 +5,8 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 
+from discordbot.botmodules.bots import VierGewinntBot
+
 import time
 import uuid
 
@@ -371,18 +373,29 @@ class VierGewinntGame(models.Model):
         return numberline + gamelines + numberline
 
     def _get_players(self):
-        return "\n".join([
-            VIERGEWINNT_PLAYER_EMOJIS[i]+" <@"+getattr(self, "player_"+str(i)+"_id")+">" 
-            for i in range(1, 2+1)
-        ])
+        pl = []
+        for i in range(1, 2+1):
+            pid = getattr(self, f"player_{ i }_id")
+            if pid is None:
+                pl.append(VIERGEWINNT_PLAYER_EMOJIS[i]+" BOT")
+            else:
+                pl.append(VIERGEWINNT_PLAYER_EMOJIS[i]+" <@"+pid+">")
+        return "\n".join(pl)
 
     def _get_game_info(self):
         if self.finished:
             if self.winner_id:
-                return f"Das Spiel ist beendet! Gewonnen hat <@{self.winner_id}>"
+                if self.winner_id == "BOT":
+                    return "Das Spiel ist beendet! Du hast leider verloren!"
+                else:
+                    return f"Das Spiel ist beendet! Gewonnen hat <@{self.winner_id}>!"
             return "Das Spiel ist beendet! Unentschieden!"
         else:
-            return VIERGEWINNT_PLAYER_EMOJIS[self.current_player]+" ist an der Reihe!" 
+            p = getattr(self, f"player_{ self.current_player }_id")
+            if p is None:
+                return f"{ VIERGEWINNT_PLAYER_EMOJIS[self.current_player] } Ich bin an der Reihe! (Berchne einen guten Zug...)"
+            else:
+                return f"{ VIERGEWINNT_PLAYER_EMOJIS[self.current_player] } <@{ p }> ist an der Reihe!"
 
     def get_description(self):
         return self._get_game_info()+"\n\n"+self._get_players()+"\n\n"+self._get_gameboard()
@@ -480,6 +493,18 @@ class VierGewinntGame(models.Model):
                     elif self._is_full():
                         self.finished = True
                     return True
+        return False
+
+    def process_bot(self):
+        if not self.finished and getattr(self, f"player_{self.current_player}_id") is None: 
+            if self._add_to_column(VierGewinntBot.get_best_move(board=self.game, botnr=self.current_player, maxdepth=3)):
+                w = self._get_winner()
+                if w:
+                    self.winner_id = "BOT"
+                    self.finished = True
+                elif self._is_full():
+                    self.finished = True
+                return True
         return False
 
     # Meta

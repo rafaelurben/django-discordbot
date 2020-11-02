@@ -43,9 +43,8 @@ def setup(bot):
                 if not game.finished:
                     n = VIERGEWINNT_NUMBER_EMOJIS.index(emoji)
 
-                    success = game.process(n, payload.user_id)
-                    if success:
-                        await DjangoConnection._saveVierGewinntGame(game)
+                    if game.process(n, payload.user_id):
+                        await DjangoConnection._save(game)
 
                         embed = bot.getEmbed(
                             title=f"Vier Gewinnt (#{game.pk})",
@@ -55,8 +54,20 @@ def setup(bot):
 
                         await message.edit(embed=embed)
 
-                        if game.finished:
-                            for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
-                                await message.remove_reaction(emoji, bot.user)
+                    
+                    if game.process_bot():
+                        await DjangoConnection._save(game)
+
+                        embed = bot.getEmbed(
+                            title=f"Vier Gewinnt (#{game.pk})",
+                            color=0x0078D7,
+                            description=game.get_description()
+                        )
+
+                        await message.edit(embed=embed)
+
+                    if game.finished:
+                        for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
+                            await message.remove_reaction(emoji, bot.user)
 
                 await message.remove_reaction(emoji, payload.member)

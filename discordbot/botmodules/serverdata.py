@@ -198,6 +198,17 @@ class DjangoConnection():
     def _join_server(self, user, server):
         user.joinServer(server)
 
+    # Basic Methods
+
+    @classmethod
+    @sync_to_async
+    def _save(self, game):
+        game.save()
+
+    @classmethod
+    @sync_to_async
+    def _delete(self, game):
+        game.delete()
 
     # Reports
 
@@ -261,16 +272,6 @@ class DjangoConnection():
 
     @classmethod
     @sync_to_async
-    def _saveAmongUsGame(self, game: AmongUsGame):
-        game.save()
-
-    @classmethod
-    @sync_to_async
-    def _deleteAmongUsGame(self, game: AmongUsGame):
-        game.delete()
-
-    @classmethod
-    @sync_to_async
     def _setAmongUsUser(self, game: AmongUsGame, userid: int, color: str, save: bool = False):
         game.set_user(userid=userid, color=color, save=save)
 
@@ -296,7 +297,3 @@ class DjangoConnection():
     def _createVierGewinntGame(self, **kwargs):
         return VierGewinntGame.create(**kwargs)
 
-    @classmethod
-    @sync_to_async
-    def _saveVierGewinntGame(self, game: AmongUsGame):
-        game.save()
