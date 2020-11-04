@@ -35,7 +35,32 @@ class Music(commands.Cog):
         self.bot = bot
         self.color = 0xee00ff
 
-        # Siehe Botevent -> on_voice_state_update
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        if os.getenv("DEBUG", False):
+            filespath = os.path.join(os.path.dirname(
+                os.path.dirname(os.path.realpath(__file__))), "botfiles")
+            memespath = os.path.join(filespath, "memes")
+
+            ffmpeg_options = {
+                'options': '-vn',
+                'executable': os.path.join(filespath, "ffmpeg.exe")
+            }
+
+            # *Grillenzirpen* nach Streamende
+            if before.channel and before.self_stream and not after.self_stream:
+                voice_client = before.channel.guild.voice_client
+                if voice_client is None:
+                    voice_client = await before.channel.connect()
+                elif voice_client.is_playing():
+                    voice_client.stop()
+                    await voice_client.move_to(before.channel)
+
+                player = PCMVolumeTransformer(FFmpegPCMAudio(
+                    source=os.path.join(memespath, "grillenzirpen.wav"), **ffmpeg_options))
+                voice_client.play(player, after=lambda e: print(
+                    '[Music] - Error: %s' % e) if e else None)
+
 
     # sich in Entwicklung befindende Befehle
     if os.getenv("DEBUG", False):
@@ -68,8 +93,8 @@ class Music(commands.Cog):
             usage="<Suche>"
         )
         @commands.guild_only()
-        async def meme(self, ctx, search:str="windows-xp-error"):
-            search = search+" "+ctx.getargs()
+        async def meme(self, ctx, search:str="windows-xp-error", *args):
+            search = " ".join([search]+args)
             filenames = list(os.listdir(memespath))
 
             result = process.extractOne(search, filenames)
@@ -99,8 +124,8 @@ class Music(commands.Cog):
             usage="<Url/Suche>"
         )
         @commands.guild_only()
-        async def play(self, ctx):
-            url = ctx.getargs(True)
+        async def play(self, ctx, search: str, *args):
+            url = " ".join([search]+args)
             async with ctx.typing():
                 player = list(await ctx.data.musicqueue.createYoutubePlayer(url, loop=self.bot.loop))[0]
                 if ctx.voice_client.is_playing():
@@ -120,8 +145,8 @@ class Music(commands.Cog):
             usage="<Url/Suche>"
         )
         @commands.guild_only()
-        async def stream(self, ctx):
-            url = ctx.getargs(True)
+        async def stream(self, ctx, search: str, *args):
+            url = " ".join([search]+args)
             if url in radios:
                 url = radios[url]
 

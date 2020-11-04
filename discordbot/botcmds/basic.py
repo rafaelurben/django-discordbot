@@ -61,8 +61,8 @@ class Basic(commands.Cog):
         help="Benutze /say <Text> und der Bot schickt dir den Text zurück",
         usage="<Text>"
         )
-    async def say(self,ctx,Text:str):
-        txt = Text+" "+ctx.getargs()
+    async def say(self, ctx, text:str, *args):
+        txt = " ".join([text]+args)
         await ctx.send(txt)
 
     @commands.command(
@@ -72,7 +72,7 @@ class Basic(commands.Cog):
         help="Benutze /avatar <User> und du siehst, welchen Avatar die Person hat",
         usage="<User>"
         )
-    async def avatar(self,ctx,user:User):
+    async def avatar(self, ctx, user:User):
         await ctx.sendEmbed(title="Avatar", fields=[("Benutzer",user.mention),("Standardavatar",user.default_avatar)], thumbnailurl=str(user.avatar_url))
 
 
@@ -109,7 +109,7 @@ class Basic(commands.Cog):
             EMBED.set_footer(text=f'Besitzer dieses Bots ist {owner.name}#{owner.discriminator}',icon_url=owner.avatar_url)
         for kategorie in REGELN:
             EMBED.add_field(name=kategorie,value="```nimrod\n- "+ ("\n- ".join(regel for regel in REGELN[kategorie])) +"```",inline=False)
-        msg = await ctx.send(embed=EMBED)
+        await ctx.send(embed=EMBED)
 
 
     @commands.command(

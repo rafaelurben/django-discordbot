@@ -13,9 +13,7 @@ def setup(bot):
         elif isinstance(error, commands.MissingRequiredArgument):
             EMBED.add_field(name="Beschreibung", value="Du hast ein benötigtes Argument weggelassen!")
         elif isinstance(error, commands.CommandNotFound):
-            EMBED.add_field(name="Beschreibung", value="Dieser Command existiert nicht!")
-            print("[Command] - '"+ctx.message.content+"' von '"+ctx.message.author.name+"' wurde nicht gefunden")
-            return # keine Nachricht senden!
+            EMBED.add_field(name="Beschreibung", value="Dieser Befehl wurde nicht gefunden!")
         elif isinstance(error, commands.CommandError):
             EMBED.add_field(name="Beschreibung", value="Bei einem Befehl ist ein Fehler aufgetreten!")
         elif isinstance(error, commands.CommandOnCooldown):

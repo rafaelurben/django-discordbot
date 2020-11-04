@@ -38,9 +38,9 @@ class Moderation(commands.Cog):
     @commands.has_permissions(kick_members = True)
     @commands.bot_has_permissions(kick_members = True)
     @commands.guild_only()
-    async def kick(self, ctx, member: Member):
+    async def kick(self, ctx, member: Member, *args):
         if ctx.author.roles[-1] > member.roles[-1]:
-            Grund = ctx.getargs()
+            Grund = " ".join(args)
             if Grund.rstrip() == "":
                 Grund = "Leer"
             await member.kick(reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
@@ -59,9 +59,9 @@ class Moderation(commands.Cog):
     @commands.has_permissions(ban_members = True)
     @commands.bot_has_permissions(ban_members = True)
     @commands.guild_only()
-    async def ban(self, ctx, member: Member):
+    async def ban(self, ctx, member: Member, *args):
         if ctx.author.roles[-1] > member.roles[-1]:
-            Grund = ctx.getargs()
+            Grund = " ".join(args)
             if Grund.rstrip() == "":
                 Grund = "Leer"
             await member.ban(reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
@@ -81,8 +81,8 @@ class Moderation(commands.Cog):
     @commands.has_permissions(ban_members = True)
     @commands.bot_has_permissions(ban_members = True)
     @commands.guild_only()
-    async def unban(self, ctx, userid: int):
-        Grund = ctx.getargs()
+    async def unban(self, ctx, userid: int, *args):
+        Grund = " ".join(args)
         if Grund.rstrip() == "":
             Grund = "Leer"
         user = self.bot.get_user(userid)
@@ -103,8 +103,8 @@ class Moderation(commands.Cog):
         usage="<Member> [Grund]"
         )
     @commands.guild_only()
-    async def kill(self, ctx, member: Member):
-        Grund = ctx.getargs()
+    async def kill(self, ctx, member: Member, *args):
+        Grund = " ".join(args)
         if Grund.rstrip() == "":
             Grund = "Leer"
         VoiceState = member.voice

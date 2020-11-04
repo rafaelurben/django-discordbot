@@ -69,6 +69,70 @@ class Games(commands.Cog):
         print("[AmongUs Background Tasks] - Stopped!")
         self.amongus_backgroundtasks.cancel()
 
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        if not payload.user_id == self.bot.user.id:
+            emoji = payload.emoji.name
+            channel = await self.bot.fetch_channel(payload.channel_id)
+            message = await channel.fetch_message(payload.message_id)
+
+            ### AmongUs
+
+            if (emoji in AMONGUS_EMOJI_COLORS or emoji == DELETE) and await DjangoConnection._hasAmongUsGame(text_message_id=payload.message_id):
+                try:
+                    await message.remove_reaction(emoji, payload.member)
+                except:
+                    pass
+
+                await message.remove_reaction(emoji, payload.member)
+
+                game = await DjangoConnection._getAmongUsGame(text_message_id=payload.message_id)
+
+                if emoji == DELETE:
+                    await DjangoConnection._removeAmongUsUser(game=game, userid=payload.user_id, save=True)
+                else:
+                    c = AMONGUS_EMOJI_COLORS[payload.emoji.name]
+                    await DjangoConnection._setAmongUsUser(game=game, userid=payload.user_id, color=c, save=True)
+
+            ### VierGewinnt
+
+            if (emoji in VIERGEWINNT_NUMBER_EMOJIS) and await DjangoConnection._hasVierGewinntGame(message_id=payload.message_id):
+                try:
+                    await message.remove_reaction(emoji, payload.member)
+                except:
+                    pass
+
+                game = await DjangoConnection._getVierGewinntGame(message_id=payload.message_id)
+
+                if not game.finished:
+                    n = VIERGEWINNT_NUMBER_EMOJIS.index(emoji)
+
+                    if game.process(n, payload.user_id):
+                        await DjangoConnection._save(game)
+
+                        embed = self.bot.getEmbed(
+                            title=f"Vier Gewinnt (#{game.pk})",
+                            color=0x0078D7,
+                            description=game.get_description()
+                        )
+
+                        await message.edit(embed=embed)
+
+                    if game.process_bot():
+                        await DjangoConnection._save(game)
+
+                        embed = self.bot.getEmbed(
+                            title=f"Vier Gewinnt (#{game.pk})",
+                            color=0x0078D7,
+                            description=game.get_description()
+                        )
+
+                        await message.edit(embed=embed)
+
+                    if game.finished:
+                        for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
+                            await message.remove_reaction(emoji, self.bot.user)
+
 
     # Fortnite
 
@@ -76,25 +140,15 @@ class Games(commands.Cog):
         brief="Hauptcommand für alle Fortnite Befehle",
         description='Erhalte aktuelle Fortnite-Infos',
         aliases=['fn'],
-        help="Um eine Liste aller Fortnite-Befehle zu erhalten, gib den Command ohne Unterbefehl ein.",
         usage="<Unterbefehl> [Argument(e)]"
     )
     async def fortnite(self, ctx):  
         if ctx.invoked_subcommand is None:
-            await ctx.sendEmbed(
-                title="Fortnite Befehle",
-                description=f"""Alle Fortnite Befehle können ebenfalls mit `/fn` verwendet werden.""",
-                color=self.color,
-                inline=False,
-                fields=[
-                    ("/fortnite store",                     "Erhalte den aktuellen Fortnite Store"),
-                    ("/fortnite challenges",                "Erhalte die aktuellen Challenges"),
-                    ("/fortnite stats <Platform> <Name>",   "Erhalte die Stats eines Spielers auf einer Platform (kbm/gamepad/touch)"),
-                ]
-            )
+            await ctx.send_help()
 
     @fortnite.command(
         name="store",
+        brief="Erhalte den aktuellen Fortnite Store",
         aliases=['shop']
     )
     async def fortnite_store(self, ctx):
@@ -117,6 +171,7 @@ class Games(commands.Cog):
 
     @fortnite.command(
         name="challenges",
+        brief="Erhalte die aktuellen Challenges",
         aliases=[]
     )
     async def fortnite_challenges(self, ctx):
@@ -133,7 +188,10 @@ class Games(commands.Cog):
 
     @fortnite.command(
         name="stats",
-        aliases=[]
+        brief="Erhalte die Stats eines Spielers",
+        aliases=[],
+        help="Mögliche Plattformen: [kbm, gamepad, mouse]",
+        usage="<Plattform> <Spielername>",
     )
     async def fortnite_stats(self, ctx, platform:str, playername:str):
         JSON = ctx.apis.Fortnite.getStats(platform, playername)
@@ -154,30 +212,19 @@ class Games(commands.Cog):
 
     @commands.group(
         brief="Hauptcommand für alle Minecraft Befehle",
-        description='Alle Minecraft Befehle beginnen mit diesem Befehl',
+        description='Erhalte Infos über Minecraft-Spieler',
         aliases=['mc'],
-        help="Um eine Liste aller AmongUs-Befehle zu erhalten, gib den Command ohne Unterbefehl ein.",
         usage="<Unterbefehl> <Argument>"
     )
     async def minecraft(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.sendEmbed(
-                title="Minecraft Befehle",
-                description=f"""Erhalte Infos über Minecraft-Spieler.""",
-                color=0x00AA00,
-                inline=False,
-                fields=[
-                    ("/minecraft uuid <Name>",   "Erhalte die UUID eines Spielers"),
-                    ("/minecraft names <UUID>",  "Erhalte alte Namen eines Spielers"),
-                    ("/minecraft skin <UUID>",   "Erhalte den Skin eines Spielers"),
-                    ("/minecraft player <Name>",
-                     "Erhalte alle Infos über einen Spieler"),
-                ]
-            )
+            await ctx.send_help()
 
     @minecraft.command(
         name="uuid",
-        aliases=['id']
+        brief="Erhalte die UUID eines Spielers",
+        aliases=['id'],
+        usage="<Spielername>",
     )
     async def minecraft_uuid(self, ctx, name):
         api = ctx.apis.Minecraft
@@ -192,7 +239,9 @@ class Games(commands.Cog):
 
     @minecraft.command(
         name="names",
-        aliases=['namen', 'name']
+        brief="Erhalte alte Namen eines Spielers",
+        aliases=['namen', 'name'],
+        usage="<UUID>",
     )
     async def minecraft_names(self, ctx, uuid):
         api = ctx.apis.Minecraft
@@ -211,7 +260,9 @@ class Games(commands.Cog):
 
     @minecraft.command(
         name="skin",
-        aliases=[]
+        brief="Erhalte den Skin eines Spielers",
+        aliases=[],
+        usage="<UUID>",
     )
     async def minecraft_skin(self, ctx, uuid):
         api = ctx.apis.Minecraft
@@ -229,7 +280,10 @@ class Games(commands.Cog):
 
     @minecraft.command(
         name="player",
-        aliases=['spieler']
+        brief="Erhalte alle Infos über einen Spieler",
+        description="Dies ist eine Zusammenfassung von UUID, Namen und Skin",
+        aliases=['spieler'],
+        usage="<Spielername>",
     )
     async def minecraft_player(self, ctx, name):
         api = ctx.apis.Minecraft
@@ -435,28 +489,17 @@ class Games(commands.Cog):
 
     @commands.group(
         brief="Hauptcommand für alle AmongUs Befehle",
-        description='Mute und entmute dich und deine Freunde automatisch währende eines AmongUs-Spiels.',
+        description='Mute und entmute dich und deine Freunde automatisch während eines AmongUs-Spiels.',
         aliases=['au'],
-        help="Um eine Liste aller AmongUs-Befehle zu erhalten, gib den Command ohne Argumente ein.",
         usage="<Unterbefehl> [Argumente]"
     )
     async def amongus(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.sendEmbed(
-                title="AmongUs Befehle",
-                description=f"""Alle AmongUs Befehle können ebenfalls mit `/au` verwendet werden.""",
-                color=0xFEDE29,
-                inline=False,
-                fields=[
-                    ("/amongus create",  "Erstelle ein AmongUs Spiel"),
-                    ("/amongus delete",  "Lösche dein AmongUs Spiel"),
-                    ("/amongus reset",   "Setze dein AmongUs Spiel zurück"),
-                    ("/amongus config",  "Erhalte nochmals die Konfigurationsdaten für den Tracker"),
-                ]
-            )
+            await ctx.send_help()
 
     @amongus.command(
         name="create",
+        brief="Erstelle ein AmongUs Spiel",
         aliases=['open', 'add', '+'],
     )
     @commands.guild_only()
@@ -492,6 +535,7 @@ class Games(commands.Cog):
 
     @amongus.command(
         name="close",
+        brief="Lösche dein AmongUs Spiel",
         aliases=['delete', 'del', '-'],
     )
     @commands.guild_only()
@@ -519,6 +563,7 @@ class Games(commands.Cog):
 
     @amongus.command(
         name="reset",
+        brief="Setze dein AmongUs Spiel zurück",
         aliases=[],
     )
     @commands.guild_only()
@@ -543,6 +588,7 @@ class Games(commands.Cog):
 
     @amongus.command(
         name="apikey",
+        brief="Erhalte nochmals die Konfigurationsdaten für den Tracker",
         aliases=['resend', 'config', 'tracker', 'key'],
     )
     @commands.guild_only()
@@ -577,20 +623,13 @@ class Games(commands.Cog):
     @commands.guild_only()
     async def viergewinnt(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.sendEmbed(
-                title="VierGewinnt Befehle",
-                description=f"""Alle AmongUs Befehle können ebenfalls mit `/4row` verwendet werden.""",
-                color=0x0078D7,
-                inline=False,
-                fields=[
-                    ("/viergewinnt duell <Mitglied> [Breite 4-10] [Höhe 4-14]", "Duelliere einen anderen Spieler"),
-                    ("/viergewinnt challenge [Breite 4-10] [Höhe 4-14]",        "Duelliere einen Bot"),
-                ]
-            )
+            await ctx.send_help()
 
     @viergewinnt.command(
         name="duell",
+        brief="Duelliere einen anderen Spieler",
         aliases=['battle', 'duel'],
+        usage="<Mitglied> [Breite (4-10)] [Höhe (4-14)]",
     )
     @commands.guild_only()
     async def viergewinnt_duell(self, ctx, user:User, width:int=7, height:int=6):
@@ -615,9 +654,10 @@ class Games(commands.Cog):
 
     @viergewinnt.command(
         name="challenge",
+        brief="Duelliere einen Bot",
         aliases=['bot', 'botduel', 'botduell'],
+        usage="[Breite (4-10)] [Höhe (4-14)]",
     )
-    @commands.guild_only()
     async def viergewinnt_challenge(self, ctx, width: int = 7, height: int = 6):
         msg = await ctx.sendEmbed(
             title="Vier Gewinnt",

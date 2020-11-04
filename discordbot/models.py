@@ -497,7 +497,7 @@ class VierGewinntGame(models.Model):
 
     def process_bot(self):
         if not self.finished and getattr(self, f"player_{self.current_player}_id") is None: 
-            if self._add_to_column(VierGewinntBot.get_best_move(board=self.game, botnr=self.current_player, maxdepth=3)):
+            if self._add_to_column(VierGewinntBot.get_best_move(board=self.game, botnr=self.current_player, maxdepth=4)):
                 w = self._get_winner()
                 if w:
                     self.winner_id = "BOT"

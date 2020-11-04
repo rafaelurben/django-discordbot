@@ -1,30 +1,26 @@
-from discord.ext import commands
-from discord import Embed, Activity, ActivityType, Status, Streaming, Game, HTTPException
-from discordbot.botmodules import serverdata, apis
-
 from datetime import datetime
 
+from discord import (Activity, ActivityType, Embed, Game, HTTPException,
+                     Status, Streaming)
+from discord.ext import commands
 from rich.traceback import install as install_traceback
+
+from discordbot.botmodules import apis, serverdata
+
 install_traceback()
 from rich.pretty import install as install_pretty
+
 install_pretty()
 
 #
 
 extensionfolder = "discordbot.botcmds"
 extensions = ['basic','support','moderation','games','help','channels','music','owneronly','converters','embedgenerator']
-sudo_ids = [285832847409807360]
-sudo_seperator = "--sudo"
 all_prefixes = ["/","!","$",".","-",">","?"]
 
 # Own functions
 
-def get_prefix(client, message):
-    if message.guild:
-        prefixes = ['/']
-    else:
-        prefixes = all_prefixes
-    return commands.when_mentioned_or(*prefixes)(client, message)
+
 
 # Own classes
 
@@ -37,32 +33,7 @@ class MyContext(commands.Context):
         if self.guild is not None:
             self.data = serverdata.Server.getServer(self.guild.id)
 
-            ## manupulate ctx for --sudo arg
-            if int(self.author.id) in sudo_ids:
-                if sudo_seperator in self.message.content:
-                    try:
-                        msg = self.message.content
-                        newmsg = msg.split(sudo_seperator)[0]
-                        newmember = msg.split(sudo_seperator)[1]
-                        self.message.content = newmsg
-                        userid = int(newmember.strip().lstrip("<@").lstrip("!").lstrip("&").rstrip(">") if "<@" in newmember and ">" in newmember else newmember)
-                        member = self.guild.get_member(userid)
-                        self.author = member
-                        self.message.author = member
-                    except (ValueError, ) as e:
-                        print("[SUDO] - Kein gültiges Mitglied: "+newmember+" - Fehler: "+e)
-
             self.database = serverdata.DjangoConnection(self.author, self.guild)
-
-    def getargs(self, raiserrorwhenmissing=False):
-        msg = self.message.content.split(" ")
-        calledbymention = bool(self.prefix in all_prefixes)
-        length = len(self.args)+len(self.kwargs)-int(calledbymention)
-        txt = (" ".join(msg[length::])) if len(msg) > length else ""
-        newmessage = txt.split(sudo_seperator)[0].strip()
-        if not newmessage and raiserrorwhenmissing:
-            raise commands.BadArgument(message="Du hast ein wichtiges Argument vergessen!")
-        return newmessage
 
     async def sendEmbed(self, *args, message:str="", **kwargs):
         return await self.send(message, embed=self.getEmbed(*args, **kwargs))
@@ -84,15 +55,28 @@ class MyContext(commands.Context):
                 EMBED.set_author(name=authorname)
         return EMBED
 
-    async def tick(self, value):
+    async def tick(self, value=True):
         emoji = '\N{WHITE HEAVY CHECK MARK}' if value else '\N{CROSS MARK}'
         try:
             await self.message.add_reaction(emoji)
         except HTTPException:
             pass
 
+    async def send_help(self):
+        await self.invoke(self.bot.get_command("help"), self.invoked_with)
+
 
 class MyBot(commands.Bot):
+    def __init__(self, **kwargs):
+        super().__init__(self.get_command_prefix, **kwargs)
+
+    def get_command_prefix(self, client, message):
+        if message.guild:
+            prefixes = ['/']
+        else:
+            prefixes = all_prefixes
+        return commands.when_mentioned_or(*prefixes)(client, message)
+        
     async def get_context(self, message, *, cls=MyContext):
         return await super().get_context(message, cls=cls)
 
@@ -122,22 +106,22 @@ class MyBot(commands.Bot):
 # create Bot
 
 bot = MyBot(
-    command_prefix=get_prefix,
     description='Das ist eine Beschreibung!',
     case_insensitive=True,
     activity=Activity(type=ActivityType.listening, name="/help"),
-    status=Status.idle
+    status=Status.idle,
+    help_command=None,
 )
 
 # Events
 
 from discordbot.botevents import setup
+
 setup(bot)
 
 @bot.event
 async def on_ready():
     print(f"[Bot] - Logged in as '{bot.user.name}' - '{bot.user.id}'")
-    bot.remove_command('help')
     for extension in extensions:
         try:
             bot.load_extension(extensionfolder+"."+extension)
@@ -145,18 +129,9 @@ async def on_ready():
             pass
     return
 
-@bot.event
-async def on_command(ctx):
-    #print(f"[Command] - '{ctx.message.content}' von '{ctx.author.name}#{str(ctx.author.discriminator)}'")
-    if ctx.guild is not None:
-        try:
-            await ctx.message.delete()
-        except:
-            pass
-
 # Hidden commands
 
-@bot.command(aliases=["."])
+@bot.command(aliases=["."], hidden=True)
 async def destroy(ctx):
     pass
 
@@ -165,9 +140,6 @@ async def destroy(ctx):
 
 def run(TOKEN):
     bot.run(TOKEN, bot=True, reconnect=True)
-
-
-import sys, os
 
 if __name__ == "__main__":
     print("[Bot] - You must run this bot via your manage.py file: python3.8 manage.py run-discorbot")

@@ -16,8 +16,8 @@ class Converters(commands.Cog):
         help="Benutze /morse <Text> und erhalte den Text in Morsecode oder umgekehrt",
         usage="<Morsecode | Nachricht>"
         )
-    async def morse(self, ctx):
-        message = ctx.getargs()
+    async def morse(self, ctx, text: str, *args):
+        message = " ".join([text]+args)
         if message.replace("-","").replace("_","").replace(".","").replace(" ","") == "":
             text = converters.morse_decrypt(message.replace("_","-"))
             morse = message

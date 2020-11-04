@@ -123,7 +123,7 @@ class VierGewinntBot():
     # Recursive
 
     @classmethod
-    def _get_best_move(self, board, playernr=2, level=0, alpha=-100000000000, beta=100000000000, botnr=2, maxdepth=2):
+    def _get_best_move(self, board, playernr=2, level=0, alpha=-100000000000, beta=100000000000, botnr=2, maxdepth=4):
         scores = []
         for i in range(len(board[0])):
             if board[0][i] == 0:
@@ -161,7 +161,7 @@ class VierGewinntBot():
     # Main
 
     @classmethod
-    def get_best_move(self, board, botnr=2, maxdepth=3):
+    def get_best_move(self, board, botnr=2, maxdepth=4):
         scores = []
         for i in tqdm(range(len(board[0])), desc="[VierGewinntBot]"):
             if board[0][i] == 0:

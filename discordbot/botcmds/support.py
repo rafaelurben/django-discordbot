@@ -15,8 +15,8 @@ class Support(commands.Cog):
         usage="<Member> [Grund]"
         )
     @commands.guild_only()
-    async def report(self, ctx, member: Member):
-        Grund = ctx.getargs()
+    async def report(self, ctx, member: Member, *args):
+        Grund = " ".join(args)
         Grund = Grund if Grund.rstrip(" ") else "Leer"
         await ctx.database.createReport(dc_user=member, reason=Grund)
         await ctx.sendEmbed(title="Benutzer Gemeldet", color=self.color, fields=[("Betroffener",member.mention),("Grund",Grund)])

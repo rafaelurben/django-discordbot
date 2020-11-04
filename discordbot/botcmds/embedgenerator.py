@@ -20,8 +20,8 @@ class EmbedGenerator(commands.Cog):
         help="Benutze /createembed für Erklärungen.",
         usage="<Titel> [Argumente]"
     )
-    async def createembed(self, ctx):
-        text = ctx.getargs()
+    async def createembed(self, ctx, *args):
+        text = " ".join(args)
         if not text:
             await ctx.sendEmbed(title="Embed-Creator", description=f"""
 Verwendung des Chat-Embed-Generators:
