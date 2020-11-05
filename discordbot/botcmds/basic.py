@@ -62,7 +62,7 @@ class Basic(commands.Cog):
         usage="<Text>"
         )
     async def say(self, ctx, text:str, *args):
-        txt = " ".join([text]+args)
+        txt = " ".join((text,)+args)
         await ctx.send(txt)
 
     @commands.command(
@@ -76,14 +76,19 @@ class Basic(commands.Cog):
         await ctx.sendEmbed(title="Avatar", fields=[("Benutzer",user.mention),("Standardavatar",user.default_avatar)], thumbnailurl=str(user.avatar_url))
 
 
-    # @commands.command(
-    #     brief="Spamt jemanden voll",
-    #     description="Schickt jemandem ein paar Nachrichten",
-    #     aliases=["troll"],
-    #     help="Benutze /spam <User> und der Bot spamt den User voll",
-    #     usage="<Kanal/Benutzer> [Anzahl<=10] [Text]"
-    #     )
-    # async def spam(self,ctx,what: typing.Union[TextChannel,User],anzahl:int=5,*args):
+    @commands.command(
+        brief="Spamt jemanden voll",
+        description="Schickt jemandem ein paar Nachrichten",
+        aliases=["troll"],
+        help="Benutze /spam <User> und der Bot spamt den User voll",
+        usage="<Kanal/Benutzer> [Anzahl<=10] [Text]"
+        )
+    async def spam(self,ctx, what:typing.Union[TextChannel,User]=None, anzahl:int=5, *args):
+        await ctx.invoke(ctx.bot.get_command("regeln"))
+        await ctx.sendEmbed(
+            title="Spam verboten",
+            description="Schon vergessen, dass Spam laut Regeln verboten ist? Hast du wirklich gedacht, ich breche meine eigenen Regeln?"
+        )
     #     anzahl = int(anzahl if anzahl <= 10 else 10)
     #     text = str(" ".join(str(i) for i in args))
     #     empty = not (len(text) > 0 and not text == (" "*len(text)))
@@ -103,7 +108,7 @@ class Basic(commands.Cog):
         usage="<Kanal/Benutzer> [Anzahl<100] [Text]"
         )
     async def regeln(self,ctx):
-        EMBED = Embed(title="Regeln", color=self.color, description="Das Nichtbeachten der Regeln kann mit einem Ban, Kick oder Mute bestraft werden!")
+        EMBED = self.bot.getEmbed(title="Regeln", color=self.color, description="Das Nichtbeachten der Regeln kann mit einem Ban, Kick oder Mute bestraft werden!")
         owner = self.bot.get_user(self.bot.owner_id)
         if owner:
             EMBED.set_footer(text=f'Besitzer dieses Bots ist {owner.name}#{owner.discriminator}',icon_url=owner.avatar_url)

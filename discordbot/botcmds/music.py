@@ -94,7 +94,7 @@ class Music(commands.Cog):
         )
         @commands.guild_only()
         async def meme(self, ctx, search:str="windows-xp-error", *args):
-            search = " ".join([search]+args)
+            search = " ".join((search,)+args)
             filenames = list(os.listdir(memespath))
 
             result = process.extractOne(search, filenames)
@@ -125,7 +125,7 @@ class Music(commands.Cog):
         )
         @commands.guild_only()
         async def play(self, ctx, search: str, *args):
-            url = " ".join([search]+args)
+            url = " ".join((search,)+args)
             async with ctx.typing():
                 player = list(await ctx.data.musicqueue.createYoutubePlayer(url, loop=self.bot.loop))[0]
                 if ctx.voice_client.is_playing():
@@ -146,7 +146,7 @@ class Music(commands.Cog):
         )
         @commands.guild_only()
         async def stream(self, ctx, search: str, *args):
-            url = " ".join([search]+args)
+            url = " ".join((search,)+args)
             if url in radios:
                 url = radios[url]
 

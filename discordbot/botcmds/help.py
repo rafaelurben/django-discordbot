@@ -15,8 +15,8 @@ class Help(commands.Cog):
         usage="[Kategorie/Befehl/Befehl Unterbefehl]"
     )
     async def help(self, ctx, search:str='*', subsearch:str=None):
-        help_embed = ctx.getEmbed(title='Hilfe', color=self.color, inline=False)
-        help_embed.description = "Syntax: `/help [Kategorie/Befehl/Befehl Unterbefehl]`\n\n"
+        description = ["Syntax: `/help [Kategorie/Befehl/Befehl Unterbefehl]`\n\n"]
+        fields = []
 
         def addCog(cog, include_subcommands=False, hide_cogs=["Owneronly"]):
             if not cog.qualified_name in hide_cogs:
@@ -33,22 +33,14 @@ class Help(commands.Cog):
                     elif not cmd.parent:
                         commands_list += f'**{cmd.name}** - *{cmd.brief}*\n'
 
-                help_embed.add_field(
-                    name=cog.qualified_name,
-                    value=commands_list+'\u200b',
-                    inline=False
-                )
+                fields.append((cog.qualified_name, commands_list+'\u200b'))
 
         def addGroup(grp):
             commands_list = ''
             for cmd in grp.commands:
                 commands_list += f'**{cmd.name}** - *{cmd.brief}*\n'
 
-            help_embed.add_field(
-                name="Unterbefehle von "+grp.qualified_name,
-                value=commands_list+'\u200b',
-                inline=False
-            )
+            fields.append(("Unterbefehle von "+grp.qualified_name, commands_list+'\u200b'))
 
         def addCommand(cmd):
             if not cmd.hidden:
@@ -77,7 +69,7 @@ class Help(commands.Cog):
                     help_text += f'Alias: `{"`, `".join(cmd.aliases)}`'
 
                 help_text += f'\nSyntax: `/{cmdname}{" "+cmd.usage if cmd.usage is not None else ""}`\n\u200b'
-                help_embed.description += help_text
+                description[0] += help_text
     
 
         cogs = dict((k.lower(), v) for k, v in dict(self.bot.cogs).items())
@@ -96,8 +88,13 @@ class Help(commands.Cog):
         else:
             raise commands.BadArgument("Ungültige(r) Kategorie/Befehl.\nBenutze den `/help` Befehl um alle Kategorien und Befehle zu sehen.")
 
-        await ctx.send(embed=help_embed)
-        return
+        await ctx.sendEmbed(
+            title='Hilfe',
+            color=self.color,
+            inline=False,
+            description=description[0],
+            fields=fields,
+        )
 
 
 def setup(bot):

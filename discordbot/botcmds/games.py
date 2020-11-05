@@ -3,7 +3,7 @@
 from asgiref.sync import sync_to_async
 
 from discord.ext import commands, tasks
-from discord import Embed, utils, PermissionOverwrite, Color, NotFound, User
+from discord import Embed, utils, PermissionOverwrite, Color, NotFound, User, Member
 
 from django.utils import timezone
 
@@ -15,6 +15,7 @@ from discordbot.botmodules.serverdata import DjangoConnection
 import requests
 import os
 import asyncio
+import typing
 
 #####
 
@@ -32,6 +33,8 @@ YES = '✅'
 NO = '❌'
 
 DELETE = '❌'
+
+RUNNING = '⏰'
 
 AMONGUS_TRACKER_INSTALL = """Konfiguriere den Tracker mit folgenden Daten:
                 
@@ -493,6 +496,7 @@ class Games(commands.Cog):
         aliases=['au'],
         usage="<Unterbefehl> [Argumente]"
     )
+    @commands.guild_only()
     async def amongus(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send_help()
@@ -620,7 +624,6 @@ class Games(commands.Cog):
         help="Um eine Liste aller VierGewinnt-Befehle zu erhalten, gib den Command ohne Argumente ein.",
         usage="<Unterbefehl> [Argumente]"
     )
-    @commands.guild_only()
     async def viergewinnt(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send_help()
@@ -632,25 +635,28 @@ class Games(commands.Cog):
         usage="<Mitglied> [Breite (4-10)] [Höhe (4-14)]",
     )
     @commands.guild_only()
-    async def viergewinnt_duell(self, ctx, user:User, width:int=7, height:int=6):
-        msg = await ctx.sendEmbed(
-            title="Vier Gewinnt",
-            color=0x0078D7,
-            description=f"Duell gegen {user.mention} wird erstellt..."
-        )
+    async def viergewinnt_duell(self, ctx, user: typing.Union[User, Member], width: int = 7, height: int = 6):
+        if not (user == ctx.author or user.bot):
+            msg = await ctx.sendEmbed(
+                title="Vier Gewinnt",
+                color=0x0078D7,
+                description=f"Duell gegen {user.mention} wird erstellt..."
+            )
 
-        game = await ctx.database._createVierGewinntGame(channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=str(user.id), width=width, height=height)
+            game = await ctx.database._createVierGewinntGame(channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=str(user.id), width=width, height=height)
 
-        embed = ctx.bot.getEmbed(
-            title=f"Vier Gewinnt (#{game.pk})",
-            color=0x0078D7,
-            description=game.get_description()
-        )
+            embed = ctx.bot.getEmbed(
+                title=f"Vier Gewinnt (#{game.pk})",
+                color=0x0078D7,
+                description=game.get_description()
+            )
 
-        await msg.edit(embed=embed)
+            await msg.edit(embed=embed)
 
-        for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
-            await msg.add_reaction(emoji)
+            for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
+                await msg.add_reaction(emoji)
+        else:
+            raise commands.BadArgument("Du kannst nicht gegen dich selbst oder Bots spielen... Wenn du einen Bot herausfordern möchtest, benutze bitte `/viergewinnt challenge`!")
 
     @viergewinnt.command(
         name="challenge",
@@ -677,6 +683,105 @@ class Games(commands.Cog):
 
         for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
             await msg.add_reaction(emoji)
+
+    @viergewinnt.command(
+        name="games",
+        brief="Liste alle deine Spiele auf",
+        aliases=[],
+        usage="[User]",
+    )
+    async def viergewinnt_games(self, ctx, user: typing.Union[User, Member] = None):
+        user = user or ctx.author
+        challenges = await ctx.database._listVierGewinntGames(player_1_id=str(user.id), player_2_id__isnull=True)
+        duels_created = await ctx.database._listVierGewinntGames(player_1_id=str(user.id), player_2_id__isnull=False)
+        duels_invited = await ctx.database._listVierGewinntGames(player_2_id=str(user.id))
+        challengetext = "" if challenges else "Du hast noch keine Challenges erstellt."
+        for g in challenges:
+            challengetext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
+                              if g.finished else RUNNING) + f" ({ g.id }) BOT " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
+        duelscreatedtext = "" if duels_created else "Du hast noch keine Duelle erstellt."
+        for g in duels_created:
+            duelscreatedtext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO) 
+                                 if g.finished else RUNNING) + f" ({ g.id }) <@{ g.player_2_id }> " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
+        duelsinvitedtext = "" if duels_invited else "Du wurdest noch nicht zu einem Duell eingeladen/re."
+        for g in duels_invited:
+            duelsinvitedtext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
+                                 if g.finished else RUNNING) + f" ({ g.id }) <@{ g.player_1_id }> " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
+
+        await ctx.sendEmbed(
+            title="VierGewinnt Spiele", 
+            description="Vier Gewinnt Spiele von "+user.mention, 
+            color=0x0078D7, 
+            inline=False,
+            fields=[
+                ("Challenges", challengetext+"\u200b"), 
+                ("Erstellte Spiele", duelscreatedtext+"\u200b"), 
+                ("Eingeladene Spiele", duelsinvitedtext+"\u200b")
+            ]
+        )
+
+    @viergewinnt.command(
+        name="reset",
+        brief="Lösche alle deine Challenges und Duelle",
+        description="Hinweis: Dies beinhaltet nicht Duelle, welche ein anderer Spieler gestartet hat!",
+        aliases=[],
+        usage="[NUR BESITZER: Spieler]"
+    )
+    async def viergewinnt_reset(self, ctx, user: typing.Union[User, Member] = None):
+        user = ctx.author if user is None else user if await self.bot.is_owner(user) else ctx.author
+        await ctx.database._delete(await ctx.database._listVierGewinntGames(get_as_queryset=True, player_1_id=str(user.id)))
+        await ctx.sendEmbed(
+            title="VierGewinnt Spiele gelöscht!",
+            description=f"Die VierGewinnt Spiele von { user.mention } wurden erfolgreich gelöscht!",
+            color=0x0078D7, 
+        )
+
+    @viergewinnt.command(
+        name="resume",
+        brief="Fahre ein Duell oder eine Challenge fort",
+        description="Wenn du die Nachricht eines Duells oder einer Challenge nicht mehr finden kannst, kannst du sie mit diesem Befehl noch einmal senden lassen.",
+        aliases=["continue", "wiederaufnehmen", "resend"],
+        usage="<ID>",
+        help="Um die ID herauszufinden, benutze `/viergewinnt games`",
+    )
+    async def viergewinnt_resume(self, ctx, id: int):
+        if await ctx.database._hasVierGewinntGame(id=id):
+            game = await ctx.database._getVierGewinntGame(id=id)
+
+            msg = await ctx.sendEmbed(
+                title=f"Vier Gewinnt (#{game.pk})",
+                color=0x0078D7,
+                description=game.get_description()
+            )
+
+            oldchannelid = int(game.channel_id)
+            oldmessageid = int(game.message_id)
+
+            game.channel_id = msg.channel.id
+            game.message_id = msg.id
+
+            await ctx.database._save(game)
+
+            if not game.finished:
+                for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
+                    await msg.add_reaction(emoji)
+
+                try:
+                    channel = self.bot.get_channel(oldchannelid) or await self.bot.fetch_channel(oldchannelid)
+                    message = await channel.fetch_message(oldmessageid)
+
+                    await message.edit(embed=self.bot.getEmbed(
+                        title=f"Vier Gewinnt (#{game.pk})",
+                        color=0x0078D7,
+                        description="Dieses Spiel wurde in einer neuen Nachricht weitergeführt!\n\n"+game.get_description()
+                    ))
+
+                    for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
+                        await message.remove_reaction(emoji, self.bot.user)
+                except NotFound as e:
+                    print(e)
+        else:
+            raise commands.BadArgument("Ein Spiel mit dieser ID konnte nicht gefunden werden! Möglicherweise gelöscht?")
 
 def setup(bot):
     bot.add_cog(Games(bot))

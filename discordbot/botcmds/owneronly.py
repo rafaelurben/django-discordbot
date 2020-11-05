@@ -3,6 +3,8 @@ from discord import Game, Streaming, Activity, ActivityType, Status, Member, Use
 
 from discordbot.bot import extensions, extensionfolder
 
+import typing
+
 CONVERTERS = {
     Member: commands.MemberConverter,
     User: commands.UserConverter,
@@ -121,8 +123,7 @@ class Owneronly(commands.Cog):
         help="Falls Unterbefehle verwendet werden, benutze bitte befehl_unterbefehl als Command",
     )
     @commands.is_owner()
-    @commands.guild_only()
-    async def sudo(self, ctx, member: Member, command: str, *args):
+    async def sudo(self, ctx, member: typing.Union[Member, User], command: str, *args):
         _command = command.replace("_", " ")
         cmd = self.bot.get_command(_command)
         ctx.message.content = ctx.prefix+_command+ctx.message.content.split(command)[1]

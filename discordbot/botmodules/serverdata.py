@@ -294,6 +294,14 @@ class DjangoConnection():
 
     @classmethod
     @sync_to_async
+    def _listVierGewinntGames(self, get_as_queryset: bool=False, **kwargs):
+        if get_as_queryset:
+            return VierGewinntGame.objects.filter(**kwargs).order_by("id")
+        else:
+            return list(VierGewinntGame.objects.filter(**kwargs).order_by("id"))
+
+    @classmethod
+    @sync_to_async
     def _createVierGewinntGame(self, **kwargs):
         return VierGewinntGame.create(**kwargs)
 

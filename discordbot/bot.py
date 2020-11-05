@@ -29,11 +29,10 @@ class MyContext(commands.Context):
         super().__init__(*args, **kwargs)
 
         self.apis = apis
+        self.database = serverdata.DjangoConnection(self.author, self.guild)
 
         if self.guild is not None:
             self.data = serverdata.Server.getServer(self.guild.id)
-
-            self.database = serverdata.DjangoConnection(self.author, self.guild)
 
     async def sendEmbed(self, *args, message:str="", **kwargs):
         return await self.send(message, embed=self.getEmbed(*args, **kwargs))
@@ -45,7 +44,7 @@ class MyContext(commands.Context):
         if timestamp:
             EMBED.timestamp = datetime.utcnow() if timestamp is True else timestamp
         for field in fields:
-            EMBED.add_field(name=field[0], value=field[1], inline=bool(field[2] if len(field) > 2 else inline))
+            EMBED.add_field(name=field[0], value=(field[1][:1018]+" [...]" if len(field[1]) > 1024 else field[1]), inline=bool(field[2] if len(field) > 2 else inline))
         if thumbnailurl:
             EMBED.set_thumbnail(url=thumbnailurl.strip())
         if authorname:
@@ -91,7 +90,7 @@ class MyBot(commands.Bot):
         if timestamp:
             EMBED.timestamp = datetime.utcnow() if timestamp is True else timestamp
         for field in fields:
-            EMBED.add_field(name=field[0], value=field[1], inline=bool(
+            EMBED.add_field(name=field[0], value=(field[1][:1018]+" [...]" if len(field[1]) > 1024 else field[1]), inline=bool(
                 field[2] if len(field) > 2 else inline))
         if thumbnailurl:
             EMBED.set_thumbnail(url=thumbnailurl.strip())

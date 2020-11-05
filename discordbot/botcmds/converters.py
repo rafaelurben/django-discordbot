@@ -11,15 +11,14 @@ class Converters(commands.Cog):
 
     @commands.command(
         brief="Wandle Morsecode um",
-        description="Wandle Morsecode um",
         aliases=["mors","morsecode"],
         help="Benutze /morse <Text> und erhalte den Text in Morsecode oder umgekehrt",
         usage="<Morsecode | Nachricht>"
         )
     async def morse(self, ctx, text: str, *args):
-        message = " ".join([text]+args)
-        if message.replace("-","").replace("_","").replace(".","").replace(" ","") == "":
-            text = converters.morse_decrypt(message.replace("_","-"))
+        message = " ".join((text,)+args)
+        if message.replace("-", "").replace("_", "").replace(".", "").replace("|", "").replace(" ", "") == "":
+            text = converters.morse_decrypt(message.replace("_","-").replace(" | ", "  "))
             morse = message
         else:
             text = message

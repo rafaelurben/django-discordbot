@@ -42,7 +42,10 @@ def setup(bot):
             print("[Command] - Bei '"+ctx.message.content+"' von '"+ctx.message.author.name+"#"+ctx.message.author.discriminator+"' ist ein Fehler aufgetreten: "+str(error))
         
         if not error == "":
-            EMBED.add_field(name="Text", value=str(error) if len(str(error)) < 1024 else str(error)[-1024:-1])
+            if "OperationalError: (2006, 'MySQL server has gone away')" in str(error):
+                EMBED.add_field(name="Info", value="Leider konnte die Verbindung zur Datenbank nicht hergestellt werden. Bitte versuche es später noch einmal!")
+            else:
+                EMBED.add_field(name="Error", value=str(error) if len(str(error)) < 1024 else str(error)[-1024:-1])
         EMBED.add_field(name="Nachricht", value=ctx.message.content, inline=False)
         await ctx.send(embed=EMBED)
 
