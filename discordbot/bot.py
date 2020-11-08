@@ -1,26 +1,32 @@
+import typing
 from datetime import datetime
 
-from discord import (Activity, ActivityType, Embed, Game, HTTPException,
-                     Status, Streaming)
+from discord import Activity, ActivityType, Embed, Game, HTTPException, Status, Member, User, TextChannel, VoiceChannel, Role, Invite, Game, Emoji, PartialEmoji, Colour
 from discord.ext import commands
-from rich.traceback import install as install_traceback
 
 from discordbot.botmodules import apis, serverdata
+from discordbot.config import EXTENSIONFOLDER, EXTENSIONS, ALL_PREFIXES, MAIN_PREFIXES
 
+
+from rich.traceback import install as install_traceback
 install_traceback()
 from rich.pretty import install as install_pretty
-
 install_pretty()
 
 #
 
-extensionfolder = "discordbot.botcmds"
-extensions = ['basic','support','moderation','games','help','channels','music','owneronly','converters','embedgenerator']
-all_prefixes = ["/","!","$",".","-",">","?"]
-
-# Own functions
-
-
+CONVERTERS = {
+    Member: commands.MemberConverter,
+    User: commands.UserConverter,
+    TextChannel: commands.TextChannelConverter,
+    VoiceChannel: commands.VoiceChannelConverter,
+    Role: commands.RoleConverter,
+    Invite: commands.InviteConverter,
+    Game: commands.GameConverter,
+    Emoji: commands.EmojiConverter,
+    PartialEmoji: commands.PartialEmojiConverter,
+    Colour: commands.ColourConverter
+}
 
 # Own classes
 
@@ -64,6 +70,26 @@ class MyContext(commands.Context):
     async def send_help(self):
         await self.invoke(self.bot.get_command("help"), self.invoked_with)
 
+    async def invoke_as(self, member, command, *args):
+        _command = command.replace("_", " ")
+        cmd = self.bot.get_command(_command)
+        if cmd is None:
+            raise commands.BadArgument(f"Der Befehl `{ _command }` wurde nicht gefunden! \nPS: Benutze im Command bitte kein Prefix!")
+        self.message.content = self.prefix+_command+self.message.content.split(command)[1]
+        self.message.author = member
+        self.author = member
+        self.database = type(self.database)(self.author, self.guild)
+        annotations = cmd.callback.__annotations__
+        annotations.pop("return", None)
+        arguments = list(args)
+        for i, cls in enumerate(annotations.values()):
+            if len(arguments) > i:
+                if cls in CONVERTERS:
+                    arguments[i] = await CONVERTERS[cls]().convert(self, arguments[i])
+                else:
+                    arguments[i] = cls(arguments[i])
+        await self.invoke(cmd, *arguments)
+
 
 class MyBot(commands.Bot):
     def __init__(self, **kwargs):
@@ -71,9 +97,9 @@ class MyBot(commands.Bot):
 
     def get_command_prefix(self, client, message):
         if message.guild:
-            prefixes = ['/']
+            prefixes = MAIN_PREFIXES
         else:
-            prefixes = all_prefixes
+            prefixes = ALL_PREFIXES
         return commands.when_mentioned_or(*prefixes)(client, message)
         
     async def get_context(self, message, *, cls=MyContext):
@@ -121,20 +147,13 @@ setup(bot)
 @bot.event
 async def on_ready():
     print(f"[Bot] - Logged in as '{bot.user.name}' - '{bot.user.id}'")
-    for extension in extensions:
+    for extension in EXTENSIONS:
         try:
-            bot.load_extension(extensionfolder+"."+extension)
+            bot.load_extension(EXTENSIONFOLDER+"."+extension)
         except commands.errors.ExtensionAlreadyLoaded:
             pass
     return
-
-# Hidden commands
-
-@bot.command(aliases=["."], hidden=True)
-async def destroy(ctx):
-    pass
-
-
+    
 # Start
 
 def run(TOKEN):

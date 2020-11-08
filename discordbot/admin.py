@@ -111,4 +111,16 @@ class AmongUsGameAdmin(admin.ModelAdmin):
     def has_add_permission(self, request, obj=None):
         return False
 
-admin.site.register(VierGewinntGame)
+@admin.register(VierGewinntGame)
+class VierGewinntAdmin(admin.ModelAdmin):
+    list_display = ('id', 'player_1_id', 'player_2_id', 'finished', 'winner_id', 'time_edited', 'time_created')
+    ordering = ('id',)
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    fields = ('get_description',)
+    readonly_fields = ('get_description',)

@@ -150,7 +150,7 @@ class Server():
 
 ### NEW
 
-from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AmongUsGame, VierGewinntGame
+from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AmongUsGame, VierGewinntGame, BotPermission
 
 class DjangoConnection():
     def __init__(self, dc_user, dc_guild):
@@ -237,6 +237,28 @@ class DjangoConnection():
         else:
             user = await self.fetch_user(dc_user)
             return await self._getReports(server, user=user, **kwargs)
+
+    # Remote
+
+    @classmethod
+    @sync_to_async
+    def _has_permissions(self, **kwargs):
+        return BotPermission.objects.filter(**kwargs).exists()
+
+    @classmethod
+    @sync_to_async
+    def _delete_permissions(self, **kwargs):
+        BotPermission.objects.filter(**kwargs).delete()
+
+    @classmethod
+    @sync_to_async
+    def _create_permissions(self, **kwargs):
+        return BotPermission.objects.create(**kwargs)
+
+    @classmethod
+    @sync_to_async
+    def _list_permissions(self, **kwargs):
+        return list(BotPermission.objects.filter(**kwargs))
 
     # AmongUs
 

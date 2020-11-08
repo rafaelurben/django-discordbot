@@ -399,6 +399,7 @@ class VierGewinntGame(models.Model):
 
     def get_description(self):
         return self._get_game_info()+"\n\n"+self._get_players()+"\n\n"+self._get_gameboard()
+    get_description.short_description = "Game"
 
     # Get
 
@@ -512,5 +513,13 @@ class VierGewinntGame(models.Model):
     class Meta:
         verbose_name = 'VierGewinnt Game'
         verbose_name_plural = 'VierGewinnt Games'
+
+    objects = models.Manager()
+
+
+class BotPermission(models.Model):
+    id_1 = models.CharField("ID 1", max_length=32)
+    id_2 = models.CharField("ID 2", max_length=32)
+    typ = models.CharField("Typ", max_length=32)
 
     objects = models.Manager()

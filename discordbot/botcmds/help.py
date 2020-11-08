@@ -38,38 +38,40 @@ class Help(commands.Cog):
         def addGroup(grp):
             commands_list = ''
             for cmd in grp.commands:
-                commands_list += f'**{cmd.name}** - *{cmd.brief}*\n'
+                if not cmd.hidden:
+                    commands_list += f'**{cmd.name}** - *{cmd.brief}*\n'
 
             fields.append(("Unterbefehle von "+grp.qualified_name, commands_list+'\u200b'))
 
         def addCommand(cmd):
-            if not cmd.hidden:
-                if isinstance(cmd, commands.Group):
-                    if subsearch:
-                        subcmds = dict((alias, cmd) for cmd in cmd.commands for alias in cmd.aliases+[cmd.name.lower()])
-                        if subsearch in subcmds:
-                            addCommand(subcmds[subsearch])
-                            return
-                    addGroup(cmd)
+            if cmd.hidden:
+                description[0] += "\n*Dies ist ein versteckter Befehl*\n\n"
+            if isinstance(cmd, commands.Group):
+                if subsearch:
+                    subcmds = dict((alias, cmd) for cmd in cmd.commands for alias in cmd.aliases+[cmd.name.lower()])
+                    if subsearch in subcmds:
+                        addCommand(subcmds[subsearch])
+                        return
+                addGroup(cmd)
 
-                cmdname = cmd.name
-                currentcmd = cmd
-                while currentcmd.parent:
-                    currentcmd = currentcmd.parent
-                    cmdname = currentcmd.name + " " + cmdname
+            cmdname = cmd.name
+            currentcmd = cmd
+            while currentcmd.parent:
+                currentcmd = currentcmd.parent
+                cmdname = currentcmd.name + " " + cmdname
 
-                cmdbrief = " - "+cmd.brief if cmd.brief else ""
-                help_text = f'```/{cmdname}{cmdbrief}```\n' 
+            cmdbrief = " - "+cmd.brief if cmd.brief else ""
+            help_text = f'```/{cmdname}{cmdbrief}```\n' 
 
-                if cmd.description:
-                    help_text += f'Beschrieb: `{cmd.description}`\n\n'
-                if cmd.help:
-                    help_text += f'Hilfe: `{cmd.help}`\n\n'
-                if cmd.aliases:
-                    help_text += f'Alias: `{"`, `".join(cmd.aliases)}`'
+            if cmd.description:
+                help_text += f'Beschrieb: `{cmd.description}`\n\n'
+            if cmd.help:
+                help_text += f'Hilfe: `{cmd.help}`\n\n'
+            if cmd.aliases:
+                help_text += f'Alias: `{"`, `".join(cmd.aliases)}`'
 
-                help_text += f'\nSyntax: `/{cmdname}{" "+cmd.usage if cmd.usage is not None else ""}`\n\u200b'
-                description[0] += help_text
+            help_text += f'\nSyntax: `/{cmdname}{" "+cmd.usage if cmd.usage is not None else ""}`\n\u200b'
+            description[0] += help_text
     
 
         cogs = dict((k.lower(), v) for k, v in dict(self.bot.cogs).items())

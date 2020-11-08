@@ -1,6 +1,7 @@
 from discord.ext import commands
-from discord import Embed, Member, User
+from discord import Embed, Member, User, Webhook
 import time
+import typing
 
 class Support(commands.Cog):
     def __init__(self, bot):
@@ -47,8 +48,117 @@ class Support(commands.Cog):
             await ctx.send(embed=EMBED)
         return
 
+    
+    @commands.group(
+        brief="Lasse jemanden Commands für dich ausführen",
+        description="Überlasse jemanden, Commands als dich auszuführen.",
+        usage="<Unterbefehl> <Argumente>",
+    )
+    async def remote(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help()
 
 
+    @remote.command(
+        name="allow",
+        brief="Füge einen erlaubten Spieler hinzu",
+        aliases=["+", "add"],
+        usage="<Member>",
+        help="Dieser Befehl kann ziemlich viel Mist machen, vorallem wenn du Rechte hast! Also pass auf!",
+    )
+    async def remote_allow(self, ctx, member: typing.Union[Member, User]):
+        if not await ctx.database._has_permissions(id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission"):
+            await ctx.database._create_permissions(id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission")
+            await ctx.sendEmbed(
+                title="Benutzer erlaubt",
+                color=self.color,
+                description=member.mention+" darf nun Befehle für dich ausführen!"
+            )
+        else:
+            raise commands.BadArgument("Dieser Benutzer darf bereits Befehle für dich ausführen!")
+
+    @remote.command(
+        name="allowraw",
+        brief="Füge eine erlaubte ID hinzu",
+        aliases=["allowwebhook", "++", "addraw"],
+        usage="<ID>",
+        help="Dies wird gebraucht, um Webhooks die Erlaubnis zu geben, Commands für dich auszuführen. Dieser Befehl kann ziemlich viel Mist machen, vorallem wenn du Rechte hast! Also pass auf!",
+        hidden=True,
+    )
+    async def remote_allowraw(self, ctx, id: int):
+        if not await ctx.database._has_permissions(id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission"):
+            await ctx.database._create_permissions(id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission")
+            await ctx.sendEmbed(
+                title="ID erlaubt",
+                color=self.color,
+                description=str(id)+" darf nun Befehle für dich ausführen!"
+            )
+        else:
+            raise commands.BadArgument("Diese ID darf bereits Befehle für dich ausführen!")
+
+    @remote.command(
+        name="disallow",
+        brief="Entferne einen erlaubten Spieler",
+        aliases=["-", "remove"],
+        usage="<Member>",
+    )
+    async def remote_disallow(self, ctx, member: typing.Union[Member, User]):
+        if await ctx.database._has_permissions(id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission"):
+            await ctx.database._delete_permissions(id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission")
+            await ctx.sendEmbed(
+                title="Benutzer verboten", 
+                color=self.color,
+                description=member.mention+" darf nun nicht mehr Befehle für dich ausführen!"
+            )
+        else:
+            raise commands.BadArgument("Dieser Benutzer steht nicht auf deiner Liste!")
+
+    @remote.command(
+        name="disallowraw",
+        brief="Entferne eine erlaubte ID",
+        aliases=["--", "removeraw"],
+        usage="<Member>",
+        help="Dies wird gebraucht, um Webhooks die Erlaubnis zu geben, Commands für dich auszuführen.",
+        hidden=True,
+    )
+    async def remote_disallowraw(self, ctx, id: int):
+        if await ctx.database._has_permissions(id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission"):
+            await ctx.database._delete_permissions(id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission")
+            await ctx.sendEmbed(
+                title="ID verboten",
+                color=self.color,
+                description=str(id)+" darf nun nicht mehr Befehle für dich ausführen!"
+            )
+        else:
+            raise commands.BadArgument(
+                "Diese ID steht nicht auf deiner Liste!")
+
+    @remote.command(
+        name="list",
+        brief="Liste die erlaubten Spieler auf",
+        aliases=[],
+        usage=""
+    )
+    async def remote_list(self, ctx):
+        perms = await ctx.database._list_permissions(id_1=str(ctx.author.id), typ="remote_permission")
+        await ctx.sendEmbed(
+            title="Benutzerliste",
+            color=self.color,
+            description="Folgende Benutzer/IDs dürfen Befehle für dich ausführen:\n\n"+"\n".join([f"<@{i.id_2}> ({i.id_2})" for i in perms])
+        )
+
+    @remote.command(
+        name="run",
+        brief="Führe einen Befehl als jemand anderes aus",
+        aliases=[],
+        usage="<Member> <Command> [Argumente]",
+        help="Falls Unterbefehle verwendet werden, benutze bitte befehl_unterbefehl als Command",
+    )
+    async def remote_run(self, ctx, member: typing.Union[Member, User], command: str, *args):
+        if await ctx.database._has_permissions(id_1=str(member.id), id_2=str(ctx.author.id), typ="remote_permission") or await ctx.database._has_permissions(id_1=str(member.id), id_2=str(ctx.message.webhook_id), typ="remote_permission"):
+            await ctx.invoke_as(member, command, *args)
+        else:
+            raise commands.BadArgument("Du darfs keine Befehle als diesen Benutzer ausführen!   ")
 
 def setup(bot):
     bot.add_cog(Support(bot))

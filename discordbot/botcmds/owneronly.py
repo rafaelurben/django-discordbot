@@ -1,22 +1,9 @@
 from discord.ext import commands
 from discord import Game, Streaming, Activity, ActivityType, Status, Member, User, TextChannel, VoiceChannel, Role, Invite, Game, Emoji, PartialEmoji, Colour
 
-from discordbot.bot import extensions, extensionfolder
+from discordbot.config import EXTENSIONS, EXTENSIONFOLDER
 
 import typing
-
-CONVERTERS = {
-    Member: commands.MemberConverter,
-    User: commands.UserConverter,
-    TextChannel: commands.TextChannelConverter,
-    VoiceChannel: commands.VoiceChannelConverter,
-    Role: commands.RoleConverter,
-    Invite: commands.InviteConverter,
-    Game: commands.GameConverter,
-    Emoji: commands.EmojiConverter,
-    PartialEmoji: commands.PartialEmojiConverter,
-    Colour: commands.ColourConverter
-}
 
 class Owneronly(commands.Cog):
     def __init__(self, bot):
@@ -31,26 +18,26 @@ class Owneronly(commands.Cog):
     async def reload(self, ctx, extension:str=None):
         msg = await ctx.sendEmbed(title="Reload", color=self.color, fields=[("Status", "Reloading")])
         EMBED = ctx.getEmbed(title="Reload", color=self.color, fields=[])
-        if extension in extensions:
+        if extension in EXTENSIONS:
             print("[Bot] - Reloading"+extension+"...")
             try:
-                self.bot.unload_extension(extensionfolder+"."+extension)
+                self.bot.unload_extension(EXTENSIONFOLDER+"."+extension)
             except:
                 pass
             try:
-                self.bot.load_extension(extensionfolder+"."+extension)
+                self.bot.load_extension(EXTENSIONFOLDER+"."+extension)
             except commands.errors.ExtensionAlreadyLoaded:
                 pass
             EMBED.add_field(name="Status",value="Reloaded category "+extension.upper()+"!")
         else:
-            print("[Bot] - Reloading all extensions...")
-            for extension in extensions:
+            print("[Bot] - Reloading all EXTENSIONS...")
+            for extension in EXTENSIONS:
                 try:
-                    self.bot.unload_extension(extensionfolder+"."+extension)
+                    self.bot.unload_extension(EXTENSIONFOLDER+"."+extension)
                 except:
                     pass
                 try:
-                    self.bot.load_extension(extensionfolder+"."+extension)
+                    self.bot.load_extension(EXTENSIONFOLDER+"."+extension)
                 except commands.errors.ExtensionAlreadyLoaded:
                     pass
             EMBED.add_field(name="Status",value="Reloaded all categories!")
@@ -116,6 +103,7 @@ class Owneronly(commands.Cog):
             """
             )
 
+
     @commands.command(
         brief="Führe einen Command als jemanden anderes aus",
         usage="<Member> <Command> [Argumente]",
@@ -124,22 +112,7 @@ class Owneronly(commands.Cog):
     )
     @commands.is_owner()
     async def sudo(self, ctx, member: typing.Union[Member, User], command: str, *args):
-        _command = command.replace("_", " ")
-        cmd = self.bot.get_command(_command)
-        ctx.message.content = ctx.prefix+_command+ctx.message.content.split(command)[1]
-        ctx.message.author = member
-        ctx.author = member
-        ctx.database = type(ctx.database)(ctx.author, ctx.guild)
-        annotations = cmd.callback.__annotations__
-        annotations.pop("return", None)
-        arguments = list(args)
-        for i, cls in enumerate(annotations.values()):
-            if len(arguments) > i:
-                if cls in CONVERTERS:
-                    arguments[i] = await CONVERTERS[cls]().convert(ctx, arguments[i])
-                else:
-                    arguments[i] = cls(arguments[i])
-        await ctx.invoke(cmd, *arguments)
+        await ctx.invoke_as(member, command, *args)
 
 def setup(bot):
     bot.add_cog(Owneronly(bot))
