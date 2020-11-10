@@ -6,9 +6,11 @@ from django.urls import reverse
 from django.utils import timezone
 
 from discordbot.botmodules.bots import VierGewinntBot
+from discordbot.botmodules.parser import HTMLCleaner
 
 import time
 import uuid
+import re
 
 # Helper functions
 
@@ -516,10 +518,59 @@ class VierGewinntGame(models.Model):
 
     objects = models.Manager()
 
+# Support
+
+## BotPermission (for Remote)
 
 class BotPermission(models.Model):
     id_1 = models.CharField("ID 1", max_length=32)
     id_2 = models.CharField("ID 2", max_length=32)
     typ = models.CharField("Typ", max_length=32)
+
+    objects = models.Manager()
+
+# Notifier
+
+NOTIFIER_WHERE_TYPES = [
+    ("channel", "Kanal"),
+    ("member",  "Mitglied (DM)"),
+]
+
+NOTIFIER_FREQUENCIES = [
+    ("hour",    "Stündlich"),
+    ("minute",  "Minütlich"),
+]
+
+class NotifierSub(models.Model):
+    name = models.CharField("Name", default="Unbenannte Mitteilung", max_length=50)
+
+    where_type = models.CharField("Wohin: Typ", max_length=8, choices=NOTIFIER_WHERE_TYPES)
+    where_id = models.CharField("Wohin: ID", max_length=32)
+
+    frequency = models.CharField("Häufigkeit", max_length=8, choices=NOTIFIER_FREQUENCIES)
+
+    url = models.URLField("URL")
+
+    must_contain_regex = models.CharField("Muss Regex enthalten", default="", blank=True, max_length=32)
+
+    last_hash = models.CharField("Letzter Hash", max_length=32, editable=False)
+
+    def process(self):
+        data = HTMLCleaner.from_url(self.url)
+        thishash = str(hash(data))
+        if thishash != str(self.last_hash):
+            self.last_hash = thishash
+            if (not self.must_contain_regex) or re.search(self.must_contain_regex, data):
+                return data
+            return True
+        return False
+
+    def __str__(self):
+        return self.name
+    __str__.short_description = "NotifierSub"
+
+    class Meta:
+        verbose_name = 'NotifierSub'
+        verbose_name_plural = 'NotifierSubs'
 
     objects = models.Manager()

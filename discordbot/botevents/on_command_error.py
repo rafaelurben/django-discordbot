@@ -49,5 +49,5 @@ def setup(bot):
         EMBED.add_field(name="Nachricht", value=ctx.message.content, inline=False)
         await ctx.send(embed=EMBED)
 
-        if type(error) in [commands.CommandError]:
+        if isinstance(error, commands.CommandError):
             raise error

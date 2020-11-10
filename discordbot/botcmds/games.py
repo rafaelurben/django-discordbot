@@ -87,8 +87,6 @@ class Games(commands.Cog):
                 except:
                     pass
 
-                await message.remove_reaction(emoji, payload.member)
-
                 game = await DjangoConnection._getAmongUsGame(text_message_id=payload.message_id)
 
                 if emoji == DELETE:
@@ -436,7 +434,7 @@ class Games(commands.Cog):
                         mention = None
 
                     description = AMONGUS_PLAYER_COLORS[c][2] + " " + c.upper() + " "
-                    description += ("- " + (mention if mention else "") + (" ("+i["name"]+")" if i["name"] else "")) if mention or i["name"] else ""
+                    description += ("- " + (mention if mention else "") + (" ('"+i["name"]+"')" if i["name"] else "")) if mention or i["name"] else ""
 
                     if i["exists"]:
                         if i["alive"]:
@@ -463,20 +461,17 @@ class Games(commands.Cog):
                         In meeting - { inmeeting }
 
                         Spieler:
-
-                        {ALIVE} [Lebend]
-
-                        { t_alive }
-
-                        {DEAD} [Tot]
-
-                        { t_dead }
-
-                        {UNKNOWN} [Unbekannt]
-
-                        { t_unknown }
-                    """),
+                    \u200b"""),
                     color=0xFEDE29,
+                    inline=False,
+                    fields=[
+                        (f"{ALIVE} Lebend",      
+                         '\u200b\n'+t_alive+'\n\u200b'),
+                        (f"{DEAD} Tot",
+                         '\u200b\n'+t_dead+'\n\u200b'),
+                        (f"{UNKNOWN} Unbekannt",  
+                         '\u200b\n'+t_unknown+'\n\u200b'),
+                    ]
                 )
                 await msg.edit(embed=embed)
             except Exception as e:

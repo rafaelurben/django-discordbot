@@ -2,6 +2,8 @@ from discord.ext import commands
 from discord import Embed
 import random
 
+from discordbot.config import HELP_HIDDEN_COGS
+
 class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -18,8 +20,8 @@ class Help(commands.Cog):
         description = ["Syntax: `/help [Kategorie/Befehl/Befehl Unterbefehl]`\n\n"]
         fields = []
 
-        def addCog(cog, include_subcommands=False, hide_cogs=["Owneronly"]):
-            if not cog.qualified_name in hide_cogs:
+        def addCog(cog, include_subcommands=False, hide_cogs=HELP_HIDDEN_COGS):
+            if not cog.qualified_name.lower() in hide_cogs:
                 commands_list = ''
                 for cmd in cog.walk_commands():
                     if include_subcommands:

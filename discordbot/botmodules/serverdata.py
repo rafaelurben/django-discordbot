@@ -8,9 +8,9 @@ from discord.ext import commands
 
 from asgiref.sync import sync_to_async
 
-#####
+from discordbot.config import FILESPATH, FFMPEG_OPTIONS
 
-filespath = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "botfiles")
+#####
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -22,7 +22,7 @@ color = 0xee00ff
 class YouTubePlayer(PCMVolumeTransformer):
     _ytdl = youtube_dl.YoutubeDL({
         'format': 'bestaudio/best',
-        'outtmpl': os.path.join(filespath,'youtube','%(extractor)s-%(id)s-%(title)s.%(ext)s'),
+        'outtmpl': os.path.join(FILESPATH,'youtube','%(extractor)s-%(id)s-%(title)s.%(ext)s'),
         'restrictfilenames': True,
         'noplaylist': True,
         'nocheckcertificate': True,
@@ -31,17 +31,12 @@ class YouTubePlayer(PCMVolumeTransformer):
         'quiet': True,
         'no_warnings': True,
         'default_search': 'auto',
-        'ffmpeg_location': filespath,
+        'ffmpeg_location': FILESPATH,
         'source_address': '0.0.0.0' # bind to ipv4 since ipv6 addresses cause issues sometimes
     })
 
-    _ffmpeg_options = {
-        'options': '-vn',
-        'executable': os.path.join(filespath,"ffmpeg.exe")
-    }
-
     def __init__(self, filename, *, queue, data, volume=0.5):
-        source = FFmpegPCMAudio(filename, **self._ffmpeg_options)
+        source = FFmpegPCMAudio(filename, **FFMPEG_OPTIONS)
 
         super().__init__(source, volume)
 
@@ -65,7 +60,8 @@ class YouTubePlayer(PCMVolumeTransformer):
         fields = [("Ansehen/Anhören", "[Hier klicken]("+self.link+")")]
         if self.duration:
             fields.append(("Dauer", str(int(self.duration/60))+"min "+str(int(self.duration%60))+"s"))
-        fields.append(("Status", status, False))
+        if status:
+            fields.append(("Status", status, False))
         await ctx.sendEmbed(
             title=self.title,
             description=((self.description if len(self.description) < 100 else self.description[0:100]+"...") if isinstance(self.description, str) else "Keine Beschreibung gefunden"),
@@ -76,10 +72,13 @@ class YouTubePlayer(PCMVolumeTransformer):
             authorurl=self.uploader_url if self.uploader_url else None,
         )
 
+    def getinfo(self):
+        return f"[{self.title}]({self.link})"
+
     def play(self, ctx):
-        if ctx.voice_client and ctx.voice_client.is_playing():
-            ctx.voice_client.stop()
-        elif ctx.voice_client:
+        if ctx.voice_client:
+            if ctx.voice_client.is_playing():
+                ctx.voice_client.stop()
             ctx.voice_client.play(self, after=lambda e: self.queue.playNext(ctx))
 
 
@@ -92,7 +91,7 @@ class YouTubePlayer(PCMVolumeTransformer):
             data = data['entries'][0]
 
         filename = data['url'] if stream else self._ytdl.prepare_filename(data)
-        return [self(queue=queue, filename=filename, data=data)]
+        return self(queue=queue, filename=filename, data=data)
 
 
 class MusicQueue():
@@ -118,16 +117,20 @@ class MusicQueue():
     async def sendNowPlaying(self, ctx):
         if ctx.voice_client and ctx.voice_client.source:
             if isinstance(ctx.voice_client.source, YouTubePlayer):
-                await ctx.voice_client.source.send(ctx, status="Wird jetzt gespielt!")
+                await ctx.voice_client.source.send(ctx, status="Wird aktuell gespielt.")
         else:
             raise commands.CommandError("Aktuell wird nichts abgespielt.")
 
+    async def sendQueue(self, ctx):
+        description = "\n".join(i.getinfo() for i in self._players)
+        await ctx.sendEmbed(
+            title="Warteschlange",
+            color=color,
+            description=description,
+        )
+
     async def createYoutubePlayer(self, search, loop=None, stream=False):
-        players = await YouTubePlayer.from_url(search, queue=self, loop=loop, stream=stream)
-        if not stream:
-            for player in players:
-                self.addPlayer(player)
-        return players
+        return await YouTubePlayer.from_url(search, queue=self, loop=loop, stream=stream)
 
 
 
@@ -150,7 +153,7 @@ class Server():
 
 ### NEW
 
-from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AmongUsGame, VierGewinntGame, BotPermission
+from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AmongUsGame, VierGewinntGame, BotPermission, NotifierSub
 
 class DjangoConnection():
     def __init__(self, dc_user, dc_guild):
@@ -327,3 +330,19 @@ class DjangoConnection():
     def _createVierGewinntGame(self, **kwargs):
         return VierGewinntGame.create(**kwargs)
 
+    # NotifierSub
+
+    @classmethod
+    @sync_to_async
+    def _getNotifierSub(self, **kwargs):
+        return NotifierSub.objects.get(**kwargs)
+
+    @classmethod
+    @sync_to_async
+    def _listNotifierSubs(self, **kwargs):
+        return list(NotifierSub.objects.filter(**kwargs))
+
+    @classmethod
+    @sync_to_async
+    def _createNotifierSub(self, **kwargs):
+        return NotifierSub.objects.create(**kwargs)

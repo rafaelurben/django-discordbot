@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Server, User, Report, Member, AmongUsGame, AMONGUS_PLAYER_COLORS, VierGewinntGame
+from .models import Server, User, Report, Member, AmongUsGame, AMONGUS_PLAYER_COLORS, VierGewinntGame, NotifierSub
 
 # Register your models here.
 
@@ -124,3 +124,5 @@ class VierGewinntAdmin(admin.ModelAdmin):
 
     fields = ('get_description',)
     readonly_fields = ('get_description',)
+
+admin.site.register(NotifierSub)

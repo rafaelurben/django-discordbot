@@ -3,30 +3,13 @@ from discord import Embed, User, Member, opus, FFmpegPCMAudio, PCMVolumeTransfor
 from fuzzywuzzy import process
 import os
 
+from discordbot.config import RADIOS, FFMPEG_OPTIONS, FILESPATH, MEMESPATH, DEBUG
+
 ###
 
 def chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
-
-###
-
-filespath = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "botfiles")
-memespath = os.path.join(filespath, "memes")
-
-# opus.load_opus('opus')
-
-ffmpeg_options = {
-    'options': '-vn',
-    'executable': os.path.join(filespath,"ffmpeg.exe")
-}
-
-radios = {
-    "swisspop": "http://www.radioswisspop.ch/live/mp3.m3u",
-    "nrjbern":  "https://energybern.ice.infomaniak.ch/energybern-high.mp3",
-}
-
-
 
 #####
 
@@ -37,16 +20,7 @@ class Music(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
-        if os.getenv("DEBUG", False):
-            filespath = os.path.join(os.path.dirname(
-                os.path.dirname(os.path.realpath(__file__))), "botfiles")
-            memespath = os.path.join(filespath, "memes")
-
-            ffmpeg_options = {
-                'options': '-vn',
-                'executable': os.path.join(filespath, "ffmpeg.exe")
-            }
-
+        if DEBUG:
             # *Grillenzirpen* nach Streamende
             if before.channel and before.self_stream and not after.self_stream:
                 voice_client = before.channel.guild.voice_client
@@ -57,23 +31,34 @@ class Music(commands.Cog):
                     await voice_client.move_to(before.channel)
 
                 player = PCMVolumeTransformer(FFmpegPCMAudio(
-                    source=os.path.join(memespath, "grillenzirpen.wav"), **ffmpeg_options))
+                    source=os.path.join(MEMESPATH, "grillenzirpen.wav"), **FFMPEG_OPTIONS))
                 voice_client.play(player, after=lambda e: print(
                     '[Music] - Error: %s' % e) if e else None)
 
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if DEBUG:
+            # *Help I need somebody Help*
+            if "i need somebody" in message.content.lower() and message.guild and message.author.voice:
+                voice_client = message.guild.voice_client
+                if voice_client is None:
+                    voice_client = await message.author.voice.channel.connect()
+                elif voice_client.is_playing():
+                    voice_client.stop()
+                    await voice_client.move_to(message.author.voice.channel)
 
-    # sich in Entwicklung befindende Befehle
-    if os.getenv("DEBUG", False):
+                player = PCMVolumeTransformer(FFmpegPCMAudio(
+                    source=os.path.join(MEMESPATH, "help-i-need-somebody.wav"), **FFMPEG_OPTIONS))
+                voice_client.play(player, after=lambda e: print(
+                    '[Music] - Error: %s' % e) if e else None)
+
+    if DEBUG:
         @commands.command(
-            name='memes',
             brief='Liste alle Memes auf',
             description='Liste alle Memes auf',
-            aliases=[],
-            help="Benutze /memes um eine Liste aller Memes zu erhalten.",
-            usage=""
         )
         async def memes(self, ctx):
-            filenames = list(os.listdir(memespath))
+            filenames = list(os.listdir(MEMESPATH))
             chunklist = list(chunks(filenames, 25))
             for chunkindex in range(len(chunklist)):
                 chunk = chunklist[chunkindex]
@@ -85,17 +70,14 @@ class Music(commands.Cog):
 
 
         @commands.command(
-            name='meme',
             brief='Spiele Memes',
             description='Spiele Memes von einer Audiodatei!',
-            aliases=[],
-            help="Benutze /meme <Name> um einen Meme abzuspielen.",
             usage="<Suche>"
         )
         @commands.guild_only()
         async def meme(self, ctx, search:str="windows-xp-error", *args):
             search = " ".join((search,)+args)
-            filenames = list(os.listdir(memespath))
+            filenames = list(os.listdir(MEMESPATH))
 
             result = process.extractOne(search, filenames)
             filename = result[0]
@@ -103,7 +85,7 @@ class Music(commands.Cog):
             print("[Music] - Suchergebnis:", search, result)
 
             if result[1] >= 75:
-                player = PCMVolumeTransformer(FFmpegPCMAudio(source=os.path.join(memespath, filename), **ffmpeg_options))
+                player = PCMVolumeTransformer(FFmpegPCMAudio(source=os.path.join(MEMESPATH, filename), **FFMPEG_OPTIONS))
 
                 if ctx.voice_client.is_playing():
                     ctx.voice_client.stop()
@@ -116,18 +98,16 @@ class Music(commands.Cog):
         # from example
 
         @commands.command(
-            name='play',
             brief='Spiele Musik',
             description='Spiele Musik von Youtube und anderen Plattformen!',
             aliases=["yt","youtube"],
-            help="Benutze /play <Url/Suche> um einen Song abzuspielen.",
             usage="<Url/Suche>"
         )
         @commands.guild_only()
         async def play(self, ctx, search: str, *args):
             url = " ".join((search,)+args)
             async with ctx.typing():
-                player = list(await ctx.data.musicqueue.createYoutubePlayer(url, loop=self.bot.loop))[0]
+                player = await ctx.data.musicqueue.createYoutubePlayer(url, loop=self.bot.loop)
                 if ctx.voice_client.is_playing():
                     ctx.data.musicqueue.addPlayer(player)
                     await player.send(ctx, status="Song zur Playlist hinzugefügt!")
@@ -141,17 +121,16 @@ class Music(commands.Cog):
             brief='Streame einen Stream',
             description='Streame einen Stream von Twitch oder YouTube',
             aliases=[],
-            help="Benutze /stream <Url/Suche> den einen Stream zu streamen.",
             usage="<Url/Suche>"
         )
         @commands.guild_only()
         async def stream(self, ctx, search: str, *args):
             url = " ".join((search,)+args)
-            if url in radios:
-                url = radios[url]
+            if url in RADIOS:
+                url = RADIOS[url]
 
             async with ctx.typing():
-                player = list(await ctx.data.musicqueue.createYoutubePlayer(url, loop=self.bot.loop, stream=True))[0]
+                player = await ctx.data.musicqueue.createYoutubePlayer(url, loop=self.bot.loop, stream=True)
 
                 if ctx.voice_client.is_playing():
                     ctx.voice_client.stop()
@@ -160,24 +139,25 @@ class Music(commands.Cog):
                 await player.send(ctx, "Stream wird direkt wiedergegeben!")
 
         @commands.command(
-            name='nowplaying',
             brief='Was läuft gerade?',
             description='Sieh, was gerade läuft',
             aliases=["np"],
-            help="Benutze /np um zu sehen, was aktuell läuft.",
-            usage=""
         )
         @commands.guild_only()
         async def nowplaying(self, ctx):
             await ctx.data.musicqueue.sendNowPlaying(ctx)
 
         @commands.command(
-            name='pause',
+            brief="Warteschlange abrufen",
+            description='Sieh, was als nächstes läuft',
+        )
+        @commands.guild_only()
+        async def queue(self, ctx):
+            await ctx.data.musicqueue.sendQueue(ctx)
+
+        @commands.command(
             brief='Pausiere Musik',
             description='Pausiere die aktuelle Musik',
-            aliases=[],
-            help="Benutze /pause um die aktuelle Musik zu pausieren.",
-            usage=""
         )
         @commands.guild_only()
         async def pause(self, ctx):
@@ -186,12 +166,8 @@ class Music(commands.Cog):
                 await ctx.sendEmbed(title="Musik pausiert", color=self.color)
 
         @commands.command(
-            name='resume',
             brief='Führe Musik fort',
             description='Hebe die Pausierung der aktuellen Musik auf.',
-            aliases=[],
-            help="Benutze /resume um die aktuelle Musik weiter zu spielen.",
-            usage=""
         )
         @commands.guild_only()
         async def resume(self, ctx):
@@ -200,51 +176,43 @@ class Music(commands.Cog):
                 await ctx.sendEmbed(title="Pausierung aufgehoben", color=self.color)
 
         @commands.command(
-            name='skip',
             brief='Überspringe Musik',
             description='Überspringe aktuelle Musik',
-            aliases=[],
-            help="Benutze /skip um den aktuellen Song zu überspringen.",
             usage="<Url/Suche>"
         )
         @commands.guild_only()
         async def skip(self, ctx):
             async with ctx.typing():
-                if ctx.voice_client is not None and ctx.voice_client.is_playing():
+                if ctx.voice_client.is_playing():
                     ctx.voice_client.stop()
-                if ctx.voice_client is not None:
-                    ctx.data.musicqueue.playNext(ctx)
-                    await ctx.data.musicqueue.sendNowPlaying(ctx)
-                else:
-                    raise commands.CommandError(message="Es wurde gar kein Song abgespielt.")
+                ctx.data.musicqueue.playNext(ctx)
+                await ctx.data.musicqueue.sendNowPlaying(ctx)
 
         @commands.command(
-            name='volume',
             brief='Ändere die Lautstärke',
             description='Ändere die Lautstärke des Bots',
             aliases=["vol"],
-            help="Benutze /volume <1-200> um die Lautstärke des Bots zu ändern.",
             usage="<1-200>"
         )
         @commands.guild_only()
-        async def volume(self, ctx, newvolume: float):
-            if ctx.voice_client is None:
-                raise commands.CommandError("Der Bot ist nicht mit einem Sprachkanal verbunden.")
-            elif not ctx.voice_client.source:
+        async def volume(self, ctx, newvolume: float = None):
+            if not ctx.voice_client.source:
                 raise commands.CommandError("Der Bot scheint aktuell nichts abzuspielen.")
 
             oldvolume = ctx.voice_client.source.volume * 100
-            ctx.voice_client.source.volume = newvolume / 100
 
-            await ctx.sendEmbed(title="Lautstärke geändert", color=self.color, fields=[("Zuvor", str(oldvolume)+"%"),("Jetzt",str(newvolume)+"%")])
+            if newvolume is None:
+                await ctx.sendEmbed(title="Lautstärke", color=self.color, fields=[("Aktuell", str(oldvolume)+"%")])
+            else:
+                ctx.voice_client.source.volume = newvolume / 100
+
+                await ctx.sendEmbed(title="Lautstärke geändert", color=self.color, fields=[("Zuvor", str(oldvolume)+"%"),("Jetzt",str(newvolume)+"%")])
 
         @commands.command(
-            name='stop',
             brief='Stoppe Musik',
             description='Stoppe Musik!',
             aliases=["die","leave","disconnect"],
             help="Benutze /stop um den Bot aus dem Sprachkanal zu entfernen.",
-            usage=""
         )
         @commands.guild_only()
         async def stop(self, ctx):
