@@ -163,8 +163,15 @@ class DjangoConnection():
         self._db_server = None
 
     @classmethod
+    def ensure_connection(self):
+        from django.db import connection, connections
+        if connection.connection and not connection.is_usable():
+            del connections._connections.default
+
+    @classmethod
     @sync_to_async
     def fetch_user(self, dc_user):
+        self.ensure_connection()
         if not DB_User.objects.filter(id=str(dc_user.id)).exists():
             user = DB_User.objects.create(id=str(dc_user.id), name=dc_user.name+"#"+dc_user.discriminator)
         else:
@@ -182,6 +189,7 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def fetch_server(self, dc_guild):
+        self.ensure_connection()
         if not DB_Server.objects.filter(id=str(dc_guild.id)).exists():
             server = DB_Server.objects.create(id=str(dc_guild.id), name=dc_guild.name)
         else:
@@ -199,6 +207,7 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _join_server(self, user, server):
+        self.ensure_connection()
         user.joinServer(server)
 
     # Basic Methods
@@ -206,11 +215,13 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _save(self, game):
+        self.ensure_connection()
         game.save()
 
     @classmethod
     @sync_to_async
     def _delete(self, game):
+        self.ensure_connection()
         game.delete()
 
     # Reports
@@ -218,6 +229,7 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _createReport(self, **kwargs):
+        self.ensure_connection()
         return DB_Report.objects.create(**kwargs)
 
     async def createReport(self, dc_user, reason:str=""):
@@ -231,6 +243,7 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _getReports(self, server, **kwargs):
+        self.ensure_connection()
         return server.getReports(**kwargs)
 
     async def getReports(self, dc_user=None, **kwargs):
@@ -246,21 +259,25 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _has_permissions(self, **kwargs):
+        self.ensure_connection()
         return BotPermission.objects.filter(**kwargs).exists()
 
     @classmethod
     @sync_to_async
     def _delete_permissions(self, **kwargs):
+        self.ensure_connection()
         BotPermission.objects.filter(**kwargs).delete()
 
     @classmethod
     @sync_to_async
     def _create_permissions(self, **kwargs):
+        self.ensure_connection()
         return BotPermission.objects.create(**kwargs)
 
     @classmethod
     @sync_to_async
     def _list_permissions(self, **kwargs):
+        self.ensure_connection()
         return list(BotPermission.objects.filter(**kwargs))
 
     # AmongUs
@@ -268,6 +285,7 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _getAmongUsGame(self, **kwargs):
+        self.ensure_connection()
         return AmongUsGame.objects.get(**kwargs)
 
     async def getAmongUsGame(self, **kwargs):
@@ -278,6 +296,7 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _hasAmongUsGame(self, **kwargs):
+        self.ensure_connection()
         return AmongUsGame.objects.filter(**kwargs).exists()
 
     async def hasAmongUsGame(self, **kwargs):
@@ -288,6 +307,7 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _createAmongUsGame(self, **kwargs):
+        self.ensure_connection()
         return AmongUsGame.objects.create(**kwargs)
 
     async def createAmongUsGame(self, **kwargs):
@@ -298,11 +318,13 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _setAmongUsUser(self, game: AmongUsGame, userid: int, color: str, save: bool = False):
+        self.ensure_connection()
         game.set_user(userid=userid, color=color, save=save)
 
     @classmethod
     @sync_to_async
     def _removeAmongUsUser(self, game: AmongUsGame, userid: int, save: bool = False):
+        self.ensure_connection()
         game.remove_user(userid=userid, save=save)
 
     # VierGewinnt
@@ -310,16 +332,19 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _getVierGewinntGame(self, **kwargs):
+        self.ensure_connection()
         return VierGewinntGame.objects.get(**kwargs)
 
     @classmethod
     @sync_to_async
     def _hasVierGewinntGame(self, **kwargs):
+        self.ensure_connection()
         return VierGewinntGame.objects.filter(**kwargs).exists()
 
     @classmethod
     @sync_to_async
     def _listVierGewinntGames(self, get_as_queryset: bool=False, **kwargs):
+        self.ensure_connection()
         if get_as_queryset:
             return VierGewinntGame.objects.filter(**kwargs).order_by("id")
         else:
@@ -328,6 +353,7 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _createVierGewinntGame(self, **kwargs):
+        self.ensure_connection()
         return VierGewinntGame.create(**kwargs)
 
     # NotifierSub
@@ -335,14 +361,17 @@ class DjangoConnection():
     @classmethod
     @sync_to_async
     def _getNotifierSub(self, **kwargs):
+        self.ensure_connection()
         return NotifierSub.objects.get(**kwargs)
 
     @classmethod
     @sync_to_async
     def _listNotifierSubs(self, **kwargs):
+        self.ensure_connection()
         return list(NotifierSub.objects.filter(**kwargs))
 
     @classmethod
     @sync_to_async
     def _createNotifierSub(self, **kwargs):
+        self.ensure_connection()
         return NotifierSub.objects.create(**kwargs)
