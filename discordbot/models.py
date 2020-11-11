@@ -1,23 +1,17 @@
 # pylint: disable=no-member, unsubscriptable-object
 
 from django.db import models
-from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 
 from discordbot.botmodules.bots import VierGewinntBot
 from discordbot.botmodules.parser import HTMLCleaner
 
+from discordbot.config import DOMAIN
+
 import time
 import uuid
 import re
-
-# Helper functions
-
-
-def get_discordbot_domain():
-    return getattr(settings, "DISCORDBOT_DOMAIN", None)
-
 
 # Basic
 
@@ -232,9 +226,8 @@ class AmongUsGame(models.Model):
 
     
     def get_tracker_url(self):
-        domain = get_discordbot_domain()
-        if domain:
-            return domain+reverse("discordbot:amongus-tracker-post")
+        if DOMAIN:
+            return DOMAIN+reverse("discordbot:amongus-tracker-post")
         else:
             return "Frage den Bot-Owner!"
 

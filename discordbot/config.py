@@ -1,30 +1,42 @@
 import os
+from django.conf import settings
 
-# Discordbot Config
+# Discordbot Configuration
+## Helper function
 
-ALLOW_BOTS = False
-ALLOW_WEBHOOKS = True
+def _s(name:str, default=None, prefix:str="DISCORDBOT_"):
+    return getattr(settings, prefix+name, os.getenv(prefix+name, default))
 
-ALL_PREFIXES = ["/", "!", "$", ".", "-", ">", "?"]
-MAIN_PREFIXES = ["/"]
+## Config
+
+DOMAIN = _s("DOMAIN", None)
+
+## Discordbot Config
+
+ALLOW_BOTS = _s("ALLOW_BOTS", False)
+ALLOW_WEBHOOKS = _s("ALLOW_WEBHOOKS", True)
+
+ALL_PREFIXES = _s("ALL_PREFIXES", ["/", "!", "$", ".", "-", ">", "?"])
+MAIN_PREFIXES = _s("MAIN_PREFIXES", ["/"])
 
 EXTENSIONFOLDER = "discordbot.botcmds"
-EXTENSIONS = ['basic','support','moderation','games','help','channels','music','owneronly','converters','embedgenerator','notifier']
+EXTENSIONS = _s("EXTENSIONS", ['basic','support','moderation','games','help','channels','music','owneronly','converters','embedgenerator','notifier'])
 
-# Help
+## Help
 
 HELP_HIDDEN_COGS = ["owneronly", "notifier"]
 
-# Music
+## Music
 
-DEBUG = os.getenv("DEBUG", False)
+DEBUG = _s("DEBUG", False)
 
-FILESPATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "botfiles")
-MEMESPATH = os.path.join(FILESPATH, "memes")
+FILESPATH = _s("FILESPATH", os.path.join(os.path.dirname(os.path.realpath(__file__)), "botfiles"))
+MEMESPATH = _s("MEMESPATH", os.path.join(FILESPATH, "memes"))
+FFMPEGPATH = _s("FMPEGPATH", os.path.join(FILESPATH, "ffmpeg.exe"))
 
 FFMPEG_OPTIONS = {
     'options': '-vn',
-    'executable': os.path.join(FILESPATH, "ffmpeg.exe")
+    'executable': FFMPEGPATH,
 }
 
 RADIOS = {
