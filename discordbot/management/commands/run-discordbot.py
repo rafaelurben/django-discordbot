@@ -15,6 +15,8 @@ class Command(BaseCommand):
 
         if "token" in options and options["token"]:
             run(options["token"])
+        elif 'DISCORDBOT_TOKEN' in os.environ:
+            run(os.environ.get('DISCORDBOT_TOKEN'))
         elif 'DISCORD_BOTTOKEN' in os.environ:
             run(os.environ.get('DISCORD_BOTTOKEN'))
         else:

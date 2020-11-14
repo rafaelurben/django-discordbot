@@ -109,6 +109,77 @@ class User(models.Model):
     
     objects = models.Manager()
 
+# Music
+
+class AudioSource(models.Model):
+    url_source = models.TextField("Url (Source)")
+
+    url_watch = models.URLField("Url (Watch)", default="", blank=True)
+    url_thumbnail = models.URLField("Url (Thumbnail)", default="", blank=True)
+
+    title = models.CharField("Title", max_length=256)
+    description = models.TextField("Description", max_length=2048)
+    duration = models.IntegerField("Duration", default=0, blank=True)
+
+    uploader_name = models.CharField("Uploader name", max_length=256, default="", blank=True)
+    uploader_url = models.URLField("Uploader Url", default="", blank=True)
+
+    @classmethod
+    def create_from_dict(self, data:dict):
+        if "formats" in data:
+            data.pop("formats")
+        if "thumbnails" in data:
+            data.pop("thumbnails")
+        print(data)
+
+        url_source = data.get('url', '')
+
+        url_watch = data.get('webpage_url', url_source)[:200]
+        url_thumbnail = data.get('thumbnail', "")[:200]
+
+        title = data.get('title', 'Unbekannter Titel')[:256]
+        description = data.get('description', "")[:2048]
+        duration = int(data.get('duration', 0))
+        
+        uploader_name = data.get('uploader', "")[:256]
+        uploader_url = data.get('uploader_url', "")[:200]
+        
+        return self.objects.create(
+            url_source=url_source,
+
+            url_watch=url_watch,
+            url_thumbnail=url_thumbnail,
+            
+            title=title,
+            description=description,
+            duration=duration,
+
+            uploader_name=uploader_name,
+            uploader_url=uploader_url,
+        )
+
+    @property
+    def clickable(self):
+        return f"[{self.title}]({self.url_watch})"
+
+    @property
+    def duration_calc(self):
+        h = str(self.duration//3600)
+        m = str(self.duration%3600//60)
+        s = str(self.duration%3600%60)
+        return f"{h}:{m}:{s}" if h != "0" else f"{m}:{s}"
+
+    def __str__(self):
+        return f"{self.title} [{self.duration_calc}]"
+    __str__.short_description = "Audio source"
+
+    class Meta():
+        verbose_name = "Audio source"
+        verbose_name_plural = "Audio sources"
+
+    objects = models.Manager()
+
+
 # Support
 
 class Report(models.Model):

@@ -3,7 +3,7 @@ from discord import Embed, User, Member, opus, FFmpegPCMAudio, PCMVolumeTransfor
 from fuzzywuzzy import process
 import os
 
-from discordbot.config import RADIOS, FFMPEG_OPTIONS, FILESPATH, MEMESPATH, DEBUG
+from discordbot.config import RADIOS, FFMPEG_OPTIONS, FILESPATH, MEMESPATH, MUSIC_MODULE
 
 ###
 
@@ -20,39 +20,43 @@ class Music(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
-        if DEBUG:
+        if MUSIC_MODULE:
             # *Grillenzirpen* nach Streamende
             if before.channel and before.self_stream and not after.self_stream:
-                voice_client = before.channel.guild.voice_client
-                if voice_client is None:
-                    voice_client = await before.channel.connect()
-                elif voice_client.is_playing():
-                    voice_client.stop()
-                    await voice_client.move_to(before.channel)
+                filepath = os.path.join(MEMESPATH, "grillenzirpen.wav")
+                if os.path.isfile(filepath):
+                    voice_client = before.channel.guild.voice_client
+                    if voice_client is None:
+                        voice_client = await before.channel.connect()
+                    elif voice_client.is_playing():
+                        voice_client.stop()
+                        await voice_client.move_to(before.channel)
 
-                player = PCMVolumeTransformer(FFmpegPCMAudio(
-                    source=os.path.join(MEMESPATH, "grillenzirpen.wav"), **FFMPEG_OPTIONS))
-                voice_client.play(player, after=lambda e: print(
-                    '[Music] - Error: %s' % e) if e else None)
+                    player = PCMVolumeTransformer(FFmpegPCMAudio(
+                        source=filepath, **FFMPEG_OPTIONS))
+                    voice_client.play(player, after=lambda e: print(
+                        '[Music] - Error: %s' % e) if e else None)
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if DEBUG:
+        if MUSIC_MODULE:
             # *Help I need somebody Help*
             if "i need somebody" in message.content.lower() and message.guild and message.author.voice:
-                voice_client = message.guild.voice_client
-                if voice_client is None:
-                    voice_client = await message.author.voice.channel.connect()
-                elif voice_client.is_playing():
-                    voice_client.stop()
-                    await voice_client.move_to(message.author.voice.channel)
+                filepath = os.path.join(MEMESPATH, "help-i-need-somebody.wav")
+                if os.path.isfile(filepath):
+                    voice_client = message.guild.voice_client
+                    if voice_client is None:
+                        voice_client = await message.author.voice.channel.connect()
+                    elif voice_client.is_playing():
+                        voice_client.stop()
+                        await voice_client.move_to(message.author.voice.channel)
 
-                player = PCMVolumeTransformer(FFmpegPCMAudio(
-                    source=os.path.join(MEMESPATH, "help-i-need-somebody.wav"), **FFMPEG_OPTIONS))
-                voice_client.play(player, after=lambda e: print(
-                    '[Music] - Error: %s' % e) if e else None)
+                    player = PCMVolumeTransformer(FFmpegPCMAudio(
+                        source=filepath, **FFMPEG_OPTIONS))
+                    voice_client.play(player, after=lambda e: print(
+                        '[Music] - Error: %s' % e) if e else None)
 
-    if DEBUG:
+    if MUSIC_MODULE:
         @commands.command(
             brief='Liste alle Memes auf',
             description='Liste alle Memes auf',
@@ -95,13 +99,11 @@ class Music(commands.Cog):
             else:
                 raise commands.BadArgument(message="Es wurden keine mit '{}' übereinstimmende Audiodatei gefunden.".format(search))
 
-        # from example
-
         @commands.command(
             brief='Spiele Musik',
             description='Spiele Musik von Youtube und anderen Plattformen!',
             aliases=["yt","youtube"],
-            usage="<Url/Suche>"
+            usage="<Url/YT Suche>"
         )
         @commands.guild_only()
         async def play(self, ctx, search: str, *args):
@@ -119,9 +121,9 @@ class Music(commands.Cog):
         @commands.command(
             name='stream',
             brief='Streame einen Stream',
-            description='Streame einen Stream von Twitch oder YouTube',
+            description='Streame einen Stream von YouTube oder anderen Plattformen',
             aliases=[],
-            usage="<Url/Suche>"
+            usage="<Url/YT Suche>"
         )
         @commands.guild_only()
         async def stream(self, ctx, search: str, *args):
@@ -139,7 +141,7 @@ class Music(commands.Cog):
                 await player.send(ctx, "Stream wird direkt wiedergegeben!")
 
         @commands.command(
-            brief='Was läuft gerade?',
+            brief='Aktueller Titel abrufen',
             description='Sieh, was gerade läuft',
             aliases=["np"],
         )

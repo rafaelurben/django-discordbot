@@ -698,7 +698,7 @@ class Games(commands.Cog):
         for g in duels_created:
             duelscreatedtext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO) 
                                  if g.finished else RUNNING) + f" ({ g.id }) <@{ g.player_2_id }> " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
-        duelsinvitedtext = "" if duels_invited else "Du wurdest noch nicht zu einem Duell eingeladen/re."
+        duelsinvitedtext = "" if duels_invited else "Du wurdest noch nicht zu einem Duell eingeladen."
         for g in duels_invited:
             duelsinvitedtext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
                                  if g.finished else RUNNING) + f" ({ g.id }) <@{ g.player_1_id }> " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
@@ -734,8 +734,8 @@ class Games(commands.Cog):
     @viergewinnt.command(
         name="resume",
         brief="Fahre ein Duell oder eine Challenge fort",
-        description="Wenn du die Nachricht eines Duells oder einer Challenge nicht mehr finden kannst, kannst du sie mit diesem Befehl noch einmal senden lassen.",
-        aliases=["continue", "wiederaufnehmen", "resend"],
+        description="Wenn du die Nachricht eines Duells oder einer Challenge nicht mehr finden kannst, kannst du sie mit diesem Befehl noch einmal senden lassen. Hiermit können auch Spiele von anderen Spielern angesehen werden.",
+        aliases=["continue", "wiederaufnehmen", "resend", "view"],
         usage="<ID>",
         help="Um die ID herauszufinden, benutze `/viergewinnt games`",
     )
@@ -743,38 +743,45 @@ class Games(commands.Cog):
         if await ctx.database._hasVierGewinntGame(id=id):
             game = await ctx.database._getVierGewinntGame(id=id)
 
-            msg = await ctx.sendEmbed(
-                title=f"Vier Gewinnt (#{game.pk})",
-                color=0x0078D7,
-                description=game.get_description()
-            )
+            if str(ctx.author.id) in [game.player_1_id, game.player_2_id]:
+                msg = await ctx.sendEmbed(
+                    title=f"Vier Gewinnt (#{game.pk})",
+                    color=0x0078D7,
+                    description=game.get_description()
+                )
 
-            oldchannelid = int(game.channel_id)
-            oldmessageid = int(game.message_id)
+                oldchannelid = int(game.channel_id)
+                oldmessageid = int(game.message_id)
 
-            game.channel_id = msg.channel.id
-            game.message_id = msg.id
+                game.channel_id = msg.channel.id
+                game.message_id = msg.id
 
-            await ctx.database._save(game)
+                await ctx.database._save(game)
 
-            if not game.finished:
-                for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
-                    await msg.add_reaction(emoji)
-
-                try:
-                    channel = self.bot.get_channel(oldchannelid) or await self.bot.fetch_channel(oldchannelid)
-                    message = await channel.fetch_message(oldmessageid)
-
-                    await message.edit(embed=self.bot.getEmbed(
-                        title=f"Vier Gewinnt (#{game.pk})",
-                        color=0x0078D7,
-                        description="Dieses Spiel wurde in einer neuen Nachricht weitergeführt!\n\n"+game.get_description()
-                    ))
-
+                if not game.finished:
                     for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
-                        await message.remove_reaction(emoji, self.bot.user)
-                except NotFound as e:
-                    print(e)
+                        await msg.add_reaction(emoji)
+
+                    try:
+                        channel = self.bot.get_channel(oldchannelid) or await self.bot.fetch_channel(oldchannelid)
+                        message = await channel.fetch_message(oldmessageid)
+
+                        await message.edit(embed=self.bot.getEmbed(
+                            title=f"Vier Gewinnt (#{game.pk})",
+                            color=0x0078D7,
+                            description="Dieses Spiel wurde in einer neuen Nachricht weitergeführt!\n\n"+game.get_description()
+                        ))
+
+                        for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
+                            await message.remove_reaction(emoji, self.bot.user)
+                    except NotFound as e:
+                        print(e)
+            else:
+                msg = await ctx.sendEmbed(
+                    title=f"Vier Gewinnt (#{game.pk} - Readonly)",
+                    color=0x0078D7,
+                    description=game.get_description()
+                )
         else:
             raise commands.BadArgument("Ein Spiel mit dieser ID konnte nicht gefunden werden! Möglicherweise gelöscht?")
 

@@ -9,6 +9,8 @@ def _s(name:str, default=None, prefix:str="DISCORDBOT_"):
 
 ## Config
 
+DEBUG = _s("DEBUG", False)
+
 DOMAIN = _s("DOMAIN", None)
 
 ## Discordbot Config
@@ -28,14 +30,15 @@ HELP_HIDDEN_COGS = ["owneronly", "notifier"]
 
 ## Music
 
-DEBUG = _s("DEBUG", False)
+MUSIC_MODULE = _s("MUSIC_MODULE", False)
 
 FILESPATH = _s("FILESPATH", os.path.join(os.path.dirname(os.path.realpath(__file__)), "botfiles"))
 MEMESPATH = _s("MEMESPATH", os.path.join(FILESPATH, "memes"))
-FFMPEGPATH = _s("FMPEGPATH", os.path.join(FILESPATH, "ffmpeg.exe"))
+FFMPEGPATH = _s("FFMPEGPATH", os.path.join(FILESPATH, "ffmpeg.exe"))
 
 FFMPEG_OPTIONS = {
     'options': '-vn',
+    'before_options': " -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
     'executable': FFMPEGPATH,
 }
 

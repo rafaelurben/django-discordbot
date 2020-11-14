@@ -40,8 +40,6 @@ class YouTubePlayer(PCMVolumeTransformer):
 
         super().__init__(source, volume)
 
-        data.pop("formats")
-
         self.queue = queue
 
         self.data = data
@@ -91,6 +89,7 @@ class YouTubePlayer(PCMVolumeTransformer):
             data = data['entries'][0]
 
         filename = data['url'] if stream else self._ytdl.prepare_filename(data)
+        #print(await DjangoConnection.getOrCreateAudioSourceFromDict(data))
         return self(queue=queue, filename=filename, data=data)
 
 
@@ -153,7 +152,7 @@ class Server():
 
 ### NEW
 
-from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AmongUsGame, VierGewinntGame, BotPermission, NotifierSub
+from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AudioSource, AmongUsGame, VierGewinntGame, BotPermission, NotifierSub
 
 class DjangoConnection():
     def __init__(self, dc_user, dc_guild):
@@ -223,6 +222,33 @@ class DjangoConnection():
     def _delete(self, game):
         self.ensure_connection()
         game.delete()
+
+    # Music
+
+    @classmethod
+    @sync_to_async
+    def _hasAudioSource(self, **kwargs):
+        self.ensure_connection()
+        return AudioSource.objects.filter(**kwargs).exists()
+
+    @classmethod
+    @sync_to_async
+    def _getAudioSource(self, **kwargs):
+        self.ensure_connection()
+        return AudioSource.objects.get(**kwargs)
+
+    @classmethod
+    @sync_to_async
+    def _createAudioSourceFromDict(self, data):
+        self.ensure_connection()
+        return AudioSource.create_from_dict(data)
+
+    @classmethod
+    async def getOrCreateAudioSourceFromDict(self, data):
+        if await self._hasAudioSource(url_watch=data.get("webpage_url", data.get("url", None))):
+            return await self._getAudioSource(url_watch=data.get("webpage_url", data.get("url")))
+        else:
+            return await self._createAudioSourceFromDict(data)
 
     # Reports
 

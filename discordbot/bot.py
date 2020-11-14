@@ -5,7 +5,7 @@ from discord import Activity, ActivityType, Embed, Game, HTTPException, Status, 
 from discord.ext import commands
 
 from discordbot.botmodules import apis, serverdata
-from discordbot.config import EXTENSIONFOLDER, EXTENSIONS, ALL_PREFIXES, MAIN_PREFIXES
+from discordbot.config import EXTENSIONFOLDER, EXTENSIONS, ALL_PREFIXES, MAIN_PREFIXES, DEBUG
 
 
 from rich.traceback import install as install_traceback
@@ -44,20 +44,20 @@ class MyContext(commands.Context):
         return await self.send(message, embed=self.getEmbed(*args, **kwargs))
 
     def getEmbed(self, title:str, description:str="", color:int=0x000000, fields:list=[], inline=True, thumbnailurl:str=None, authorurl:str="", authorname:str=None, footertext:str="Angefordert von USER", footerurl:str="AVATARURL", timestamp=False):
-        EMBED = Embed(title=title, description=description, color=color)
-        EMBED.set_footer(text=footertext.replace("USER", str(self.author.name+"#"+self.author.discriminator)), icon_url=footerurl.replace("AVATARURL", str(self.author.avatar_url)))
+        EMBED = Embed(title=title[:256], description=description[:2048], color=color)
+        EMBED.set_footer(text=footertext.replace("USER", str(self.author.name+"#"+self.author.discriminator))[:2048], icon_url=footerurl.replace("AVATARURL", str(self.author.avatar_url)))
         
         if timestamp:
             EMBED.timestamp = datetime.utcnow() if timestamp is True else timestamp
-        for field in fields:
-            EMBED.add_field(name=field[0], value=(field[1][:1018]+" [...]" if len(field[1]) > 1024 else field[1]), inline=bool(field[2] if len(field) > 2 else inline))
+        for field in fields[:25]:
+            EMBED.add_field(name=field[0][:256], value=(field[1][:1018]+" [...]" if len(field[1]) > 1024 else field[1]), inline=bool(field[2] if len(field) > 2 else inline))
         if thumbnailurl:
             EMBED.set_thumbnail(url=thumbnailurl.strip())
         if authorname:
             if authorurl and ("https://" in authorurl or "http://" in authorurl):
-                EMBED.set_author(name=authorname, url=authorurl.strip())
+                EMBED.set_author(name=authorname[:256], url=authorurl.strip())
             else:
-                EMBED.set_author(name=authorname)
+                EMBED.set_author(name=authorname[:256])
         return EMBED
 
     async def tick(self, value=True):
@@ -106,25 +106,25 @@ class MyBot(commands.Bot):
         return await super().get_context(message, cls=cls)
 
     def getEmbed(self, title: str, description: str = "", color: int = 0x000000, fields: list = [], inline=True, thumbnailurl: str = None, authorurl: str = "", authorname: str = None, footertext: str = None, footerurl: str = None, timestamp=False):
-        EMBED = Embed(title=title, description=description, color=color)
+        EMBED = Embed(title=title[:256], description=description[:2048], color=color)
         if footertext:
             if footerurl:
-                EMBED.set_footer(text=footertext, icon_url=footerurl)
+                EMBED.set_footer(text=footertext[:2048], icon_url=footerurl)
             else:
-                EMBED.set_footer(text=footertext)
+                EMBED.set_footer(text=footertext[:2048])
 
         if timestamp:
             EMBED.timestamp = datetime.utcnow() if timestamp is True else timestamp
         for field in fields:
-            EMBED.add_field(name=field[0], value=(field[1][:1018]+" [...]" if len(field[1]) > 1024 else field[1]), inline=bool(
+            EMBED.add_field(name=field[0][:256], value=(field[1][:1018]+" [...]" if len(field[1]) > 1024 else field[1]), inline=bool(
                 field[2] if len(field) > 2 else inline))
         if thumbnailurl:
             EMBED.set_thumbnail(url=thumbnailurl.strip())
         if authorname:
             if authorurl and ("https://" in authorurl or "http://" in authorurl):
-                EMBED.set_author(name=authorname, url=authorurl.strip())
+                EMBED.set_author(name=authorname[:256], url=authorurl.strip())
             else:
-                EMBED.set_author(name=authorname)
+                EMBED.set_author(name=authorname[:256])
         return EMBED
 
 
@@ -133,7 +133,7 @@ class MyBot(commands.Bot):
 bot = MyBot(
     description='Das ist eine Beschreibung!',
     case_insensitive=True,
-    activity=Activity(type=ActivityType.listening, name="/help"),
+    activity=Activity(type=ActivityType.listening, name=(MAIN_PREFIXES[0] if MAIN_PREFIXES else "/")+"help"),
     status=Status.idle,
     help_command=None,
 )
@@ -157,6 +157,7 @@ async def on_ready():
 # Start
 
 def run(TOKEN):
+    print("[Bot] - Starting with DEBUG="+str(DEBUG))
     bot.run(TOKEN, bot=True, reconnect=True)
 
 if __name__ == "__main__":
