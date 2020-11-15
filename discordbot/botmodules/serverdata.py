@@ -1,97 +1,10 @@
-import time
-import os
-import youtube_dl
-import asyncio
-
-from discord import PCMVolumeTransformer, FFmpegPCMAudio
 from discord.ext import commands
+
+from discordbot.botmodules.audio import AudioManager, YouTubePlayer
 
 from asgiref.sync import sync_to_async
 
-from discordbot.config import FILESPATH, FFMPEG_OPTIONS
-
 #####
-
-# Suppress noise about console usage from errors
-youtube_dl.utils.bug_reports_message = lambda: ''
-
-color = 0xee00ff
-
-#####
-
-class YouTubePlayer(PCMVolumeTransformer):
-    _ytdl = youtube_dl.YoutubeDL({
-        'format': 'bestaudio/best',
-        'outtmpl': os.path.join(FILESPATH,'youtube','%(extractor)s-%(id)s-%(title)s.%(ext)s'),
-        'restrictfilenames': True,
-        'noplaylist': True,
-        'nocheckcertificate': True,
-        'ignoreerrors': True,
-        'logtostderr': False,
-        'quiet': True,
-        'no_warnings': True,
-        'default_search': 'auto',
-        'ffmpeg_location': FILESPATH,
-        'source_address': '0.0.0.0' # bind to ipv4 since ipv6 addresses cause issues sometimes
-    })
-
-    def __init__(self, filename, *, queue, data, volume=0.5):
-        source = FFmpegPCMAudio(filename, **FFMPEG_OPTIONS)
-
-        super().__init__(source, volume)
-
-        self.queue = queue
-
-        self.data = data
-
-        self.url = data.get('url', '')
-        self.link = data.get('webpage_url', self.url)
-        self.title = data.get('title', 'Unbekannter Titel')
-
-        self.uploader = data.get('uploader', "")
-        self.uploader_url = data.get('uploader_url', "")
-        self.thumbnail = data.get('thumbnail', "")
-        self.description = data.get('description', "")
-        self.duration = int(data.get('duration', 0))
-
-    async def send(self, ctx, status:str="Wird jetzt gespielt..."):
-        fields = [("Ansehen/Anhören", "[Hier klicken]("+self.link+")")]
-        if self.duration:
-            fields.append(("Dauer", str(int(self.duration/60))+"min "+str(int(self.duration%60))+"s"))
-        if status:
-            fields.append(("Status", status, False))
-        await ctx.sendEmbed(
-            title=self.title,
-            description=((self.description if len(self.description) < 100 else self.description[0:100]+"...") if isinstance(self.description, str) else "Keine Beschreibung gefunden"),
-            color=ctx.cog.color,
-            fields=fields,
-            thumbnailurl=self.thumbnail if self.thumbnail else None,
-            authorname=self.uploader if self.uploader else None,
-            authorurl=self.uploader_url if self.uploader_url else None,
-        )
-
-    def getinfo(self):
-        return f"[{self.title}]({self.link})"
-
-    def play(self, ctx):
-        if ctx.voice_client:
-            if ctx.voice_client.is_playing():
-                ctx.voice_client.stop()
-            ctx.voice_client.play(self, after=lambda e: self.queue.playNext(ctx))
-
-
-    @classmethod
-    async def from_url(self, url, *, queue, loop=None, stream=False):
-        loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: self._ytdl.extract_info(url, download=not stream))
-
-        if 'entries' in data:
-            data = data['entries'][0]
-
-        filename = data['url'] if stream else self._ytdl.prepare_filename(data)
-        #print(await DjangoConnection.getOrCreateAudioSourceFromDict(data))
-        return self(queue=queue, filename=filename, data=data)
-
 
 class MusicQueue():
     def __init__(self, server):
@@ -124,7 +37,7 @@ class MusicQueue():
         description = "\n".join(i.getinfo() for i in self._players)
         await ctx.sendEmbed(
             title="Warteschlange",
-            color=color,
+            color=ctx.command.cog.color,
             description=description,
         )
 
@@ -152,7 +65,8 @@ class Server():
 
 ### NEW
 
-from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AudioSource, AmongUsGame, VierGewinntGame, BotPermission, NotifierSub
+from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AudioSource, Playlist, AmongUsGame, VierGewinntGame, BotPermission, NotifierSub
+from django.db import connection, connections
 
 class DjangoConnection():
     def __init__(self, dc_user, dc_guild):
@@ -160,10 +74,10 @@ class DjangoConnection():
         self.dc_guild = dc_guild
         self._db_user = None
         self._db_server = None
-
+        self._db_playlist = None
+        
     @classmethod
     def ensure_connection(self):
-        from django.db import connection, connections
         if connection.connection and not connection.is_usable():
             del connections._connections.default
 
@@ -203,82 +117,88 @@ class DjangoConnection():
             self._db_server = await self.fetch_server(self.dc_guild)
         return self._db_server
 
-    @classmethod
-    @sync_to_async
-    def _join_server(self, user, server):
-        self.ensure_connection()
-        user.joinServer(server)
+    async def get_playlist(self):
+        if self._db_playlist is None:
+            server = await self.get_server()
+            self._db_playlist = await server.getPlaylist()
+        return self._db_playlist
 
     # Basic Methods
 
     @classmethod
     @sync_to_async
-    def _save(self, game):
+    def _save(self, obj):
         self.ensure_connection()
-        game.save()
+        obj.save()
 
     @classmethod
     @sync_to_async
-    def _delete(self, game):
+    def _delete(self, obj):
         self.ensure_connection()
-        game.delete()
+        obj.delete()
+
+    @classmethod
+    @sync_to_async
+    def _create(self, model, **kwargs):
+        self.ensure_connection()
+        return model.objects.create(**kwargs)
+
+    @classmethod
+    @sync_to_async
+    def _exists(self, model, **kwargs):
+        self.ensure_connection()
+        return model.objects.filter(**kwargs).exists()
+
+    @classmethod
+    @sync_to_async
+    def _get(self, model, **kwargs):
+        self.ensure_connection()
+        return model.objects.get(**kwargs)
+
+    @classmethod
+    @sync_to_async
+    def _list(self, model, **kwargs):
+        self.ensure_connection()
+        return list(model.objects.filter(**kwargs))
 
     # Music
 
     @classmethod
     @sync_to_async
-    def _hasAudioSource(self, **kwargs):
-        self.ensure_connection()
-        return AudioSource.objects.filter(**kwargs).exists()
-
-    @classmethod
-    @sync_to_async
-    def _getAudioSource(self, **kwargs):
-        self.ensure_connection()
-        return AudioSource.objects.get(**kwargs)
-
-    @classmethod
-    @sync_to_async
     def _createAudioSourceFromDict(self, data):
-        self.ensure_connection()
         return AudioSource.create_from_dict(data)
 
     @classmethod
     async def getOrCreateAudioSourceFromDict(self, data):
-        if await self._hasAudioSource(url_watch=data.get("webpage_url", data.get("url", None))):
-            return await self._getAudioSource(url_watch=data.get("webpage_url", data.get("url")))
+        if await self._exists(AudioSource, url_watch=data.get("webpage_url", data.get("url", None))):
+            audio = await self._get(AudioSource, url_watch=data.get("webpage_url", data.get("url")))
+            audio.url_source = data.get("url", "")
+            await self._save(audio)
+            return audio
         else:
             return await self._createAudioSourceFromDict(data)
 
     # Reports
 
-    @classmethod
-    @sync_to_async
-    def _createReport(self, **kwargs):
-        self.ensure_connection()
-        return DB_Report.objects.create(**kwargs)
-
-    async def createReport(self, dc_user, reason:str=""):
+    async def createReport(self, dc_user, reason:str="", reportedby_dc_user=None):
         server = await self.get_server()
-        user = await self.get_user()
-        await self._join_server(user, server)
+        user = (await self.get_user()) if reportedby_dc_user is None else (await self.fetch_user(reportedby_dc_user))
+        await user.joinServer(server)
         reporteduser = await self.fetch_user(dc_user)
-        await self._join_server(reporteduser, server)
-        return await self._createReport(server=server, user=reporteduser, reported_by=user, reason=reason)
+        await reporteduser.joinServer(server)
+        return await self._create(DB_Report, server=server, user=reporteduser, reported_by=user, reason=reason)
 
-    @classmethod
-    @sync_to_async
-    def _getReports(self, server, **kwargs):
-        self.ensure_connection()
-        return server.getReports(**kwargs)
-
-    async def getReports(self, dc_user=None, **kwargs):
+    async def getReports(self, dc_user=None):
         server = await self.get_server()
         if dc_user is None:
-            return await self._getReports(server, **kwargs)
+            reports = await server.getReports()
+            print(reports)
+            return reports
         else:
             user = await self.fetch_user(dc_user)
-            return await self._getReports(server, user=user, **kwargs)
+            reports = await server.getReports(user=user)
+            print(reports)
+            return reports
 
     # Remote
 
@@ -317,7 +237,7 @@ class DjangoConnection():
     async def getAmongUsGame(self, **kwargs):
         user = await self.get_user()
         server = await self.get_server()
-        return await self._getAmongUsGame(creator=user, guild=server, **kwargs)
+        return await self._get(AmongUsGame, creator=user, guild=server, **kwargs)
 
     @classmethod
     @sync_to_async
@@ -339,19 +259,7 @@ class DjangoConnection():
     async def createAmongUsGame(self, **kwargs):
         user = await self.get_user()
         server = await self.get_server()
-        return await self._createAmongUsGame(creator=user, guild=server, **kwargs)
-
-    @classmethod
-    @sync_to_async
-    def _setAmongUsUser(self, game: AmongUsGame, userid: int, color: str, save: bool = False):
-        self.ensure_connection()
-        game.set_user(userid=userid, color=color, save=save)
-
-    @classmethod
-    @sync_to_async
-    def _removeAmongUsUser(self, game: AmongUsGame, userid: int, save: bool = False):
-        self.ensure_connection()
-        game.remove_user(userid=userid, save=save)
+        return await self._create(AmongUsGame, creator=user, guild=server, **kwargs)
 
     # VierGewinnt
 

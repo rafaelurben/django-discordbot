@@ -3,6 +3,9 @@
 from discord.ext import commands
 from discord import Embed
 
+from discordbot.config import DEBUG
+
+
 def setup(bot):
     @bot.event
     async def on_command_error(ctx, error):
@@ -39,7 +42,8 @@ def setup(bot):
             return # keine Nachricht senden!
         else:
             EMBED.add_field(name="Beschreibung", value="Es ist ein unbekannter Fehler aufgetreten! Vermutlich liegt er nicht bei dir, also melde ihn am besten einen Admin.")
-            print("[Command] - Bei '"+ctx.message.content+"' von '"+ctx.message.author.name+"#"+ctx.message.author.discriminator+"' ist ein Fehler aufgetreten: "+str(error))
+            if DEBUG:
+                print("[Command] - Bei '"+ctx.message.content+"' von '"+ctx.message.author.name+"#"+ctx.message.author.discriminator+"' ist ein Fehler aufgetreten: "+str(error))
         
         if not error == "":
             if "OperationalError: (2006, 'MySQL server has gone away')" in str(error):
@@ -49,5 +53,5 @@ def setup(bot):
         EMBED.add_field(name="Nachricht", value=ctx.message.content, inline=False)
         await ctx.send(embed=EMBED)
 
-        if isinstance(error, commands.CommandError):
+        if DEBUG and isinstance(error, commands.CommandError):
             raise error

@@ -2,7 +2,7 @@
 
 from discord.ext import commands
 
-from discordbot.config import ALLOW_BOTS, ALLOW_WEBHOOKS
+from discordbot.config import ALLOW_BOTS, ALLOW_WEBHOOKS, DEBUG
 
 def setup(bot):
     @bot.event

@@ -89,6 +89,8 @@ class Basic(commands.Cog):
             title="Spam verboten",
             description="Schon vergessen, dass Spam laut Regeln verboten ist? Hast du wirklich gedacht, ich breche meine eigenen Regeln?"
         )
+        await ctx.database.createReport(dc_user=ctx.author, reason="Tried to use /spam", reportedby_dc_user=ctx.guild.me)
+
     #     anzahl = int(anzahl if anzahl <= 10 else 10)
     #     text = str(" ".join(str(i) for i in args))
     #     empty = not (len(text) > 0 and not text == (" "*len(text)))

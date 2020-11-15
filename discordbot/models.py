@@ -9,6 +9,8 @@ from discordbot.botmodules.parser import HTMLCleaner
 
 from discordbot.config import DOMAIN
 
+from asgiref.sync import sync_to_async
+
 import time
 import uuid
 import re
@@ -34,15 +36,25 @@ class Server(models.Model):
     name = models.CharField("Name", default="", blank=True, max_length=100)
     members = models.ManyToManyField("User", through="Member")
 
+    playlist = models.ForeignKey("Playlist", on_delete=models.SET_NULL, default=None, blank=True, null=True, related_name="+")
+
+    @sync_to_async
+    def getPlaylist(self):
+        if self.playlist is None:
+            self.playlist = Playlist.objects.create(server=self, title="Playlist in "+self.name)
+            self.save()
+        return self.playlist
+
     def reportCount(self):
         return self.reports.count()
     reportCount.short_description = "Reports"
 
+    @sync_to_async
     def getReports(self, user=None):
         if user is None:
             reports = []
             for member in self.members.all():
-                count = member.reportCount()
+                count = int(member.reportCount())
                 if count > 0:
                     reports.append({
                         "name": str(count)+" Report(s)",
@@ -82,6 +94,7 @@ class User(models.Model):
         return self.servers.count()
     serverCount.short_description = "Anzahl Server"
 
+    @sync_to_async
     def joinServer(self, server):
         if not server.members.filter(id=self.id).exists():
             server.members.add(self)
@@ -176,6 +189,44 @@ class AudioSource(models.Model):
     class Meta():
         verbose_name = "Audio source"
         verbose_name_plural = "Audio sources"
+
+    objects = models.Manager()
+
+class PlaylistPosition(models.Model):
+    source = models.ForeignKey('AudioSource', on_delete=models.PROTECT)
+    queue = models.ForeignKey('Playlist', on_delete=models.CASCADE)
+    position = models.PositiveSmallIntegerField("Position")
+
+    class Meta():
+        verbose_name = "Audio queue position"
+        verbose_name_plural = "Audio queue positions"
+
+    objects = models.Manager()
+
+class Playlist(models.Model):
+    server = models.ForeignKey('Server', on_delete=models.CASCADE, related_name="playlists")
+    title = models.CharField("Title", max_length=256, default="Server default")
+
+    sources = models.ManyToManyField('AudioSource', through="PlaylistPosition")
+    current_pos = models.PositiveSmallIntegerField("Current position", default=0)
+
+    @sync_to_async
+    def addSource(self, source):
+        pos = self.sources.count()+1
+        self.sources.add(source, through_defaults={"position": pos})
+        return pos
+
+    @sync_to_async
+    def removePosition(self, pos: int):
+        if pos > 0 and pos <= self.sources.count() and not self.current_pos == pos:
+            self.sources.through.objects.filter(position=pos).delete()
+            for s in self.sources.through.objects.filter(position_gt=pos):
+                s.position -= 1
+                s.save()
+
+    class Meta():
+        verbose_name = "Audio queue"
+        verbose_name_plural = "Audio queues"
 
     objects = models.Manager()
 
@@ -361,21 +412,20 @@ class AmongUsGame(models.Model):
 
     # User
 
-    def remove_user(self, userid, save=False):
+    @sync_to_async
+    def remove_user(self, userid):
         for c in AMONGUS_PLAYER_COLORS:
             if getattr(self, f'p_{c}_userid') == str(userid):
                 setattr(self, f'p_{c}_userid', "")
+        self.save()
 
-        if save:
-            self.save()
-
-    def set_user(self, userid, color, save=False):
-        self.remove_user(userid)
+    @sync_to_async
+    def set_user(self, userid, color):
+        for c in AMONGUS_PLAYER_COLORS:
+            if getattr(self, f'p_{c}_userid') == str(userid):
+                setattr(self, f'p_{c}_userid', "")
         setattr(self, f'p_{color}_userid', str(userid))
-
-        if save:
-            self.save()
-
+        self.save()
 
     def __str__(self):
         return "AmongUs #"+str(self.pk)

@@ -1,0 +1,109 @@
+import youtube_dl
+import os
+import asyncio
+
+from discord import PCMVolumeTransformer, FFmpegPCMAudio
+from discord.ext import commands
+
+from discordbot.config import FILESPATH, FFMPEG_OPTIONS, FFMPEG_OPTIONS_STREAM
+
+# Suppress noise about console usage from errors
+youtube_dl.utils.bug_reports_message = lambda: ''
+
+_ytdl = youtube_dl.YoutubeDL({
+    'format': 'bestaudio/best',
+    'outtmpl': os.path.join(FILESPATH, 'youtube', '%(extractor)s-%(id)s-%(title)s.%(ext)s'),
+    'restrictfilenames': True,
+    'noplaylist': True,
+    'nocheckcertificate': True,
+    'ignoreerrors': True,
+    'logtostderr': False,
+    'quiet': True,
+    'no_warnings': True,
+    'default_search': 'auto',
+    'ffmpeg_location': FILESPATH,
+    # bind to ipv4 since ipv6 addresses cause issues sometimes
+    'source_address': '0.0.0.0'
+})
+
+class AudioManager():
+    def __init__(self, ctx):
+        self.guild = ctx.guild
+        self.loop = ctx.bot.loop
+        self.database = ctx.database
+        
+    async def playlist(self):
+        return await self.database.get_playlist()
+
+    @classmethod
+    async def refetchStreamUrl(self, watchurl:str):
+        pass
+
+    async def processQuery(self, query:str):
+        data = await self.loop.run_in_executor(None, lambda: _ytdl.extract_info(query, download=False))
+
+        if 'entries' in data:
+            data = data['entries'][0]
+
+        src = await self.database.getOrCreateAudioSourceFromDict(data)
+
+
+
+class YouTubePlayer(PCMVolumeTransformer):
+    def __init__(self, filename, *, queue, data, stream=False, volume=0.5):
+        source = FFmpegPCMAudio(filename, **(FFMPEG_OPTIONS_STREAM if stream else FFMPEG_OPTIONS))
+
+        super().__init__(source, volume)
+
+        self.queue = queue
+
+        self.data = data
+
+        self.url = data.get('url', '')
+        self.link = data.get('webpage_url', self.url)
+        self.title = data.get('title', 'Unbekannter Titel')
+
+        self.uploader = data.get('uploader', "")
+        self.uploader_url = data.get('uploader_url', "")
+        self.thumbnail = data.get('thumbnail', "")
+        self.description = data.get('description', "")
+        self.duration = int(data.get('duration', 0))
+
+    async def send(self, ctx, status: str = "Wird jetzt gespielt..."):
+        fields = [("Ansehen/Anhören", "[Hier klicken]("+self.link+")")]
+        if self.duration:
+            fields.append(("Dauer", str(int(self.duration/60)) +
+                           "min "+str(int(self.duration % 60))+"s"))
+        if status:
+            fields.append(("Status", status, False))
+        await ctx.sendEmbed(
+            title=self.title,
+            description=((self.description if len(self.description) < 100 else self.description[0:100]+"...") if isinstance(
+                self.description, str) else "Keine Beschreibung gefunden"),
+            color=ctx.cog.color,
+            fields=fields,
+            thumbnailurl=self.thumbnail if self.thumbnail else None,
+            authorname=self.uploader if self.uploader else None,
+            authorurl=self.uploader_url if self.uploader_url else None,
+        )
+
+    def getinfo(self):
+        return f"[{self.title}]({self.link})"
+
+    def play(self, ctx):
+        if ctx.voice_client:
+            if ctx.voice_client.is_playing():
+                ctx.voice_client.stop()
+            ctx.voice_client.play(
+                self, after=lambda e: self.queue.playNext(ctx))
+
+    @classmethod
+    async def from_url(self, url, *, queue, loop=None, stream=False):
+        loop = loop or asyncio.get_event_loop()
+        data = await loop.run_in_executor(None, lambda: _ytdl.extract_info(url, download=not stream))
+
+        if 'entries' in data:
+            data = data['entries'][0]
+
+        filename = data['url'] if stream else _ytdl.prepare_filename(data)
+        return self(queue=queue, filename=filename, data=data, stream=stream)

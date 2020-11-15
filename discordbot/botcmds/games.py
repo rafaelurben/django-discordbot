@@ -11,6 +11,7 @@ from datetime import timedelta
 
 from discordbot.models import AmongUsGame, AMONGUS_PLAYER_COLORS, AMONGUS_EMOJI_COLORS, VierGewinntGame, VIERGEWINNT_NUMBER_EMOJIS
 from discordbot.botmodules.serverdata import DjangoConnection
+from discordbot.botmodules import apis
 
 import requests
 import os
@@ -90,10 +91,10 @@ class Games(commands.Cog):
                 game = await DjangoConnection._getAmongUsGame(text_message_id=payload.message_id)
 
                 if emoji == DELETE:
-                    await DjangoConnection._removeAmongUsUser(game=game, userid=payload.user_id, save=True)
+                    await game.remove_user(userid=payload.user_id)
                 else:
                     c = AMONGUS_EMOJI_COLORS[payload.emoji.name]
-                    await DjangoConnection._setAmongUsUser(game=game, userid=payload.user_id, color=c, save=True)
+                    await game.set_user(userid=payload.user_id, color=c)
 
             ### VierGewinnt
 
@@ -153,7 +154,7 @@ class Games(commands.Cog):
         aliases=['shop']
     )
     async def fortnite_store(self, ctx):
-        JSON = ctx.apis.Fortnite.getStore()
+        JSON = apis.Fortnite.getStore()
         await ctx.sendEmbed(
             title="Fortnite Item Shop",
             color=self.color,
@@ -176,7 +177,7 @@ class Games(commands.Cog):
         aliases=[]
     )
     async def fortnite_challenges(self, ctx):
-        JSON = ctx.apis.Fortnite.getChallenges()
+        JSON = apis.Fortnite.getChallenges()
         await ctx.sendEmbed(
             title="Fortnite Challenges",
             color=self.color,
@@ -195,7 +196,7 @@ class Games(commands.Cog):
         usage="<Plattform> <Spielername>",
     )
     async def fortnite_stats(self, ctx, platform:str, playername:str):
-        JSON = ctx.apis.Fortnite.getStats(platform, playername)
+        JSON = apis.Fortnite.getStats(platform, playername)
         try:
             await ctx.sendEmbed(
                 title="Fortnite Stats von "+JSON["epicUserHandle"]+" auf "+JSON["platformNameLong"],
@@ -228,7 +229,7 @@ class Games(commands.Cog):
         usage="<Spielername>",
     )
     async def minecraft_uuid(self, ctx, name):
-        api = ctx.apis.Minecraft
+        api = apis.Minecraft
 
         JSON = api.getProfile(name)
         EMBED = ctx.getEmbed(title="Minecraft UUID", color=self.color, fields=[("UUID", JSON["id"], False),("Aktueller Name", JSON["name"], False)])
@@ -245,7 +246,7 @@ class Games(commands.Cog):
         usage="<UUID>",
     )
     async def minecraft_names(self, ctx, uuid):
-        api = ctx.apis.Minecraft
+        api = apis.Minecraft
 
         if len(uuid) != 32:
             raise commands.BadArgument("Eine UUID ist genau 32 Zeichen lang!")
@@ -266,7 +267,7 @@ class Games(commands.Cog):
         usage="<UUID>",
     )
     async def minecraft_skin(self, ctx, uuid):
-        api = ctx.apis.Minecraft
+        api = apis.Minecraft
 
         if len(uuid) != 32:
             raise commands.BadArgument("Eine UUID ist genau 32 Zeichen lang!")
@@ -287,7 +288,7 @@ class Games(commands.Cog):
         usage="<Spielername>",
     )
     async def minecraft_player(self, ctx, name):
-        api = ctx.apis.Minecraft
+        api = apis.Minecraft
         
         JSON = api.getProfile(name)
         UUID = JSON["id"]

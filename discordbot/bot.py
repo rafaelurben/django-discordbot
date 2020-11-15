@@ -4,7 +4,7 @@ from datetime import datetime
 from discord import Activity, ActivityType, Embed, Game, HTTPException, Status, Member, User, TextChannel, VoiceChannel, Role, Invite, Game, Emoji, PartialEmoji, Colour
 from discord.ext import commands
 
-from discordbot.botmodules import apis, serverdata
+from discordbot.botmodules import serverdata, audio
 from discordbot.config import EXTENSIONFOLDER, EXTENSIONS, ALL_PREFIXES, MAIN_PREFIXES, DEBUG
 
 
@@ -34,8 +34,8 @@ class MyContext(commands.Context):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.apis = apis
         self.database = serverdata.DjangoConnection(self.author, self.guild)
+        self.audio = audio.AudioManager(self)
 
         if self.guild is not None:
             self.data = serverdata.Server.getServer(self.guild.id)
@@ -152,8 +152,16 @@ async def on_ready():
             bot.load_extension(EXTENSIONFOLDER+"."+extension)
         except commands.errors.ExtensionAlreadyLoaded:
             pass
-    return
+
+@bot.event
+async def on_connect():
+    print("[Bot] - Connected!")
     
+
+@bot.event
+async def on_disconnect():
+    print("[Bot] - Disconnected!")
+
 # Start
 
 def run(TOKEN):

@@ -51,7 +51,7 @@ class Support(commands.Cog):
     
     @commands.group(
         brief="Lasse jemanden Commands für dich ausführen",
-        description="Überlasse jemanden, Commands als dich auszuführen.",
+        description="Überlasse jemandem das Recht, Commands als dich auszuführen.",
         usage="<Unterbefehl> <Argumente>",
     )
     async def remote(self, ctx):

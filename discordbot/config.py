@@ -38,6 +38,11 @@ FFMPEGPATH = _s("FFMPEGPATH", os.path.join(FILESPATH, "ffmpeg.exe"))
 
 FFMPEG_OPTIONS = {
     'options': '-vn',
+    'executable': FFMPEGPATH,
+}
+
+FFMPEG_OPTIONS_STREAM = {
+    'options': '-vn',
     'before_options': " -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
     'executable': FFMPEGPATH,
 }

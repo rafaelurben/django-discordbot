@@ -31,9 +31,14 @@ class Help(commands.Cog):
                             depth += 1
                             currentcmd = currentcmd.parent 
 
-                        commands_list += "- "*depth + f'**{cmd.name}** - *{cmd.brief}*\n'
+                        if depth == 0:
+                            commands_list += f'\n**{cmd.name}** - {cmd.brief}\n'
+                        elif depth == 1:
+                            commands_list += f'- **{cmd.name}** '
+                        # else:
+                        #    commands_list += "- "*depth + f'**{cmd.name}**\n'
                     elif not cmd.parent:
-                        commands_list += f'**{cmd.name}** - *{cmd.brief}*\n'
+                        commands_list += f'**{cmd.name}** - {cmd.brief}\n'
 
                 fields.append((cog.qualified_name, commands_list+'\u200b'))
 
@@ -41,7 +46,7 @@ class Help(commands.Cog):
             commands_list = ''
             for cmd in grp.commands:
                 if not cmd.hidden:
-                    commands_list += f'**{cmd.name}** - *{cmd.brief}*\n'
+                    commands_list += f'**{cmd.name}** - {cmd.brief}\n'
 
             fields.append(("Unterbefehle von "+grp.qualified_name, commands_list+'\u200b'))
 
