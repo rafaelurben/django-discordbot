@@ -7,4 +7,4 @@ ffmpeg==1.4
 fuzzywuzzy[speedup]==0.18.0
 youtube-dl==2020.11.12
 rich==9.2.0
-tqdm==4.51.0
+tqdm==4.52.0
