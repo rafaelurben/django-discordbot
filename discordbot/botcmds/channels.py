@@ -74,7 +74,7 @@ class Channels(commands.Cog):
         else:
             overwrites = { ctx.guild.default_role: PermissionOverwrite(read_messages=False), ctx.author: PermissionOverwrite(read_messages=True,send_messages=True) }
             newchannel = await category.create_text_channel(name=(ctx.author.name+"-"+ctx.author.discriminator),overwrites=overwrites, reason="Benutzer hat den Textkanal erstellt")
-            await ctx.sendEmbed(title="Textkanal erstellt", color=self.color, fields=[("Kanal", newchannel.mention)])
+            await ctx.sendEmbed(title="Textkanal erstellt", fields=[("Kanal", newchannel.mention)])
 
 
     @textchannel.command(
@@ -90,7 +90,7 @@ class Channels(commands.Cog):
         if channel:
             await channel.delete(reason="Benutzer hat den Textkanal gelöscht")
             if not ctx.channel == channel:
-                await ctx.sendEmbed(title="Textkanal gelöscht", color=self.color, fields=[("Server", ctx.guild.name)])
+                await ctx.sendEmbed(title="Textkanal gelöscht", fields=[("Server", ctx.guild.name)])
         else:
             raise commands.BadArgument(message="Du hattest gar keinen Textkanal!")
         return
@@ -114,13 +114,13 @@ class Channels(commands.Cog):
         else:
             await channel.set_permissions(wer, reason="Benuter hat Benutzer/Rolle eingeladen", read_messages=True, send_messages=True)
             if isinstance(wer, Member):
-                await ctx.sendEmbed(title="Benutzer zu Textkanal eingeladen", color=self.color, fields=[("Benutzer", wer.mention)])
-                #EMBED = ctx.getEmbed(title="Benutzer zu Textkanal eingeladen", color=self.color, fields=[("Server", ctx.guild.name), ("Benutzer", wer.mention)])
+                await ctx.sendEmbed(title="Benutzer zu Textkanal eingeladen", fields=[("Benutzer", wer.mention)])
+                #EMBED = ctx.getEmbed(title="Benutzer zu Textkanal eingeladen", fields=[("Server", ctx.guild.name), ("Benutzer", wer.mention)])
                 #await ctx.author.send(embed=EMBED)
                 await channel.send(wer.mention+" wurde zu diesem Textkanal hinzugefügt.")
             elif isinstance(wer, Role):
-                await ctx.sendEmbed(title="Rolle zu Textkanal eingeladen", color=self.color, fields=[("Rolle", wer.name)])
-                #EMBED = ctx.getEmbed(title="Rolle zu Textkanal eingeladen", color=self.color, fields=[("Server", ctx.guild.name), ("Rolle", wer.name)])
+                await ctx.sendEmbed(title="Rolle zu Textkanal eingeladen", fields=[("Rolle", wer.name)])
+                #EMBED = ctx.getEmbed(title="Rolle zu Textkanal eingeladen", fields=[("Server", ctx.guild.name), ("Rolle", wer.name)])
                 #await ctx.author.send(embed=EMBED)
                 await channel.send("Alle mit der Rolle "+wer.mention+" wurden zu diesem Textkanal hinzugefügt.")
         return
@@ -141,7 +141,7 @@ class Channels(commands.Cog):
                 message="Du hast noch keinen Textkanal!")
         else:
             await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal für alle Geöffnet", read_messages=True, send_messages=True)
-            await ctx.sendEmbed(title="Kanal geöffnet", color=self.color, description="Der Kanal ist nun für alle auf diesem Server geöffnet!")
+            await ctx.sendEmbed(title="Kanal geöffnet", description="Der Kanal ist nun für alle auf diesem Server geöffnet!")
 
     @textchannel.command(
         name="close",
@@ -159,7 +159,7 @@ class Channels(commands.Cog):
                 message="Du hast noch keinen Textkanal!")
         else:
             await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal nicht mehr für alle geöffnet!", read_messages=False, send_messages=False)
-            await ctx.sendEmbed(title="Kanal geschlossen", color=self.color, description="Der Kanal ist nun nicht mehr für alle auf diesem Server geöffnet!")
+            await ctx.sendEmbed(title="Kanal geschlossen", description="Der Kanal ist nun nicht mehr für alle auf diesem Server geöffnet!")
 
     # Voicechannels
 
@@ -190,9 +190,10 @@ class Channels(commands.Cog):
         else:
             overwrites = { ctx.guild.default_role: PermissionOverwrite(connect=False,speak=True,read_messages=False), ctx.author: PermissionOverwrite(connect=True,speak=True,read_messages=True,move_members=True,mute_members=True) }
             newchannel = await category.create_voice_channel(name=(ctx.author.name+"#"+ctx.author.discriminator),overwrites=overwrites,reason="Benutzer hat den Sprachkanal erstellt")
-            EMBED = Embed(title="Sprachkanal erstellt!", color=self.color)
-            EMBED.set_footer(text=f'Kanal von {ctx.author.name}',icon_url=ctx.author.avatar_url)
-            await ctx.send(embed=EMBED)
+            await ctx.sendEmbed(
+                title="Sprachkanal erstellt!",
+                footertext="Kanal von USER"
+            )
             if ctx.author.voice:
                 await ctx.author.edit(voice_channel=newchannel,reason="Benutzer hat den Sprachkanal erstellt")
         return
@@ -209,10 +210,13 @@ class Channels(commands.Cog):
         channel = utils.get(ctx.guild.voice_channels, name=(ctx.author.name+"#"+ctx.author.discriminator), category=category)
         if channel:
             await channel.delete(reason="Vom Benutzer gelöscht")
-            EMBED = Embed(title="Sprachkanal gelöscht!", color=self.color)
-            EMBED.set_footer(text=f'Kanal von {ctx.author.name}',icon_url=ctx.author.avatar_url)
-            EMBED.add_field(name="Server",value=ctx.guild.name)
-            await ctx.send(embed=EMBED)
+            await ctx.sendEmbed(
+                title="Sprachkanal gelöscht!",
+                footertext="Kanal von USER",
+                fields=[
+                    ("Server", ctx.guild.name)
+                ]
+            )
         else:
             raise commands.BadArgument(message="Du hattest gar keinen Sprachkanal!")
         return
@@ -235,15 +239,15 @@ class Channels(commands.Cog):
         else:
             await channel.set_permissions(wer,reason="Benuter hat Benutzer/Rolle eingeladen",read_messages=True,connect=True,speak=True)
             if isinstance(wer, Member):
-                await ctx.sendEmbed(title="Benutzer zu Sprachkanal eingeladen", color=self.color, fields=[("Benutzer", wer.mention)])
-                #EMBED = ctx.getEmbed(title="Benutzer zu Sprachkanal eingeladen", color=self.color, fields=[("Server", ctx.guild.name),("Benutzer", wer.mention)])
+                await ctx.sendEmbed(title="Benutzer zu Sprachkanal eingeladen", fields=[("Benutzer", wer.mention)])
+                #EMBED = ctx.getEmbed(title="Benutzer zu Sprachkanal eingeladen", fields=[("Server", ctx.guild.name),("Benutzer", wer.mention)])
                 #await ctx.author.send(embed=EMBED)
                 if not wer.bot:
-                    EMBED2 = ctx.getEmbed(title="Du wurdest zu einem Sprachkanal eingeladen", color=self.color, fields=[("Server", ctx.guild.name),("Von", ctx.author.mention)])
+                    EMBED2 = ctx.getEmbed(title="Du wurdest zu einem Sprachkanal eingeladen", fields=[("Server", ctx.guild.name),("Von", ctx.author.mention)])
                     await wer.send(embed=EMBED2)
             elif isinstance(wer, Role):
-                await ctx.sendEmbed(title="Rolle zu Sprachkanal eingeladen", color=self.color, fields=[("Rolle", wer.name)])
-                #EMBED = ctx.getEmbed(title="Rolle zu Sprachkanal eingeladen", color=self.color, fields=[("Server", ctx.guild.name),("Rolle", wer.name)])
+                await ctx.sendEmbed(title="Rolle zu Sprachkanal eingeladen", fields=[("Rolle", wer.name)])
+                #EMBED = ctx.getEmbed(title="Rolle zu Sprachkanal eingeladen", fields=[("Server", ctx.guild.name),("Rolle", wer.name)])
                 #await ctx.author.send(embed=EMBED)
                 await ctx.send("Alle mit der Rolle "+wer.mention+" wurden von "+ctx.author.mention+" zu seinem/ihrem Sprachkanal eingeladen.")
         return
@@ -264,7 +268,7 @@ class Channels(commands.Cog):
                 message="Du hast noch keinen Sprachkanal!")
         else:
             await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal für alle Geöffnet", read_messages=True, connect=True, speak=True)
-            await ctx.sendEmbed(title="Kanal geöffnet", color=self.color, description="Der Sprachkanal ist nun für alle auf diesem Server geöffnet!")
+            await ctx.sendEmbed(title="Kanal geöffnet", description="Der Sprachkanal ist nun für alle auf diesem Server geöffnet!")
 
     @voicechannel.command(
         name="close",
@@ -282,7 +286,7 @@ class Channels(commands.Cog):
                 message="Du hast noch keinen Sprachkanal!")
         else:
             await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal nicht mehr für alle geöffnet!", read_messages=False, connect=False, speak=False)
-            await ctx.sendEmbed(title="Kanal geschlossen", color=self.color, description="Der Sprachkanal ist nun für alle auf diesem Server geöffnet!")
+            await ctx.sendEmbed(title="Kanal geschlossen", description="Der Sprachkanal ist nun für alle auf diesem Server geöffnet!")
 
 
 

@@ -16,8 +16,8 @@ class Owneronly(commands.Cog):
     )
     @commands.is_owner()
     async def reload(self, ctx, extension:str=None):
-        msg = await ctx.sendEmbed(title="Reload", color=self.color, fields=[("Status", "Reloading")])
-        EMBED = ctx.getEmbed(title="Reload", color=self.color, fields=[])
+        msg = await ctx.sendEmbed(title="Reload", fields=[("Status", "Reloading")])
+        EMBED = ctx.getEmbed(title="Reload", fields=[])
         if extension in EXTENSIONS:
             print("[Bot] - Reloading '"+extension+"' extension...")
             try:
@@ -50,7 +50,7 @@ class Owneronly(commands.Cog):
     )
     @commands.is_owner()
     async def stopbot(self, ctx):
-        await ctx.sendEmbed(title="Stop", color=self.color, fields=[("Status", "Gestoppt")])
+        await ctx.sendEmbed(title="Stop", fields=[("Status", "Gestoppt")])
         await self.bot.logout()
 
 
@@ -84,7 +84,7 @@ class Owneronly(commands.Cog):
         if status is not None or activity is not None:
             await ctx.bot.change_presence(status=status, activity=activity)
         else:
-            await ctx.sendEmbed(title="Status ändern", color=0xff0000, inline=False,
+            await ctx.sendEmbed(title="Status ändern", inline=False,
             description="""
             **Syntax:**
             /status <STATUS> [AKTIVITÄT [ARGUMENT(E)]]

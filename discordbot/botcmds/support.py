@@ -20,7 +20,7 @@ class Support(commands.Cog):
         Grund = " ".join(args)
         Grund = Grund if Grund.rstrip(" ") else "Leer"
         await ctx.database.createReport(dc_user=member, reason=Grund)
-        await ctx.sendEmbed(title="Benutzer Gemeldet", color=self.color, fields=[("Betroffener",member.mention),("Grund",Grund)])
+        await ctx.sendEmbed(title="Benutzer Gemeldet", fields=[("Betroffener",member.mention),("Grund",Grund)])
         return
 
 
@@ -35,14 +35,17 @@ class Support(commands.Cog):
     @commands.guild_only()
     async def reports(self, ctx, member:Member=None):
         if member == None:
-            EMBED = Embed(title="Server Reports", color=self.color)
-            EMBED.set_footer(text=f'Angefordert von {ctx.author.name}',icon_url=ctx.author.avatar_url)
+            EMBED = ctx.getEmbed(
+                title="Server Reports",
+            )
             for user in await ctx.database.getReports():
                 EMBED.add_field(**user)
             await ctx.send(embed=EMBED)
         else:
-            EMBED = Embed(title="User Reports", color=self.color, description=("User: "+member.mention))
-            EMBED.set_footer(text=f'Angefordert von {ctx.author.name}',icon_url=ctx.author.avatar_url)
+            EMBED = ctx.getEmbed(
+                title="User Reports",
+                description=("User: "+member.mention)
+            )
             for report in await ctx.database.getReports(dc_user=member):
                 EMBED.add_field(**report)
             await ctx.send(embed=EMBED)

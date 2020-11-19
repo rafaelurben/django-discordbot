@@ -36,8 +36,12 @@ class AudioManager():
     async def playlist(self):
         return await self.database.get_playlist()
 
-    async def refetchStreamUrl(self, watchurl:str):
-        pass
+    async def refetchUrlIfYouTube(self, watchurl:str):
+        if "youtube.com" in watchurl:
+            data = await self.loop.run_in_executor(None, lambda: _ytdl.extract_info(watchurl, download=False))
+            return [f for f in (data["entries"][0]["formats"] if "entries" in data else data["formats"]) if not f["acodec"] is None][0]
+        else:
+            return watchurl
 
     async def getSongs(self, query: str):
         data = await self.loop.run_in_executor(None, lambda: _ytdl.extract_info(query, download=False))
@@ -55,8 +59,30 @@ class AudioManager():
             with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".test.json"), "w+") as f:
                 import json
                 f.write(json.dumps(data, indent=2))
-            
-            return 
+
+            if "entries" in data:
+                if len(data["entries"]) > 1:
+                    entries = list(entry for entry in data["entries"] if not entry is None)
+                    return {
+                        "title": "Playlist",
+                        "description": f"{len(entries)} Stücke",
+                        "authorname": data.get("title", "Unbekannt"),
+                        "authorurl": data["webpage_url"] if "webpage_url" in data and "http" in data["webpage_url"] else ""
+                    }
+            else:
+                    data = data["entries"][0]
+            src = await self.database.getOrCreateAudioSourceFromDict(data)
+            return {
+                "title": src.title,
+                "authorname": src.uploader_name,
+                "authorurl": src.uploader_url,
+                "description": src.description,
+                "inline": True,
+                "fields": [
+                    ("Dauer", src.duration_calc),
+                    ("Url", f"[Ansehen]({src.url_watch})")
+                ]
+            }
 
     async def processQuery(self, query:str):
         sources = await self.getSongs(query)

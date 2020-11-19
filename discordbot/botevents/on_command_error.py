@@ -9,8 +9,7 @@ from discordbot.config import DEBUG
 def setup(bot):
     @bot.event
     async def on_command_error(ctx, error):
-        EMBED = Embed(title="Fehler", color=0xff0000)
-        EMBED.set_footer(text=f'Angefordert von {ctx.message.author.name}#{ctx.message.author.discriminator}',icon_url=ctx.author.avatar_url)
+        EMBED = ctx.getEmbed(title="Fehler", color=0xff0000)
         if isinstance(error, commands.BadArgument):
             EMBED.add_field(name="Beschreibung", value="Du hast ungültige Argumente angegeben!")
         elif isinstance(error, commands.MissingRequiredArgument):

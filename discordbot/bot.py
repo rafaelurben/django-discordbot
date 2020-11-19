@@ -44,7 +44,7 @@ class MyContext(commands.Context):
         return await self.send(message, embed=self.getEmbed(*args, **kwargs))
 
     def getEmbed(self, title:str, description:str="", color:int=0x000000, fields:list=[], inline=True, thumbnailurl:str=None, authorurl:str="", authorname:str=None, footertext:str="Angefordert von USER", footerurl:str="AVATARURL", timestamp=False):
-        EMBED = Embed(title=title[:256], description=description[:2048], color=color)
+        EMBED = Embed(title=title[:256], description=description[:2048], color=color or getattr(self.cog, "color", 0x000000))
         EMBED.set_footer(text=footertext.replace("USER", str(self.author.name+"#"+self.author.discriminator))[:2048], icon_url=footerurl.replace("AVATARURL", str(self.author.avatar_url)))
         
         if timestamp:
@@ -89,7 +89,6 @@ class MyContext(commands.Context):
                 else:
                     arguments[i] = cls(arguments[i])
         await self.invoke(cmd, *arguments)
-
 
 class MyBot(commands.Bot):
     def __init__(self, **kwargs):
@@ -137,6 +136,12 @@ bot = MyBot(
     status=Status.idle,
     help_command=None,
 )
+
+
+@bot.before_invoke
+async def before_invoke(ctx):
+    await ctx.trigger_typing()
+
 
 # Events
 

@@ -34,7 +34,7 @@ Verwendung des Chat-Embed-Generators:
 Parameter brauchen je eine Zeile und beginnen immer mit `{par}`.
 Optionen werden immer mit `{opt}` getrennt.
 
-Verfügbare Parameter:""", color=self.color, inline=False, fields=[
+Verfügbare Parameter:""", inline=False, fields=[
         ("Feld (bis zu 25)",f"{par}field{opt}<Titel>{opt}<Inhalt>{opt}[Inline]"),
         ("Footer",          f"{par}footer{opt}<Titel>{opt}[Bild-URL]"),
         ("Author",          f"{par}author{opt}<Name>{opt}[Link]"),
@@ -106,7 +106,7 @@ Verfügbare Parameter:""", color=self.color, inline=False, fields=[
                     text += f"\n{par}field{opt}{field.name}{opt}{field.value}{(opt+'False') if not field.inline else ''}"
             if emb.color:
                 text += f"\n{par}color{opt}{str(emb.color.r)}{opt}{str(emb.color.g)}{opt}{str(emb.color.b)}"
-            await ctx.sendEmbed(title="Embed Command", color=self.color, description=text)
+            await ctx.sendEmbed(title="Embed Command", description=text)
         else:
             raise commands.BadArgument("Diese Nachricht hat kein Embed!")
 

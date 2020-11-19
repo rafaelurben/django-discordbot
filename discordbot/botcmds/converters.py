@@ -23,7 +23,7 @@ class Converters(commands.Cog):
         else:
             text = message
             morse = converters.morse_encrypt(message)
-        await ctx.sendEmbed(title="Morsecode", color=self.color, fields=[("Morsecode", morse.replace("  "," | ")),("Text", text)])
+        await ctx.sendEmbed(title="Morsecode", fields=[("Morsecode", morse.replace("  "," | ")),("Text", text)])
 
 
 def setup(bot):

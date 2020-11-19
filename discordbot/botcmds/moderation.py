@@ -44,7 +44,7 @@ class Moderation(commands.Cog):
             if Grund.rstrip() == "":
                 Grund = "Leer"
             await member.kick(reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
-            await ctx.sendEmbed(title="Benutzer Gekickt", color=self.color, fields=[("Betroffener",member.mention),("Grund",Grund)])
+            await ctx.sendEmbed(title="Benutzer Gekickt", fields=[("Betroffener",member.mention),("Grund",Grund)])
         else:
             raise commands.BadArgument(message="Deine Rolle ist nicht höher als die des Benutzers, den du kicken wolltest!")
 
@@ -65,7 +65,7 @@ class Moderation(commands.Cog):
             if Grund.rstrip() == "":
                 Grund = "Leer"
             await member.ban(reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
-            await ctx.sendEmbed(title="Benutzer Gebannt", color=self.color, fields=[("Betroffener",member.mention),("Grund",Grund)])
+            await ctx.sendEmbed(title="Benutzer Gebannt", fields=[("Betroffener",member.mention),("Grund",Grund)])
         else:
             raise commands.BadArgument(message="Deine Rolle ist nicht höher als die des Benutzers, den du bannen wolltest!")
 
@@ -90,7 +90,7 @@ class Moderation(commands.Cog):
             raise commands.BadArgument(message="Benutzer wurde nicht gefunden!")
         try:
             await ctx.guild.unban(user,reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
-            await ctx.sendEmbed(title="Benutzer Entbannt", color=self.color, fields=[("Betroffener",user.mention),("Grund",Grund)])
+            await ctx.sendEmbed(title="Benutzer Entbannt", fields=[("Betroffener",user.mention),("Grund",Grund)])
         except:
             raise commands.BadArgument(message="Benutzer wurde nicht gefunden!")
 
@@ -113,7 +113,7 @@ class Moderation(commands.Cog):
                 if VoiceState.channel.permissions_for(ctx.guild.get_member(self.bot.user.id)).move_members:
                     if ctx.author.roles[-1] >= member.roles[-1]:
                         await member.edit(voice_channel=None,reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
-                        await ctx.sendEmbed(title="Benutzer Getötet", color=self.color, fields=[("Betroffener",member.mention),("Grund",Grund)])
+                        await ctx.sendEmbed(title="Benutzer Getötet", fields=[("Betroffener",member.mention),("Grund",Grund)])
                     else:
                         raise commands.BadArgument(message="Deine Rolle ist nicht höher als oder gleich wie die des Benutzers, den du töten wolltest!")
                 else:
@@ -137,7 +137,7 @@ class Moderation(commands.Cog):
                 if member.voice.channel.permissions_for(ctx.author).move_members:
                     if member.voice.channel.permissions_for(ctx.guild.get_member(self.bot.user.id)).move_members:
                         await member.edit(voice_channel=ctx.author.voice.channel,reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert.")
-                        await ctx.sendEmbed(title="Hierhin bewegt", color=self.color, fields=[("Betroffener",member.mention),("Kanal",ctx.author.voice.channel.name)])
+                        await ctx.sendEmbed(title="Hierhin bewegt", fields=[("Betroffener",member.mention),("Kanal",ctx.author.voice.channel.name)])
                     else:
                         raise commands.BotMissingPermissions([])
                 else:

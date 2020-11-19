@@ -232,7 +232,7 @@ class Games(commands.Cog):
         api = apis.Minecraft
 
         JSON = api.getProfile(name)
-        EMBED = ctx.getEmbed(title="Minecraft UUID", color=self.color, fields=[("UUID", JSON["id"], False),("Aktueller Name", JSON["name"], False)])
+        EMBED = ctx.getEmbed(title="Minecraft UUID", fields=[("UUID", JSON["id"], False),("Aktueller Name", JSON["name"], False)])
         if "legacy" in JSON:
             EMBED.add_field(name="Account",value="Alter Account")
         if "demo" in JSON:
@@ -252,7 +252,7 @@ class Games(commands.Cog):
             raise commands.BadArgument("Eine UUID ist genau 32 Zeichen lang!")
 
         JSON = api.getProfiles(uuid)
-        EMBED = ctx.getEmbed(title="Minecraft Namen", color=self.color, description="Sortierung: Von neu bis alt.")
+        EMBED = ctx.getEmbed(title="Minecraft Namen", description="Sortierung: Von neu bis alt.")
         for i in JSON[::-1]:
             if "changedToAt" in i:
                 EMBED.add_field(name="Name seit "+str(i["changedToAt"]),value=i["name"], inline=False)
@@ -273,7 +273,7 @@ class Games(commands.Cog):
             raise commands.BadArgument("Eine UUID ist genau 32 Zeichen lang!")
 
         JSON = api.getSkin(uuid)
-        EMBED = ctx.getEmbed(title="Minecraft Skin", color=self.color, fields=[("Aktueller Name", JSON["name"]), ("UUID", JSON["id"])])
+        EMBED = ctx.getEmbed(title="Minecraft Skin", fields=[("Aktueller Name", JSON["name"]), ("UUID", JSON["id"])])
         if JSON["skin"] is not None:
             EMBED.set_thumbnail(url=JSON["skin"])
         else:
@@ -292,7 +292,7 @@ class Games(commands.Cog):
         
         JSON = api.getProfile(name)
         UUID = JSON["id"]
-        EMBED = ctx.getEmbed(title="Minecraft Spieler", color=self.color, fields=[("UUID", UUID)], inline=False)
+        EMBED = ctx.getEmbed(title="Minecraft Spieler", fields=[("UUID", UUID)], inline=False)
         if "legacy" in JSON:
             EMBED.add_field(name="Account",value="Alter Account")
         if "demo" in JSON:

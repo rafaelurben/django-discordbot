@@ -139,37 +139,40 @@ class AudioSource(models.Model):
 
     @classmethod
     def create_from_dict(self, data:dict):
-        if "formats" in data:
-            data.pop("formats")
-        if "thumbnails" in data:
-            data.pop("thumbnails")
-        print(data)
+        # if "formats" in data:
+        #     data.pop("formats")
+        # if "thumbnails" in data:
+        #     data.pop("thumbnails")
+        # print(data)
 
-        url_source = data.get('url', '')
+        if not data is None:
+            url_source = data.get('url', '')
 
-        url_watch = data.get('webpage_url', url_source)[:200]
-        url_thumbnail = data.get('thumbnail', "")[:200]
+            url_watch = data.get('webpage_url', url_source)[:200]
+            url_thumbnail = data.get('thumbnail', "")[:200]
 
-        title = data.get('title', 'Unbekannter Titel')[:256]
-        description = data.get('description', "")[:2048]
-        duration = int(data.get('duration', 0))
-        
-        uploader_name = data.get('uploader', "")[:256]
-        uploader_url = data.get('uploader_url', "")[:200]
-        
-        return self.objects.create(
-            url_source=url_source,
-
-            url_watch=url_watch,
-            url_thumbnail=url_thumbnail,
+            title = data.get('title', 'Unbekannter Titel')[:256]
+            description = data.get('description', "Keine Beschreibung gefunden.")[:2048]
+            duration = int(data.get('duration', 0))
             
-            title=title,
-            description=description,
-            duration=duration,
+            uploader_name = data.get('uploader', "")[:256]
+            uploader_url = data.get('uploader_url', "")[:200]
+            
+            return self.objects.create(
+                url_source=url_source,
 
-            uploader_name=uploader_name,
-            uploader_url=uploader_url,
-        )
+                url_watch=url_watch,
+                url_thumbnail=url_thumbnail,
+                
+                title=title,
+                description=description,
+                duration=duration,
+
+                uploader_name=uploader_name,
+                uploader_url=uploader_url,
+            )
+        else:
+            return None
 
     @property
     def clickable(self):

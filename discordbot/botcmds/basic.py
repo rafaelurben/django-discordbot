@@ -51,8 +51,8 @@ class Basic(commands.Cog):
     )
     async def ping(self, ctx):
         start = d.timestamp(d.now())
-        msg = await ctx.sendEmbed(title="Aktueller Ping", color=self.color, fields=[("Ping", "Berechnen...")])
-        embed = ctx.getEmbed(title="Aktueller Ping", color=self.color, fields=[("Ping", str(int(( d.timestamp( d.now() ) - start ) * 1000))+"ms")])
+        msg = await ctx.sendEmbed(title="Aktueller Ping", fields=[("Ping", "Berechnen...")])
+        embed = ctx.getEmbed(title="Aktueller Ping", fields=[("Ping", str(int(( d.timestamp( d.now() ) - start ) * 1000))+"ms")])
         await msg.edit(embed=embed)
         return
 
@@ -112,7 +112,7 @@ class Basic(commands.Cog):
         usage="<Kanal/Benutzer> [Anzahl<100] [Text]"
         )
     async def regeln(self,ctx):
-        EMBED = self.bot.getEmbed(title="Regeln", color=self.color, description="Das Nichtbeachten der Regeln kann mit einem Ban, Kick oder Mute bestraft werden!")
+        EMBED = self.bot.getEmbed(title="Regeln", description="Das Nichtbeachten der Regeln kann mit einem Ban, Kick oder Mute bestraft werden!")
         owner = self.bot.get_user(self.bot.owner_id)
         if owner:
             EMBED.set_footer(text=f'Besitzer dieses Bots ist {owner.name}#{owner.discriminator}',icon_url=owner.avatar_url)
@@ -142,9 +142,9 @@ class Basic(commands.Cog):
                     invite = None
 
         if invite:
-            await ctx.sendEmbed(title="Einladungen", color=self.color, fields=[("Dieser Server", invite.url or "Unbekannt"), ("Bot Owner Server", INVITE_OWNER), ("Bot", INVITE_BOT)])
+            await ctx.sendEmbed(title="Einladungen", fields=[("Dieser Server", invite.url or "Unbekannt"), ("Bot Owner Server", INVITE_OWNER), ("Bot", INVITE_BOT)])
         else:
-            await ctx.sendEmbed(title="Einladungen", color=self.color, fields=[("Bot Owner Server",INVITE_OWNER), ("Bot",INVITE_BOT)])
+            await ctx.sendEmbed(title="Einladungen", fields=[("Bot Owner Server",INVITE_OWNER), ("Bot",INVITE_BOT)])
 
 def setup(bot):
     bot.add_cog(Basic(bot))

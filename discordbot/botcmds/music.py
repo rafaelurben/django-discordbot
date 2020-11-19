@@ -95,7 +95,7 @@ class Music(commands.Cog):
                     ctx.voice_client.stop()
 
                 ctx.voice_client.play(player, after=lambda e: print('[Music] - Fehler: %s' % e) if e else None)
-                await ctx.sendEmbed(title="Memetime!", color=self.color, fields=[("Meme",str(filename).split(".")[0])])
+                await ctx.sendEmbed(title="Memetime!", fields=[("Meme",str(filename).split(".")[0])])
             else:
                 raise commands.BadArgument(message="Es wurden keine mit '{}' übereinstimmende Audiodatei gefunden.".format(search))
 
@@ -165,7 +165,7 @@ class Music(commands.Cog):
         async def pause(self, ctx):
             if ctx.voice_client and ctx.voice_client.is_playing():
                 ctx.voice_client.pause()
-                await ctx.sendEmbed(title="Musik pausiert", color=self.color)
+                await ctx.sendEmbed(title="Musik pausiert")
 
         @commands.command(
             brief='Führe Musik fort',
@@ -175,7 +175,7 @@ class Music(commands.Cog):
         async def resume(self, ctx):
             if ctx.voice_client and ctx.voice_client.is_paused():
                 ctx.voice_client.resume()
-                await ctx.sendEmbed(title="Pausierung aufgehoben", color=self.color)
+                await ctx.sendEmbed(title="Pausierung aufgehoben")
 
         @commands.command(
             brief='Überspringe Musik',
@@ -204,11 +204,11 @@ class Music(commands.Cog):
             oldvolume = ctx.voice_client.source.volume * 100
 
             if newvolume is None:
-                await ctx.sendEmbed(title="Lautstärke", color=self.color, fields=[("Aktuell", str(oldvolume)+"%")])
+                await ctx.sendEmbed(title="Lautstärke", fields=[("Aktuell", str(oldvolume)+"%")])
             else:
                 ctx.voice_client.source.volume = newvolume / 100
 
-                await ctx.sendEmbed(title="Lautstärke geändert", color=self.color, fields=[("Zuvor", str(oldvolume)+"%"),("Jetzt",str(newvolume)+"%")])
+                await ctx.sendEmbed(title="Lautstärke geändert", fields=[("Zuvor", str(oldvolume)+"%"),("Jetzt",str(newvolume)+"%")])
 
         @commands.command(
             brief='Stoppe Musik',
@@ -248,8 +248,9 @@ class Music(commands.Cog):
         hidden=True,
     )
     async def songinfo(self, ctx, query:str):
-        embdata = await ctx.audio.getInfoEmbedData(query)
-        #await ctx.sendEmbed(**embdata)
+        async with ctx.typing():
+            embdata = await ctx.audio.getInfoEmbedData(query)
+            await ctx.sendEmbed(**embdata)
 
     @commands.command(
         name='usersong',
@@ -265,7 +266,7 @@ class Music(commands.Cog):
         for activity in Member.activities:
             if str(activity.type) == "ActivityType.listening":
                 try:
-                    await ctx.sendEmbed(title="User Song", color=self.color, fields=[("Titel", activity.title),("Künstler", activity.artist),("Link", ("[Spotify](https://open.spotify.com/track/"+activity.track_id+")"))])
+                    await ctx.sendEmbed(title="User Song", fields=[("Titel", activity.title),("Künstler", activity.artist),("Link", ("[Spotify](https://open.spotify.com/track/"+activity.track_id+")"))])
                 except AttributeError:
                     raise commands.BadArgument(message="Scheinbar hört dieser Benutzer keinen richtigen Song.")
                 found = True
