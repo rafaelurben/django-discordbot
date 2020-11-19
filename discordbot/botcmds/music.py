@@ -239,9 +239,17 @@ class Music(commands.Cog):
             else:
                 raise commands.CommandError("Du bist mit keinem Sprachkanal in diesem Server verbunden!")
 
-
-
     # Generelle Commands
+
+    @commands.command(
+        brief='Erhalte Infos über einen Song',
+        description='Erhalte Infos über einen Song oder eine Playlist',
+        aliases=[],
+        hidden=True,
+    )
+    async def songinfo(self, ctx, query:str):
+        embdata = await ctx.audio.getInfoEmbedData(query)
+        #await ctx.sendEmbed(**embdata)
 
     @commands.command(
         name='usersong',

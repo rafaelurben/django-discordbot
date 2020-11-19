@@ -2,6 +2,12 @@ from discord.ext import commands
 from discord import Embed, User, Member, utils, PermissionOverwrite, Role
 import typing
 
+CHANNEL_NAMES_DEFAULT = ["Sprachkanal", "Sprachkanal erstellen", "Neuer Sprachkanal", ]
+CHANNEL_NAMES_PUBLIC = ["Sprachkanal [offen]", "Sprachkanal erstellen [offen]", "Neuer Sprackanal [offen]", ]
+CHANNEL_NAMES_PRIVATE = ["Sprachkanal [privat]", "Sprachkanal erstellen [privat]", "Neuer Sprachkanal [privat]", ]
+
+CATEGORY_NAMES = ["BENUTZERKANÄLE", ]
+
 async def getUserChannelCategory(guild):
     category = utils.get(guild.categories, name="Benutzerkanäle")
     if not category:
@@ -10,7 +16,8 @@ async def getUserChannelCategory(guild):
         voicechanneloverwrites = { guild.default_role: PermissionOverwrite(read_messages=True, connect=True, speak=False, move_members=False) }
         category = await guild.create_category_channel(name="Benutzerkanäle", overwrites=categoryoverwrites, reason="Bereite Benutzerkanäle vor...")
         await category.create_text_channel(name="benutzerkanäle", overwrites=textchanneloverwrites, reason="Bereite Benutzerkanäle vor...", topic="Hilfe: /help channels")
-        await category.create_voice_channel(name="Sprachkanal erstellen", overwrites=voicechanneloverwrites, reason="Bereite Benutzerkanäle vor...")
+        await category.create_voice_channel(name=CHANNEL_NAMES_PUBLIC[0], overwrites=voicechanneloverwrites, reason="Bereite Benutzerkanäle vor...")
+        await category.create_voice_channel(name=CHANNEL_NAMES_PRIVATE[0], overwrites=voicechanneloverwrites, reason="Bereite Benutzerkanäle vor...")
     return category
 
 class Channels(commands.Cog):
@@ -23,16 +30,19 @@ class Channels(commands.Cog):
         category = await getUserChannelCategory(member.guild)
 
         # Delete channel if empty
-        if before.channel and before.channel.category and before.channel.category.name.upper() == "BENUTZERKANÄLE" and "#" in before.channel.name and before.channel.members == []:
+        if before.channel and before.channel.category and before.channel.category.name.upper() in CATEGORY_NAMES and "#" in before.channel.name and before.channel.members == []:
             await before.channel.delete(reason="Kanal war leer")
 
         # Create new channel
-        if after.channel and after.channel.name == "Sprachkanal erstellen":
+        if after.channel and after.channel.category and after.channel.category.name.upper() in CATEGORY_NAMES and after.channel.name in CHANNEL_NAMES_DEFAULT+CHANNEL_NAMES_PRIVATE+CHANNEL_NAMES_PUBLIC:
             channel = utils.get(member.guild.voice_channels, name=(member.name+"#"+member.discriminator))
             if channel:
                 await member.edit(voice_channel=channel,reason="Benutzer wollte einen Kanal erstellen, besitzte aber bereits einen Kanal")
             else:
-                overwrites = { member.guild.default_role: PermissionOverwrite(connect=False,speak=True,read_messages=True), member: PermissionOverwrite(connect=True,speak=True,read_messages=True,move_members=True,mute_members=True) }
+                if after.channel.name in CHANNEL_NAMES_PRIVATE:
+                    overwrites = { member.guild.default_role: PermissionOverwrite(connect=False, speak=True, read_messages=True), member: PermissionOverwrite(connect=True, speak=True, read_messages=True, move_members=True, mute_members=True) }
+                else:
+                    overwrites = { member.guild.default_role: PermissionOverwrite(connect=True, speak=True, read_messages=True), member: PermissionOverwrite(connect=True, speak=True, read_messages=True, move_members=True, mute_members=True) }
                 newchannel = await category.create_voice_channel(name=(member.name+"#"+member.discriminator),overwrites=overwrites,reason="Benutzer hat den Sprachkanal erstellt")
                 await member.edit(voice_channel=newchannel,reason="Benutzer hat den Sprachkanal erstellt")
 
@@ -79,7 +89,8 @@ class Channels(commands.Cog):
         channel = utils.get(ctx.guild.text_channels, name=(ctx.author.name+"-"+ctx.author.discriminator), category=category)
         if channel:
             await channel.delete(reason="Benutzer hat den Textkanal gelöscht")
-            await ctx.sendEmbed(title="Textkanal gelöscht", color=self.color, fields=[("Server", ctx.guild.name)])
+            if not ctx.channel == channel:
+                await ctx.sendEmbed(title="Textkanal gelöscht", color=self.color, fields=[("Server", ctx.guild.name)])
         else:
             raise commands.BadArgument(message="Du hattest gar keinen Textkanal!")
         return

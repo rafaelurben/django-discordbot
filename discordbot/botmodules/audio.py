@@ -31,21 +31,36 @@ class AudioManager():
         self.guild = ctx.guild
         self.loop = ctx.bot.loop
         self.database = ctx.database
+        self.bot = ctx.bot
         
     async def playlist(self):
         return await self.database.get_playlist()
 
-    @classmethod
     async def refetchStreamUrl(self, watchurl:str):
         pass
 
-    async def processQuery(self, query:str):
+    async def getSongs(self, query: str):
         data = await self.loop.run_in_executor(None, lambda: _ytdl.extract_info(query, download=False))
 
-        if 'entries' in data:
-            data = data['entries'][0]
+        if data:
+            if 'entries' in data:
+                return [await self.database.getOrCreateAudioSourceFromDict(d) for d in data['entries'] if not d is None]
+            return [await self.database.getOrCreateAudioSourceFromDict(data)]
+        return []
 
-        src = await self.database.getOrCreateAudioSourceFromDict(data)
+    async def getInfoEmbedData(self, query: str):
+        data = await self.loop.run_in_executor(None, lambda: _ytdl.extract_info(query, download=False))
+
+        if data:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".test.json"), "w+") as f:
+                import json
+                f.write(json.dumps(data, indent=2))
+            
+            return 
+
+    async def processQuery(self, query:str):
+        sources = await self.getSongs(query)
+        print(sources)
 
 
 

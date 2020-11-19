@@ -3,6 +3,8 @@ from discord import Embed, User, TextChannel, utils
 from datetime import datetime as d
 import typing
 
+from discordbot.config import INVITE_OWNER, INVITE_BOT
+
 REGELN = {
     "1) Sei anständig":
         [
@@ -126,15 +128,23 @@ class Basic(commands.Cog):
         help="Benutze /invite und erhalte eine Einladung zu diesem Server, dem Bot-Server und einen Link, um den Bot zum eigenen Server hinzuzufügen",
         usage=""
         )
-    @commands.bot_has_permissions(manage_guild = True)
     async def invite(self,ctx):
-        try:
-            invite = await ctx.guild.vanity_invite()
-        except:
-            invite = utils.get(list(await ctx.guild.invites()), max_age=0, max_uses=0, temporary=False)
-            if not invite:
-                invite = await ctx.channel.create_invite()
-        await ctx.sendEmbed(title="Einladungen", color=self.color, fields=[("Dieser Server", invite.url),("Bot Server","https://rebrand.ly/RUdiscord"),("Bot","https://rebrand.ly/RUdiscordbot")])
+        invite = None
+        if ctx.guild:
+            try:
+                invite = await ctx.guild.vanity_invite()
+            except:
+                try:
+                    invite = utils.get(list(await ctx.guild.invites()), max_age=0, max_uses=0)
+                    if not invite:
+                        invite = await ctx.channel.create_invite()
+                except:
+                    invite = None
+
+        if invite:
+            await ctx.sendEmbed(title="Einladungen", color=self.color, fields=[("Dieser Server", invite.url or "Unbekannt"), ("Bot Owner Server", INVITE_OWNER), ("Bot", INVITE_BOT)])
+        else:
+            await ctx.sendEmbed(title="Einladungen", color=self.color, fields=[("Bot Owner Server",INVITE_OWNER), ("Bot",INVITE_BOT)])
 
 def setup(bot):
     bot.add_cog(Basic(bot))

@@ -220,9 +220,36 @@ class Playlist(models.Model):
     def removePosition(self, pos: int):
         if pos > 0 and pos <= self.sources.count() and not self.current_pos == pos:
             self.sources.through.objects.filter(position=pos).delete()
-            for s in self.sources.through.objects.filter(position_gt=pos):
+            for s in self.sources.through.objects.filter(position__gt=pos):
                 s.position -= 1
                 s.save()
+
+    @sync_to_async
+    def switchPositions(self, pos1:int, pos2:int):
+        if self.sources.count() > max(pos1, pos2):
+            o1 = self.sources.through.objects.get(playlist=self, position=pos1)
+            o2 = self.sources.through.objects.get(playlist=self, position=pos2)
+            o1.position = pos2
+            o2.position = pos1
+            o1.save()
+            o2.save()
+            return True
+        return False
+
+    @sync_to_async
+    def getAll(self):
+        return list(self.sources.all().order_by("position"))
+
+    @sync_to_async
+    def hasNext(self):
+        return self.sources.through.objects.filter(playlist=self, position__gt=self.current_pos).exists()
+
+    @sync_to_async
+    def next(self):
+        self.current_pos += 1
+        obj = self.sources.through.objects.get(playlist=self, position=self.current_pos)
+        self.save()
+        return obj
 
     class Meta():
         verbose_name = "Audio queue"

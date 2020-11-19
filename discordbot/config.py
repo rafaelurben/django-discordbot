@@ -24,6 +24,11 @@ MAIN_PREFIXES = _s("MAIN_PREFIXES", ["/"])
 EXTENSIONFOLDER = "discordbot.botcmds"
 EXTENSIONS = _s("EXTENSIONS", ['basic','support','moderation','games','help','channels','music','owneronly','converters','embedgenerator','notifier'])
 
+## Basic
+
+INVITE_OWNER = "https://rebrand.ly/RUdiscord"
+INVITE_BOT = "https://rebrand.ly/RUdiscordbot"
+
 ## Help
 
 HELP_HIDDEN_COGS = ["owneronly", "notifier"]
