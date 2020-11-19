@@ -6,8 +6,8 @@ import requests
 class HTMLCleaner(HTMLParserOriginal):
     def __init__(self, data, convert_charrefs=True):
         super().__init__(convert_charrefs=convert_charrefs)
-
         self.data = ""
+
         self.feed(data)
 
         self.data = "\n".join(i.strip(" ") for i in self.data.split("\n"))
@@ -20,6 +20,34 @@ class HTMLCleaner(HTMLParserOriginal):
 
     def handle_data(self, data):
         self.data += data+"\n"
+
+    def handle_starttag(self, tag, attrs=None):
+        if tag in ["del"]:
+            self.data += "~~**"
+        elif tag in ["li"]:
+            self.data += "- "
+        elif tag in ["b", "strong"]:
+            self.data += "**"
+        elif tag in ["i", "em"]:
+            self.data += "_"
+        elif tag in ["strike"]:
+            self.data += "~~"
+        elif tag in ["ins"]:
+            self.data += "__"
+        elif tag in ["hr"]:
+            self.data += "\n---\n"
+
+    def handle_endtag(self, tag):
+        if tag in ["del"]:
+            self.data += "**~~"
+        elif tag in ["b", "strong"]:
+            self.data += "**"
+        elif tag in ["i", "em"]:
+            self.data += "_"
+        elif tag in ["strike"]:
+            self.data += "~~"
+        elif tag in ["ins"]:
+            self.data += "__"
 
     @classmethod
     def from_data(self, data):
