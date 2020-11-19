@@ -11,7 +11,7 @@ class EmbedGenerator(commands.Cog):
         self.color = 0x34b7eb
 
     @commands.has_permissions(manage_messages = True)
-    @commands.bot_has_permissions(manage_messages = True)
+    @commands.guild_only()
     @commands.command(
         name='createembed',
         brief='Erstelle einen Embed',
@@ -20,8 +20,8 @@ class EmbedGenerator(commands.Cog):
         help="Benutze /createembed für Erklärungen.",
         usage="<Titel> [Argumente]"
     )
-    async def createembed(self, ctx, *args):
-        text = " ".join(args)
+    async def createembed(self, ctx):
+        text = " ".join(ctx.message.content.split(ctx.invoked_with)[1:])
         if not text:
             await ctx.sendEmbed(title="Embed-Creator", description=f"""
 Verwendung des Chat-Embed-Generators:
