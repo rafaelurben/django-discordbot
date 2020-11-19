@@ -69,7 +69,7 @@ class AudioManager():
                         "authorname": data.get("title", "Unbekannt"),
                         "authorurl": data["webpage_url"] if "webpage_url" in data and "http" in data["webpage_url"] else ""
                     }
-            else:
+                else:
                     data = data["entries"][0]
             src = await self.database.getOrCreateAudioSourceFromDict(data)
             return {

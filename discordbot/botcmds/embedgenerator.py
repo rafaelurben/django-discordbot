@@ -46,7 +46,6 @@ Verfügbare Parameter:""", inline=False, fields=[
             data = {
                 "title": lines.pop(0),
                 "description": "",
-                "color": self.color,
                 "footertext": "",
                 "footerurl": "",
                 "authorname": "",

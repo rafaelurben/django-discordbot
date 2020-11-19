@@ -99,7 +99,6 @@ class Help(commands.Cog):
 
         await ctx.sendEmbed(
             title='Hilfe',
-            color=self.color,
             inline=False,
             description=description[0],
             fields=fields,

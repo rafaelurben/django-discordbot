@@ -74,7 +74,6 @@ class Support(commands.Cog):
             await ctx.database._create_permissions(id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission")
             await ctx.sendEmbed(
                 title="Benutzer erlaubt",
-                color=self.color,
                 description=member.mention+" darf nun Befehle für dich ausführen!"
             )
         else:
@@ -93,7 +92,6 @@ class Support(commands.Cog):
             await ctx.database._create_permissions(id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission")
             await ctx.sendEmbed(
                 title="ID erlaubt",
-                color=self.color,
                 description=str(id)+" darf nun Befehle für dich ausführen!"
             )
         else:
@@ -110,7 +108,6 @@ class Support(commands.Cog):
             await ctx.database._delete_permissions(id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission")
             await ctx.sendEmbed(
                 title="Benutzer verboten", 
-                color=self.color,
                 description=member.mention+" darf nun nicht mehr Befehle für dich ausführen!"
             )
         else:
@@ -129,7 +126,6 @@ class Support(commands.Cog):
             await ctx.database._delete_permissions(id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission")
             await ctx.sendEmbed(
                 title="ID verboten",
-                color=self.color,
                 description=str(id)+" darf nun nicht mehr Befehle für dich ausführen!"
             )
         else:
@@ -146,7 +142,6 @@ class Support(commands.Cog):
         perms = await ctx.database._list_permissions(id_1=str(ctx.author.id), typ="remote_permission")
         await ctx.sendEmbed(
             title="Benutzerliste",
-            color=self.color,
             description="Folgende Benutzer/IDs dürfen Befehle für dich ausführen:\n\n"+"\n".join([f"<@{i.id_2}> ({i.id_2})" for i in perms])
         )
 

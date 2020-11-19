@@ -157,7 +157,6 @@ class Games(commands.Cog):
         JSON = apis.Fortnite.getStore()
         await ctx.sendEmbed(
             title="Fortnite Item Shop",
-            color=self.color,
             authorurl="http://fortnitetracker.com/",
             authorname="Powered by Fortnitetracker"
         )
@@ -165,7 +164,6 @@ class Games(commands.Cog):
             await ctx.sendEmbed(
                 title=str(JSON[i]["name"]),
                 description=("Rarity: %s \n vBucks: %s" % (JSON[i]["rarity"],JSON[i]["vBucks"])),
-                color=self.color,
                 thumbnailurl=str(JSON[i]["imageUrl"]),
                 footertext="",
                 footerurl="",
@@ -180,7 +178,6 @@ class Games(commands.Cog):
         JSON = apis.Fortnite.getChallenges()
         await ctx.sendEmbed(
             title="Fortnite Challenges",
-            color=self.color,
             fields=[((JSON[i]["metadata"][1]["value"]+" ("+JSON[i]["metadata"][3]["value"]+")"),(JSON[i]["metadata"][5]["value"]+" Battlepassstars")) for i in range(len(JSON))],
             thumbnailurl=str(JSON[0]["metadata"][4]["value"]),
             authorurl="http://fortnitetracker.com/",
@@ -201,7 +198,6 @@ class Games(commands.Cog):
             await ctx.sendEmbed(
                 title="Fortnite Stats von "+JSON["epicUserHandle"]+" auf "+JSON["platformNameLong"],
                 description=("Account Id: "+JSON["accountId"]),
-                color=self.color,
                 fields=[(JSON["lifeTimeStats"][i]["key"], JSON["lifeTimeStats"][i]["value"]) for i in range(len(JSON["lifeTimeStats"]))],
                 authorurl="http://fortnitetracker.com/",
                 authorname="Powered by Fortnitetracker"

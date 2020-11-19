@@ -68,7 +68,6 @@ class Music(commands.Cog):
                 chunk = chunklist[chunkindex]
                 await ctx.sendEmbed(
                     title="Memes (Seite "+str(chunkindex+1)+"/"+str(len(chunklist))+")",
-                    color=self.color,
                     fields=[("Meme", filename.split(".")[0]) for filename in chunk]
                 )
 
