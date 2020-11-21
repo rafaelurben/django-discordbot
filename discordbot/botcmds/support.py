@@ -1,5 +1,9 @@
 from discord.ext import commands
 from discord import Embed, Member, User, Webhook
+
+from discordbot.models import BotPermission, Report
+from discordbot.errors import ErrorMessage
+
 import time
 import typing
 
@@ -8,49 +12,76 @@ class Support(commands.Cog):
         self.bot = bot
         self.color = 0xffdf00
 
-    @commands.command(
+    # Reports
+
+    @commands.group(
+        brief="Melde Spieler und sehe dir Meldungen an",
+        description="Dieses Modul unterstützt dich dabei, Personen, welche sich falsch verhalten, auf diesem Server zu erkennen",
+        usage="<Unterbefehl> <Argumente>",
+        aliases=["rp", "rep"],
+    )
+    @commands.guild_only()
+    async def reports(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help()
+
+    @reports.command(
+        name="create",
         brief='Melde einen Spieler',
         description='Benutze diesen Command um Spieler zu melden',
-        aliases=[],
-        help="Wenn ein Benutzer Blödsinn treibt, dann benutze /report <Member> [Grund]",
+        aliases=["add", "+"],
         usage="<Member> [Grund]"
         )
-    @commands.guild_only()
-    async def report(self, ctx, member: Member, *args):
+    async def reports_create(self, ctx, member: Member, *args):
         Grund = " ".join(args)
         Grund = Grund if Grund.rstrip(" ") else "Leer"
         await ctx.database.createReport(dc_user=member, reason=Grund)
         await ctx.sendEmbed(title="Benutzer Gemeldet", fields=[("Betroffener",member.mention),("Grund",Grund)])
         return
 
-
-    @commands.command(
-        brief='Erhalte alle Reports',
-        description='Benutze diesen Command um alle Reports zu sehen',
-        aliases=["getreports","getreport"],
-        help="Mit /getreports [Member] kannst du alle Reports ansehen.",
-        usage="[Member]"
-        )
-    @commands.has_any_role("Moderator","Supporter","Admin")
-    @commands.guild_only()
-    async def reports(self, ctx, member:Member=None):
-        if member == None:
-            EMBED = ctx.getEmbed(
-                title="Server Reports",
-            )
-            for user in await ctx.database.getReports():
-                EMBED.add_field(**user)
-            await ctx.send(embed=EMBED)
-        else:
-            EMBED = ctx.getEmbed(
-                title="User Reports",
-                description=("User: "+member.mention)
-            )
-            for report in await ctx.database.getReports(dc_user=member):
-                EMBED.add_field(**report)
-            await ctx.send(embed=EMBED)
+    @reports.command(
+        name="delete",
+        brief='Lösche einen Report',
+        description='Dieser Command ist für alle mit einer der folgenden Rollen verfügbar: Moderator, Supporter, Administrator und Admin',
+        aliases=["del", "-"],
+        usage="<ID>"
+    )
+    @commands.has_any_role("Moderator", "Supporter", "Admin", "Administrator")
+    async def reports_delete(self, ctx, *repids):
+        for repid in repids:
+            if await ctx.database.deleteReport(repid=repid):
+                await ctx.sendEmbed(title=f"Report #{repid} gelöscht!")
+            else:
+                raise ErrorMessage(f"Report mit der ID {repid} wurde nicht gefunden!")
         return
 
+    @reports.command(
+        name="view",
+        brief='Siehe Reports an',
+        description='Benutze diesen Command um alle Reports zu sehen',
+        aliases=["get", "show", "list"],
+        help="Mit /reports view kannst du dir alle Reports ansehen, mit /reports view [Member] kannst du dir Reports eines bestimmten Mitglieds ansehen.",
+        usage="[Member]"
+        )
+    @commands.has_any_role("Moderator", "Supporter", "Admin", "Administrator")
+    async def reports_view(self, ctx, member:Member=None):
+        if member == None:
+            await ctx.sendEmbed(
+                title="Server Reports",
+                description=(
+                    f"Reports auf {ctx.guild.name}\n\n"+
+                    await ctx.database.getReports()
+                )
+            )
+        else:
+            await ctx.sendEmbed(
+                title="Mitglieder Reports",
+                description=("Mitglied: "+member.mention),
+                fields=await ctx.database.getReports(dc_user=member),
+            )
+        return
+
+    # Remote
     
     @commands.group(
         brief="Lasse jemanden Commands für dich ausführen",
@@ -61,7 +92,6 @@ class Support(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help()
 
-
     @remote.command(
         name="allow",
         brief="Füge einen erlaubten Spieler hinzu",
@@ -70,8 +100,8 @@ class Support(commands.Cog):
         help="Dieser Befehl kann ziemlich viel Mist machen, vorallem wenn du Rechte hast! Also pass auf!",
     )
     async def remote_allow(self, ctx, member: typing.Union[Member, User]):
-        if not await ctx.database._has_permissions(id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission"):
-            await ctx.database._create_permissions(id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission")
+        if not await ctx.database._has(BotPermission, id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission"):
+            await ctx.database._create(BotPermission, id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission")
             await ctx.sendEmbed(
                 title="Benutzer erlaubt",
                 description=member.mention+" darf nun Befehle für dich ausführen!"
@@ -88,8 +118,8 @@ class Support(commands.Cog):
         hidden=True,
     )
     async def remote_allowraw(self, ctx, id: int):
-        if not await ctx.database._has_permissions(id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission"):
-            await ctx.database._create_permissions(id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission")
+        if not await ctx.database._has(BotPermission, id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission"):
+            await ctx.database._create(BotPermission, id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission")
             await ctx.sendEmbed(
                 title="ID erlaubt",
                 description=str(id)+" darf nun Befehle für dich ausführen!"
@@ -104,8 +134,8 @@ class Support(commands.Cog):
         usage="<Member>",
     )
     async def remote_disallow(self, ctx, member: typing.Union[Member, User]):
-        if await ctx.database._has_permissions(id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission"):
-            await ctx.database._delete_permissions(id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission")
+        if await ctx.database._has(BotPermission, id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission"):
+            await ctx.database._listdelete(BotPermission, id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission")
             await ctx.sendEmbed(
                 title="Benutzer verboten", 
                 description=member.mention+" darf nun nicht mehr Befehle für dich ausführen!"
@@ -122,8 +152,8 @@ class Support(commands.Cog):
         hidden=True,
     )
     async def remote_disallowraw(self, ctx, id: int):
-        if await ctx.database._has_permissions(id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission"):
-            await ctx.database._delete_permissions(id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission")
+        if await ctx.database._has(BotPermission, id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission"):
+            await ctx.database._listdelete(BotPermission, id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission")
             await ctx.sendEmbed(
                 title="ID verboten",
                 description=str(id)+" darf nun nicht mehr Befehle für dich ausführen!"
@@ -139,7 +169,7 @@ class Support(commands.Cog):
         usage=""
     )
     async def remote_list(self, ctx):
-        perms = await ctx.database._list_permissions(id_1=str(ctx.author.id), typ="remote_permission")
+        perms = await ctx.database._list(BotPermission, id_1=str(ctx.author.id), typ="remote_permission")
         await ctx.sendEmbed(
             title="Benutzerliste",
             description="Folgende Benutzer/IDs dürfen Befehle für dich ausführen:\n\n"+"\n".join([f"<@{i.id_2}> ({i.id_2})" for i in perms])
@@ -153,7 +183,7 @@ class Support(commands.Cog):
         help="Falls Unterbefehle verwendet werden, benutze bitte befehl_unterbefehl als Command",
     )
     async def remote_run(self, ctx, member: typing.Union[Member, User], command: str, *args):
-        if await ctx.database._has_permissions(id_1=str(member.id), id_2=str(ctx.author.id), typ="remote_permission") or await ctx.database._has_permissions(id_1=str(member.id), id_2=str(ctx.message.webhook_id), typ="remote_permission"):
+        if await ctx.database._has(BotPermission, id_1=str(member.id), id_2=str(ctx.author.id), typ="remote_permission") or await ctx.database._has(BotPermission, id_1=str(member.id), id_2=str(ctx.message.webhook_id), typ="remote_permission"):
             await ctx.invoke_as(member, command, *args)
         else:
             raise commands.BadArgument("Du darfs keine Befehle als diesen Benutzer ausführen!   ")

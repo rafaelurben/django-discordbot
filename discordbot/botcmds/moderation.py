@@ -20,6 +20,7 @@ class Moderation(commands.Cog):
     @commands.bot_has_permissions(manage_messages = True)
     @commands.guild_only()
     async def clearchat(self,ctx):
+        await ctx.sendEmbed(title="Chat wird geleert...", description="Der Chat wird geleert!")
         try:
             await ctx.message.channel.purge()
         except Exception as e:

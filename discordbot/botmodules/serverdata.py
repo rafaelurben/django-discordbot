@@ -1,6 +1,7 @@
 from discord.ext import commands
 
 from discordbot.botmodules.audio import AudioManager, YouTubePlayer
+from discordbot.errors import ErrorMessage
 
 from asgiref.sync import sync_to_async
 
@@ -31,7 +32,7 @@ class MusicQueue():
             if isinstance(ctx.voice_client.source, YouTubePlayer):
                 await ctx.voice_client.source.send(ctx, status="Wird aktuell gespielt.")
         else:
-            raise commands.CommandError("Aktuell wird nichts abgespielt.")
+            raise ErrorMessage("Aktuell wird nichts abgespielt.")
 
     async def sendQueue(self, ctx):
         description = "\n".join(i.getinfo() for i in self._players)
@@ -138,6 +139,10 @@ class DjangoConnection():
         obj.delete()
 
     @classmethod
+    async def _del(self, obj):
+        await self._delete(obj)
+
+    @classmethod
     @sync_to_async
     def _create(self, model, **kwargs):
         self.ensure_connection()
@@ -145,28 +150,41 @@ class DjangoConnection():
 
     @classmethod
     @sync_to_async
-    def _exists(self, model, **kwargs):
+    def _exists(self, model, **filters):
         self.ensure_connection()
-        return model.objects.filter(**kwargs).exists()
+        return model.objects.filter(**filters).exists()
+
+    @classmethod
+    async def _has(self, model, **filters):
+        return await self._exists(model, **filters)
 
     @classmethod
     @sync_to_async
-    def _get(self, model, **kwargs):
+    def _get(self, model, **filters):
         self.ensure_connection()
-        return model.objects.get(**kwargs)
+        return model.objects.get(**filters)
 
     @classmethod
     @sync_to_async
-    def _list(self, model, **kwargs):
+    def _list(self, model, _order_by=("pk",), **filters):
         self.ensure_connection()
-        return list(model.objects.filter(**kwargs))
+        return list(model.objects.filter(**filters).order_by(*_order_by))
+
+    @classmethod
+    @sync_to_async
+    def _listdelete(self, model, **filters):
+        self.ensure_connection()
+        model.objects.filter(**filters).delete
+
+    @classmethod
+    async def _getdel(self, model, **filters):
+        if await self._has(model, **filters):
+            obj = await self._get(DB_Report, **filters)
+            await self._delete(obj)
+            return True
+        return False
 
     # Music
-
-    @classmethod
-    @sync_to_async
-    def _createAudioSourceFromDict(self, data):
-        return AudioSource.create_from_dict(data)
 
     @classmethod
     async def getOrCreateAudioSourceFromDict(self, data):
@@ -176,7 +194,7 @@ class DjangoConnection():
             await self._save(audio)
             return audio
         else:
-            return await self._createAudioSourceFromDict(data)
+            return await AudioSource.create_from_dict(data)
 
     # Reports
 
@@ -192,120 +210,29 @@ class DjangoConnection():
         server = await self.get_server()
         if dc_user is None:
             reports = await server.getReports()
-            print(reports)
             return reports
         else:
             user = await self.fetch_user(dc_user)
             reports = await server.getReports(user=user)
-            print(reports)
             return reports
 
-    # Remote
-
-    @classmethod
-    @sync_to_async
-    def _has_permissions(self, **kwargs):
-        self.ensure_connection()
-        return BotPermission.objects.filter(**kwargs).exists()
-
-    @classmethod
-    @sync_to_async
-    def _delete_permissions(self, **kwargs):
-        self.ensure_connection()
-        BotPermission.objects.filter(**kwargs).delete()
-
-    @classmethod
-    @sync_to_async
-    def _create_permissions(self, **kwargs):
-        self.ensure_connection()
-        return BotPermission.objects.create(**kwargs)
-
-    @classmethod
-    @sync_to_async
-    def _list_permissions(self, **kwargs):
-        self.ensure_connection()
-        return list(BotPermission.objects.filter(**kwargs))
+    async def deleteReport(self, repid:int):
+        server = await self.get_server()
+        return await self._getdel(DB_Report, server=server, id=repid)
 
     # AmongUs
-
-    @classmethod
-    @sync_to_async
-    def _getAmongUsGame(self, **kwargs):
-        self.ensure_connection()
-        return AmongUsGame.objects.get(**kwargs)
 
     async def getAmongUsGame(self, **kwargs):
         user = await self.get_user()
         server = await self.get_server()
         return await self._get(AmongUsGame, creator=user, guild=server, **kwargs)
 
-    @classmethod
-    @sync_to_async
-    def _hasAmongUsGame(self, **kwargs):
-        self.ensure_connection()
-        return AmongUsGame.objects.filter(**kwargs).exists()
-
     async def hasAmongUsGame(self, **kwargs):
         user = await self.get_user()
         server = await self.get_server()
-        return await self._hasAmongUsGame(creator=user, guild=server, **kwargs)
-
-    @classmethod
-    @sync_to_async
-    def _createAmongUsGame(self, **kwargs):
-        self.ensure_connection()
-        return AmongUsGame.objects.create(**kwargs)
+        return await self._has(AmongUsGame, creator=user, guild=server, **kwargs)
 
     async def createAmongUsGame(self, **kwargs):
         user = await self.get_user()
         server = await self.get_server()
         return await self._create(AmongUsGame, creator=user, guild=server, **kwargs)
-
-    # VierGewinnt
-
-    @classmethod
-    @sync_to_async
-    def _getVierGewinntGame(self, **kwargs):
-        self.ensure_connection()
-        return VierGewinntGame.objects.get(**kwargs)
-
-    @classmethod
-    @sync_to_async
-    def _hasVierGewinntGame(self, **kwargs):
-        self.ensure_connection()
-        return VierGewinntGame.objects.filter(**kwargs).exists()
-
-    @classmethod
-    @sync_to_async
-    def _listVierGewinntGames(self, get_as_queryset: bool=False, **kwargs):
-        self.ensure_connection()
-        if get_as_queryset:
-            return VierGewinntGame.objects.filter(**kwargs).order_by("id")
-        else:
-            return list(VierGewinntGame.objects.filter(**kwargs).order_by("id"))
-
-    @classmethod
-    @sync_to_async
-    def _createVierGewinntGame(self, **kwargs):
-        self.ensure_connection()
-        return VierGewinntGame.create(**kwargs)
-
-    # NotifierSub
-
-    @classmethod
-    @sync_to_async
-    def _getNotifierSub(self, **kwargs):
-        self.ensure_connection()
-        return NotifierSub.objects.get(**kwargs)
-
-    @classmethod
-    @sync_to_async
-    def _listNotifierSubs(self, **kwargs):
-        self.ensure_connection()
-        return list(NotifierSub.objects.filter(**kwargs))
-
-    @classmethod
-    @sync_to_async
-    def _createNotifierSub(self, **kwargs):
-        self.ensure_connection()
-        return NotifierSub.objects.create(**kwargs)

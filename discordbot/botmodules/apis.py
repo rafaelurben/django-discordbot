@@ -1,6 +1,7 @@
 from discord.ext import commands
 import requests, datetime, base64, os
 
+from discordbot.errors import ErrorMessage
 
 class Minecraft():
     @classmethod
@@ -53,7 +54,7 @@ class Fortnite():
     def __get_headers(self):
         key = os.environ.get("TRNAPIKEY", None)
         if key is None:
-            raise commands.CommandError(message="Der Fortnite-Befehl ist leider deaktiviert (nicht konfiguriert)!") 
+            raise ErrorMessage(message="Der Fortnite-Befehl ist leider deaktiviert (nicht konfiguriert)!") 
         else:
             return {'TRN-Api-Key': key}
 

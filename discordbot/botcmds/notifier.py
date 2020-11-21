@@ -6,6 +6,7 @@ from datetime import datetime as d
 import typing
 
 from discordbot.botmodules.serverdata import DjangoConnection
+from discordbot.models import NotifierSub
 
 class Notifier(commands.Cog):
     def __init__(self, bot):
@@ -24,7 +25,7 @@ class Notifier(commands.Cog):
     #
 
     async def notifier_update(self, frequency:str, send:bool=False):
-        for sub in await DjangoConnection._listNotifierSubs(frequency=frequency):
+        for sub in await DjangoConnection._list(NotifierSub, frequency=frequency):
             data = sub.process()
             if data:
                 await DjangoConnection._save(sub)

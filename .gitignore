@@ -132,3 +132,5 @@ dmypy.json
 discordbot/botfiles/memes/*
 discordbot/botfiles/youtube/*
 discordbot/botfiles/ffmpeg.exe
+
+**_debug**

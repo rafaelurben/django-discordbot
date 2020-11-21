@@ -4,12 +4,7 @@ from fuzzywuzzy import process
 import os
 
 from discordbot.config import RADIOS, FFMPEG_OPTIONS, FILESPATH, MEMESPATH, MUSIC_MODULE
-
-###
-
-def chunks(lst, n):
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
+from discordbot.errors import ErrorMessage
 
 #####
 
@@ -17,6 +12,8 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.color = 0xee00ff
+
+    # Events
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -56,6 +53,18 @@ class Music(commands.Cog):
                     voice_client.play(player, after=lambda e: print(
                         '[Music] - Error: %s' % e) if e else None)
 
+    # Utils
+
+    async def ensure_voice(self, ctx):
+        if ctx.author.voice and ctx.author.voice.channel.guild == ctx.guild:
+            if ctx.voice_client is None:
+                await ctx.author.voice.channel.connect()
+            #elif ctx.voice_client.is_playing():
+                #ctx.voice_client.stop()
+            await ctx.voice_client.move_to(ctx.author.voice.channel)
+        else:
+            raise ErrorMessage("Du bist mit keinem Sprachkanal in diesem Server verbunden!")
+
     if MUSIC_MODULE:
         @commands.command(
             brief='Liste alle Memes auf',
@@ -63,13 +72,7 @@ class Music(commands.Cog):
         )
         async def memes(self, ctx):
             filenames = list(os.listdir(MEMESPATH))
-            chunklist = list(chunks(filenames, 25))
-            for chunkindex in range(len(chunklist)):
-                chunk = chunklist[chunkindex]
-                await ctx.sendEmbed(
-                    title="Memes (Seite "+str(chunkindex+1)+"/"+str(len(chunklist))+")",
-                    fields=[("Meme", filename.split(".")[0]) for filename in chunk]
-                )
+            await ctx.sendEmbed(title="Memes", description="\n".join(["- "+filename.split(".")[0] for filename in filenames]))
 
 
         @commands.command(
@@ -198,7 +201,7 @@ class Music(commands.Cog):
         @commands.guild_only()
         async def volume(self, ctx, newvolume: float = None):
             if not ctx.voice_client.source:
-                raise commands.CommandError("Der Bot scheint aktuell nichts abzuspielen.")
+                raise ErrorMessage("Der Bot scheint aktuell nichts abzuspielen.")
 
             oldvolume = ctx.voice_client.source.volume * 100
 
@@ -219,8 +222,9 @@ class Music(commands.Cog):
         async def stop(self, ctx):
             if ctx.voice_client:
                 await ctx.voice_client.disconnect()
+                await ctx.sendEmbed(title="Bye bye!")
             else:
-                raise commands.CommandError(message="Der Bot war in gar keinem Sprachkanal!")
+                raise ErrorMessage("Der Bot war in gar keinem Sprachkanal!")
 
         @meme.before_invoke
         @play.before_invoke
@@ -229,14 +233,7 @@ class Music(commands.Cog):
         @skip.before_invoke
         @volume.before_invoke
         async def autojoin(self, ctx):
-            if ctx.author.voice and ctx.author.voice.channel.guild == ctx.guild:
-                if ctx.voice_client is None:
-                    await ctx.author.voice.channel.connect()
-                #elif ctx.voice_client.is_playing():
-                    #ctx.voice_client.stop()
-                await ctx.voice_client.move_to(ctx.author.voice.channel)
-            else:
-                raise commands.CommandError("Du bist mit keinem Sprachkanal in diesem Server verbunden!")
+            await self.ensure_voice(ctx)
 
     # Generelle Commands
 

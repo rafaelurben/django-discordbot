@@ -34,13 +34,13 @@ class Help(commands.Cog):
                         if depth == 0:
                             commands_list += f'\n**{cmd.name}** - {cmd.brief}\n'
                         elif depth == 1:
-                            commands_list += f'- **{cmd.name}** '
+                            commands_list += f'- {cmd.name} '
                         # else:
                         #    commands_list += "- "*depth + f'**{cmd.name}**\n'
                     elif not cmd.parent:
                         commands_list += f'**{cmd.name}** - {cmd.brief}\n'
 
-                fields.append((cog.qualified_name, commands_list+'\u200b'))
+                fields.append((cog.qualified_name, commands_list.replace("\n\n", "\n")+'\u200b'))
 
         def addGroup(grp):
             commands_list = ''

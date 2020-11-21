@@ -5,7 +5,7 @@ import asyncio
 from discord import PCMVolumeTransformer, FFmpegPCMAudio
 from discord.ext import commands
 
-from discordbot.config import FILESPATH, FFMPEG_OPTIONS, FFMPEG_OPTIONS_STREAM
+from discordbot.config import FILESPATH, FFMPEG_OPTIONS, FFMPEG_OPTIONS_STREAM, DEBUG
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -56,9 +56,10 @@ class AudioManager():
         data = await self.loop.run_in_executor(None, lambda: _ytdl.extract_info(query, download=False))
 
         if data:
-            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".test.json"), "w+") as f:
-                import json
-                f.write(json.dumps(data, indent=2))
+            if DEBUG:
+                with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "_debug.test.json"), "w+") as f:
+                    import json
+                    f.write(json.dumps(data, indent=2))
 
             if "entries" in data:
                 if len(data["entries"]) > 1:
@@ -77,10 +78,11 @@ class AudioManager():
                 "authorname": src.uploader_name,
                 "authorurl": src.uploader_url,
                 "description": src.description,
+                "thumbnailurl": src.url_thumbnail,
                 "inline": True,
                 "fields": [
                     ("Dauer", src.duration_calc),
-                    ("Url", f"[Ansehen]({src.url_watch})")
+                    ("Ansehen/Anhören", f"[Hier klicken]({src.url_watch})")
                 ]
             }
 

@@ -52,29 +52,38 @@ class Server(models.Model):
     @sync_to_async
     def getReports(self, user=None):
         if user is None:
-            reports = []
+            # reports = []
+            # for member in self.members.all():
+            #     count = int(member.reportCount())
+            #     if count > 0:
+            #         reports.append({
+            #             "name": str(count)+" Report(s)",
+            #             "value": member.mention,
+            #             "inline": False
+            #         })
+            # return reports
+            description = ""
             for member in self.members.all():
-                count = int(member.reportCount())
-                if count > 0:
-                    reports.append({
-                        "name": str(count)+" Report(s)",
-                        "value": member.mention,
-                        "inline": False
-                    })
-            return reports
+                count = int(member.reportCount(server=self))
+                if count == 1:
+                    description += f"{member.mention} (Ein Report)\n"
+                elif count > 1:
+                    description += f"{member.mention} ({count} Reports)\n"
+            return description
         else:
             return user.getReports(server=self)
 
     def memberCount(self):
         return self.members.count()
+    memberCount.short_description = "Members"
 
     def __str__(self):
         return self.name+" ("+str(self.id)+")"
-    __str__.short_description = "Server"
+    __str__.short_description = "Guild"
 
     class Meta():
-        verbose_name = "Server"
-        verbose_name_plural = "Server"
+        verbose_name = "Guild"
+        verbose_name_plural = "Guilds"
 
     objects = models.Manager()
 
@@ -82,28 +91,25 @@ class User(models.Model):
     id = models.CharField("Discord ID", primary_key=True, max_length=20)
     name = models.CharField("Name", default="", blank=True, max_length=100)
 
-    def reportCount(self):
-        return self.reports.count()
+    def reportCount(self, **filters):
+        return self.reports.filter(**filters).count()
     reportCount.short_description = "Reports"
 
-    def createdReportCount(self):
-        return self.created_reports.count()
-    createdReportCount.short_description = "Erstellte Reports"
+    def createdReportCount(self, **filters):
+        return self.created_reports.filter(**filters).count()
+    createdReportCount.short_description = "Created reports"
 
-    def serverCount(self):
-        return self.servers.count()
-    serverCount.short_description = "Anzahl Server"
+    def serverCount(self, **filters):
+        return self.servers.filter(**filters).count()
+    serverCount.short_description = "Server count"
 
     @sync_to_async
     def joinServer(self, server):
         if not server.members.filter(id=self.id).exists():
             server.members.add(self)
 
-    def getReports(self, server=None):
-        if server is None:
-            reports = self.reports.all()
-        else:
-            reports = self.reports.filter(server=server)
+    def getReports(self, **filters):
+        reports = self.reports.filter(**filters)
         return [
             report.getEmbedField() for report in reports
         ]
@@ -138,6 +144,7 @@ class AudioSource(models.Model):
     uploader_url = models.URLField("Uploader Url", default="", blank=True)
 
     @classmethod
+    @sync_to_async
     def create_from_dict(self, data:dict):
         # if "formats" in data:
         #     data.pop("formats")
@@ -176,7 +183,7 @@ class AudioSource(models.Model):
 
     @property
     def clickable(self):
-        return f"[{self.title}]({self.url_watch})"
+        return f"[{self.title}]({self.url_watch}) [{self.duration_calc}]"
 
     @property
     def duration_calc(self):
@@ -272,11 +279,11 @@ class Report(models.Model):
     timestamp = models.DateTimeField("Zeitpunkt", auto_now_add=True)
 
     def getEmbedField(self):
-        return {
-            "name": str(self.timestamp.strftime('%d.%m.%Y - %H:%M:%S')),
-            "value": str(self.reason)+" - "+self.reported_by.mention,
-            "inline": False
-        }
+        return (
+            f"{self.timestamp.strftime('%Y/%m/%d %H:%M:%S')} ({self.pk})",
+            f"{self.reported_by.mention} - {self.reason}",
+            False
+        )
 
     def __str__(self):
         return "Report #"+str(self.pk)

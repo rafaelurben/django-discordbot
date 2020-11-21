@@ -6,33 +6,38 @@ import typing
 from discordbot.config import INVITE_OWNER, INVITE_BOT
 
 REGELN = {
-    "1) Sei anständig":
+    "1) Verhalten":
         [
-            "Sei nett zu anderen Leuten und behandle sie so, wie auch du behandelt werden möchtest!"
+            "Sei nett zu anderen Leuten und behandle sie so, wie auch du behandelt werden möchtest!", 
+            "Beleidige keine anderen Leute!",
+            "Benutze anständige Sprache!",
+            "Bleib beim Thema!",
         ],
     "2) Text":
         [
-            "Spamming ist verboten!","Werbung ist verboten!"
+            "Spamming ist verboten!", 
+            "Werbung ohne Erlaubnis eines Administrators ist verboten!",
         ],
-    "3) NSFW":
+    "3) Ton":
         [
-            "Anstössige Inhalte werden sofort gelöscht und der Autor mit einem Bann bestraft!","Hier sind auch Kinder und Jugendliche auf diesem Server!"
+            "Benutze keinen Stimmverzerrer!", 
+            "Mache keine unnötigen Hintergrundgeräusche!", 
+            "Channel Hopping bitte unterlassen!", 
+            "Sprachaufnahmen sind nur mit Erlaubnis aller Teilnehmer gestattet!",
         ],
-    "4) Sicherheit":
+    "4) NSFW":
         [
-            "Anweisungen von Moderatoren, Supportern und Admins müssen befolgt werden!","Falls jemand ohne Grund nach persönlichen Daten fragt, ignoriert bitte die Nachricht und meldet sie einem anderen Admin.","Sendet nie jemandem euer Passwort!"
+            "Anstössige Inhalte ausserhalb NSFW-Kanälen werden sofort gelöscht und der Autor mit einem Bann/Mute bestraft!", 
         ],
-    "5) Ton":
+    "5) Sicherheit":
         [
-            "Benutzt keinen Stimmverzerrer!", "Macht keine unnötigen Hintergrundgeräusche!"
+            "Anweisungen von Moderatoren, Supportern und Admins müssen befolgt werden!",
+            "Falls jemand ohne Grund nach deinen persönlichen Daten fragt, ignoriere bitte die Nachricht und meldet sie einem Admin oder dem Serverbesitzer! Bitte melde den Benutzer ebenfalls bei Discord!",
+            "Sende nie jemandem euer Passwort!",
         ],
     "6) Empfehlungen":
         [
-            "Habt Spass!"
-        ],
-    "7) Sprachkanäle":
-        [
-            "Channel Hopping unterlassen"
+            "Habe Spass!",
         ],
 }
 

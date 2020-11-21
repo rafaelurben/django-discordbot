@@ -47,13 +47,6 @@ amongus_last_update = timezone.now()-timedelta(days=1)
 
 #####
 
-@sync_to_async
-def getUpdatedAmongUsGames():
-    global amongus_last_update
-    games = AmongUsGame.objects.filter(last_edited__gt=amongus_last_update)
-    amongus_last_update = timezone.now()
-    return list(games)
-
 async def getAmongUsCategory(guild):
     category = utils.get(guild.categories, name="AmongUs")
     if not category:
@@ -98,13 +91,13 @@ class Games(commands.Cog):
 
             ### VierGewinnt
 
-            if (emoji in VIERGEWINNT_NUMBER_EMOJIS) and await DjangoConnection._hasVierGewinntGame(message_id=payload.message_id):
+            if (emoji in VIERGEWINNT_NUMBER_EMOJIS) and await DjangoConnection._has(VierGewinntGame, message_id=payload.message_id):
                 try:
                     await message.remove_reaction(emoji, payload.member)
                 except:
                     pass
 
-                game = await DjangoConnection._getVierGewinntGame(message_id=payload.message_id)
+                game = await DjangoConnection._get(VierGewinntGame, message_id=payload.message_id)
 
                 if not game.finished:
                     n = VIERGEWINNT_NUMBER_EMOJIS.index(emoji)
@@ -316,7 +309,11 @@ class Games(commands.Cog):
         def log(*args):
             print('[AmongUs Background Tasks] -', *args)
 
-        for game in await getUpdatedAmongUsGames():
+        global amongus_last_update
+        games = await DjangoConnection._list(AmongUsGame, last_edited__gt=amongus_last_update)
+        amongus_last_update = timezone.now()
+
+        for game in games:
             try:
                 log(f'Updating AmongUs #{ game.pk }...')
 
@@ -635,7 +632,7 @@ class Games(commands.Cog):
                 description=f"Duell gegen {user.mention} wird erstellt..."
             )
 
-            game = await ctx.database._createVierGewinntGame(channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=str(user.id), width=width, height=height)
+            game = await ctx.database._create(VierGewinntGame, channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=str(user.id), width=width, height=height)
 
             embed = ctx.bot.getEmbed(
                 title=f"Vier Gewinnt (#{game.pk})",
@@ -663,7 +660,7 @@ class Games(commands.Cog):
             description=f"Challenge gegen einen Bot wird erstellt..."
         )
 
-        game = await ctx.database._createVierGewinntGame(channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=None, width=width, height=height)
+        game = await ctx.database._create(VierGewinntGame, channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=None, width=width, height=height)
 
         embed = ctx.bot.getEmbed(
             title=f"Vier Gewinnt (#{game.pk})",
@@ -679,14 +676,14 @@ class Games(commands.Cog):
     @viergewinnt.command(
         name="games",
         brief="Liste alle deine Spiele auf",
-        aliases=[],
+        aliases=["list"],
         usage="[User]",
     )
     async def viergewinnt_games(self, ctx, user: typing.Union[User, Member] = None):
         user = user or ctx.author
-        challenges = await ctx.database._listVierGewinntGames(player_1_id=str(user.id), player_2_id__isnull=True)
-        duels_created = await ctx.database._listVierGewinntGames(player_1_id=str(user.id), player_2_id__isnull=False)
-        duels_invited = await ctx.database._listVierGewinntGames(player_2_id=str(user.id))
+        challenges = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",), player_1_id=str(user.id), player_2_id__isnull=True)
+        duels_created = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",), player_1_id=str(user.id), player_2_id__isnull=False)
+        duels_invited = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",), player_2_id=str(user.id))
         challengetext = "" if challenges else "Du hast noch keine Challenges erstellt."
         for g in challenges:
             challengetext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
@@ -721,7 +718,7 @@ class Games(commands.Cog):
     )
     async def viergewinnt_reset(self, ctx, user: typing.Union[User, Member] = None):
         user = ctx.author if user is None else user if await self.bot.is_owner(user) else ctx.author
-        await ctx.database._delete(await ctx.database._listVierGewinntGames(get_as_queryset=True, player_1_id=str(user.id)))
+        await ctx.database._delete(await ctx.database._list(VierGewinntGame, get_as_queryset=True, player_1_id=str(user.id)))
         await ctx.sendEmbed(
             title="VierGewinnt Spiele gelöscht!",
             description=f"Die VierGewinnt Spiele von { user.mention } wurden erfolgreich gelöscht!",
@@ -737,8 +734,8 @@ class Games(commands.Cog):
         help="Um die ID herauszufinden, benutze `/viergewinnt games`",
     )
     async def viergewinnt_resume(self, ctx, id: int):
-        if await ctx.database._hasVierGewinntGame(id=id):
-            game = await ctx.database._getVierGewinntGame(id=id)
+        if await ctx.database._has(VierGewinntGame, id=id):
+            game = await ctx.database._get(VierGewinntGame, id=id)
 
             if str(ctx.author.id) in [game.player_1_id, game.player_2_id]:
                 msg = await ctx.sendEmbed(
