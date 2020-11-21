@@ -82,48 +82,6 @@ class DjangoConnection():
         if connection.connection and not connection.is_usable():
             del connections._connections.default
 
-    @classmethod
-    @sync_to_async
-    def fetch_user(self, dc_user):
-        self.ensure_connection()
-        if not DB_User.objects.filter(id=str(dc_user.id)).exists():
-            user = DB_User.objects.create(id=str(dc_user.id), name=dc_user.name+"#"+dc_user.discriminator)
-        else:
-            user = DB_User.objects.get(id=str(dc_user.id))
-            if not user.name == (dc_user.name+"#"+dc_user.discriminator):
-                user.name = (dc_user.name+"#"+dc_user.discriminator)
-                user.save()
-        return user
-
-    async def get_user(self):
-        if self._db_user is None:
-            self._db_user = await self.fetch_user(self.dc_user)
-        return self._db_user
-
-    @classmethod
-    @sync_to_async
-    def fetch_server(self, dc_guild):
-        self.ensure_connection()
-        if not DB_Server.objects.filter(id=str(dc_guild.id)).exists():
-            server = DB_Server.objects.create(id=str(dc_guild.id), name=dc_guild.name)
-        else:
-            server = DB_Server.objects.get(id=str(dc_guild.id))
-            if not server.name == dc_guild.name:
-                server.name = dc_guild.name
-                server.save()
-        return server
-
-    async def get_server(self):
-        if self._db_server is None:
-            self._db_server = await self.fetch_server(self.dc_guild)
-        return self._db_server
-
-    async def get_playlist(self):
-        if self._db_playlist is None:
-            server = await self.get_server()
-            self._db_playlist = await server.getPlaylist()
-        return self._db_playlist
-
     # Basic Methods
 
     @classmethod
@@ -174,7 +132,11 @@ class DjangoConnection():
     @sync_to_async
     def _listdelete(self, model, **filters):
         self.ensure_connection()
-        model.objects.filter(**filters).delete
+        model.objects.filter(**filters).delete()
+
+    @classmethod
+    async def _listdel(self, model, **filters):
+        await self._listdelete(model, **filters)
 
     @classmethod
     async def _getdel(self, model, **filters):
@@ -183,6 +145,46 @@ class DjangoConnection():
             await self._delete(obj)
             return True
         return False
+
+    # General
+
+    @classmethod
+    async def fetch_user(self, dc_user):
+        if not self._has(DB_User, id=str(dc_user.id)):
+            user = await self._create(DB_User, id=str(dc_user.id), name=dc_user.name+"#"+dc_user.discriminator)
+        else:
+            user = await self._get(DB_User, id=str(dc_user.id))
+            if not user.name == (dc_user.name+"#"+dc_user.discriminator):
+                user.name = (dc_user.name+"#"+dc_user.discriminator)
+                await self._save(user)
+        return user
+
+    async def get_user(self):
+        if self._db_user is None:
+            self._db_user = await self.fetch_user(self.dc_user)
+        return self._db_user
+
+    @classmethod
+    async def fetch_server(self, dc_guild):
+        if not await self._has(DB_Server, id=str(dc_guild.id)):
+            server = await self._create(DB_Server, id=str(dc_guild.id), name=dc_guild.name)
+        else:
+            server = await self._get(DB_Server, id=str(dc_guild.id))
+            if not server.name == dc_guild.name:
+                server.name = dc_guild.name
+                await self._save(server)
+        return server
+
+    async def get_server(self):
+        if self._db_server is None:
+            self._db_server = await self.fetch_server(self.dc_guild)
+        return self._db_server
+
+    async def get_playlist(self):
+        if self._db_playlist is None:
+            server = await self.get_server()
+            self._db_playlist = await server.getPlaylist()
+        return self._db_playlist
 
     # Music
 

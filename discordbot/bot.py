@@ -168,24 +168,6 @@ from discordbot.botevents import setup
 
 setup(bot)
 
-@bot.event
-async def on_ready():
-    print(f"[Bot] - Logged in as '{bot.user.name}' - '{bot.user.id}'")
-    for extension in EXTENSIONS:
-        try:
-            bot.load_extension(EXTENSIONFOLDER+"."+extension)
-        except commands.errors.ExtensionAlreadyLoaded:
-            pass
-
-@bot.event
-async def on_connect():
-    print("[Bot] - Connected!")
-    
-
-@bot.event
-async def on_disconnect():
-    print("[Bot] - Disconnected!")
-
 # Start
 
 def run(TOKEN):
