@@ -5,6 +5,6 @@ discord.py[voice]==1.5.1
 opuslib==3.0.1
 ffmpeg==1.4
 fuzzywuzzy[speedup]==0.18.0
-youtube-dl==2020.11.19
+youtube-dl==2020.11.21.1
 rich==9.2.0
 tqdm==4.52.0
