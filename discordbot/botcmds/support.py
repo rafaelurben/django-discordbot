@@ -1,5 +1,5 @@
 from discord.ext import commands
-from discord import Embed, Member, User, Webhook
+from discord import Embed, Member, User, Webhook, utils
 
 from discordbot.models import BotPermission, Report
 from discordbot.errors import ErrorMessage
@@ -14,11 +14,30 @@ class Support(commands.Cog):
 
     # Reports
 
+    async def send_report(self, ctx, report):
+        try:
+            channel = utils.get(ctx.guild.channels, name="reports")
+            await ctx.sendEmbed(
+                title=f"Neuer Report ({report.pk})",
+                fields=[
+                    ("Gemeldeter Benutzer", report.user.mention),
+                    ("Gemeldet von", report.reported_by.mention),
+                    ("Grund", report.reason),
+                    ("Zeitpunkt", report.timestamp.strftime('%Y/%m/%d %H:%M:%S')),
+                ],
+                inline=False,
+                receiver=channel,
+                footerurl="",
+                footertext="",
+                )
+        except Exception as e:
+            print("[Support] - No #reports channel found!", e)
+
     @commands.group(
         brief="Melde Spieler und sehe dir Meldungen an",
         description="Dieses Modul unterstützt dich dabei, Personen, welche sich falsch verhalten, auf diesem Server zu erkennen",
         usage="<Unterbefehl> <Argumente>",
-        aliases=["rp", "rep"],
+        aliases=["rp", "rep", "report"],
     )
     @commands.guild_only()
     async def reports(self, ctx):
@@ -35,8 +54,9 @@ class Support(commands.Cog):
     async def reports_create(self, ctx, member: Member, *args):
         Grund = " ".join(args)
         Grund = Grund if Grund.rstrip(" ") else "Leer"
-        await ctx.database.createReport(dc_user=member, reason=Grund)
+        report = await ctx.database.createReport(dc_user=member, reason=Grund)
         await ctx.sendEmbed(title="Benutzer Gemeldet", fields=[("Betroffener",member.mention),("Grund",Grund)])
+        await self.send_report(ctx, report)
         return
 
     @reports.command(

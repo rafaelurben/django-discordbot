@@ -114,5 +114,26 @@ class Owneronly(commands.Cog):
     async def sudo(self, ctx, member: typing.Union[Member, User], command: str, *args):
         await ctx.invoke_as(member, command, *args)
 
+    @commands.command(
+        brief="Erhalte diesen Chat",
+        usage="[Messages = 100]",
+        aliases=["archiv", "log"],
+        hidden=True,
+    )
+    @commands.is_owner()
+    @commands.guild_only()
+    async def archive(self, ctx, messages: int = 100):
+        msgs = []
+        text = ""
+        async for msg in ctx.channel.history(limit=messages, oldest_first=True):
+            msgs.append(msg)
+            time = msg.created_at.strftime("%Y/%m/%d - %H:%M:%S")
+            text += f"[[{time}]]({msg.jump_url}) {msg.author.name}#{msg.author.discriminator}: {msg.content}\n"
+        await ctx.sendEmbed(
+            title="Kanalarchiv",
+            description=f"Kanal: {ctx.channel.mention}\nNachrichten: {len(msgs)}\n\n"+text,
+            receiver=ctx.author,
+        )
+
 def setup(bot):
     bot.add_cog(Owneronly(bot))

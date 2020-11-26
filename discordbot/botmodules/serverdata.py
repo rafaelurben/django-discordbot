@@ -150,7 +150,7 @@ class DjangoConnection():
 
     @classmethod
     async def fetch_user(self, dc_user):
-        if not self._has(DB_User, id=str(dc_user.id)):
+        if not await self._has(DB_User, id=str(dc_user.id)):
             user = await self._create(DB_User, id=str(dc_user.id), name=dc_user.name+"#"+dc_user.discriminator)
         else:
             user = await self._get(DB_User, id=str(dc_user.id))
