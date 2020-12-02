@@ -52,16 +52,6 @@ class Server(models.Model):
     @sync_to_async
     def getReports(self, user=None):
         if user is None:
-            # reports = []
-            # for member in self.members.all():
-            #     count = int(member.reportCount())
-            #     if count > 0:
-            #         reports.append({
-            #             "name": str(count)+" Report(s)",
-            #             "value": member.mention,
-            #             "inline": False
-            #         })
-            # return reports
             description = ""
             for member in self.members.all():
                 count = int(member.reportCount(server=self))

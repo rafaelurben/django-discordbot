@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import Server, User, Report, Member, AmongUsGame, AMONGUS_PLAYER_COLORS, VierGewinntGame, NotifierSub
 
-# Register your models here.
+# General
 
 class ServerAdminMemberInline(admin.TabularInline):
     model = Member
@@ -90,6 +90,7 @@ class UserAdmin(admin.ModelAdmin):
     def has_add_permission(self, request, obj=None):
         return False
 
+# Games
 
 @admin.register(AmongUsGame)
 class AmongUsGameAdmin(admin.ModelAdmin):
@@ -125,4 +126,14 @@ class VierGewinntAdmin(admin.ModelAdmin):
     fields = ('get_description',)
     readonly_fields = ('get_description',)
 
-admin.site.register(NotifierSub)
+@admin.register(NotifierSub)
+class NotifierSubAdmin(admin.ModelAdmin):
+    list_display = ('name', 'where_type', 'where_id', 'frequency', 'url', 'must_contain_regex',)
+    ordering = ('id',)
+
+    fieldsets = [
+        ("",        {"fields": ('name',)}),
+        ("Ziel",    {"fields": ('where_type', 'where_id',)}),
+        ("Herkunft",{"fields": ('url', 'frequency')}),
+        ("Filter",  {"fields": ('must_contain_regex',)})
+    ]

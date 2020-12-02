@@ -22,12 +22,14 @@ ALL_PREFIXES = _s("ALL_PREFIXES", ["/", "!", "$", ".", "-", ">", "?"])
 MAIN_PREFIXES = _s("MAIN_PREFIXES", ["/"])
 
 EXTENSIONFOLDER = "discordbot.botcmds"
-EXTENSIONS = _s("EXTENSIONS", ['basic','support','moderation','games','help','channels','music','owneronly','converters','embedgenerator','notifier', 'polls'])
+EXTENSIONS = _s("EXTENSIONS", ['basic','support','moderation','games','help','channels','music','owneronly','converters','embedgenerator','notifier', 'polls', 'domains'])
 
 ## Basic
 
 INVITE_OWNER = "https://rebrand.ly/RUdiscord"
 INVITE_BOT = "https://rebrand.ly/RUdiscordbot"
+
+SPAM_ALLOWED = False
 
 ## Help
 
