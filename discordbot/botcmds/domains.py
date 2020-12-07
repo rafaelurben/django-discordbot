@@ -3,6 +3,7 @@ from discord import utils
 import typing
 import socket
 import dns
+import dns.resolver
 
 #from discordbot.config import 
 from discordbot.errors import ErrorMessage
