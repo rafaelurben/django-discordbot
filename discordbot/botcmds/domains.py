@@ -35,9 +35,9 @@ class Domains(commands.Cog):
         description="Frage bestimmte DNS-Einträge einer Domain ab.",
         aliases=["getdns"],
         help="",
-        usage="<Domain> <Typ (CNAME, A, MX)>"
+        usage="<Domain> <Typ (CNAME, A, MX...)>"
     )
-    async def dns(self, ctx, domain: str, typ: str):
+    async def dns(self, ctx, domain: str, typ: str="A"):
         typ = typ.upper()
         try:
             result = dns.resolver.query(domain, typ)
