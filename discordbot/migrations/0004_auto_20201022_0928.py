@@ -10,9 +10,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterField(
+        migrations.RemoveField(
             model_name='amongusgame',
             name='tracker_connected',
-            field=models.BooleanField(default=False, verbose_name='Tracker connected'),
+        ),
+        migrations.AddField(
+            model_name='amongusgame',
+            name='tracker_connected',
+            field=models.BooleanField(
+                default=False, verbose_name='Tracker connected'),
         ),
     ]
