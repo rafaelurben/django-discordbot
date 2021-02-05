@@ -93,7 +93,7 @@ class MyContext(commands.Context):
         _command = command.replace("_", " ")
         cmd = self.bot.get_command(_command)
         if cmd is None:
-            raise commands.BadArgument(f"Der Befehl `{ _command }` wurde nicht gefunden! \nPS: Benutze im Command bitte kein Prefix!")
+            raise commands.BadArgument(f"Der Befehl `{ _command }` wurde nicht gefunden! \nPS: Benutze im Command bitte kein Prefix! Für Subcommands, benutze command_subcommand.")
         self.message.content = self.prefix+_command+self.message.content.split(command)[1]
         self.message.author = member
         self.author = member
