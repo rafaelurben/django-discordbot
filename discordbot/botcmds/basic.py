@@ -109,8 +109,9 @@ class Basic(commands.Cog):
                 description="Schon vergessen, dass Spam laut Regeln verboten ist? Hast du wirklich gedacht, ich breche meine eigenen Regeln?"
             )
             if ctx.guild is not None:
-                await ctx.database.createReport(dc_user=ctx.author, reason="Tried to use /spam", reportedby_dc_user=ctx.guild.me)
-
+                report = await ctx.database.createReport(dc_user=ctx.author, reason="Tried to use /spam", reportedby_dc_user=ctx.guild.me)
+                cog = ctx.bot.get_cog("Support")
+                await cog.send_report(ctx, report)
 
     @commands.command(
         brief="Zeigt die Regeln",
