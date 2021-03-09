@@ -536,7 +536,7 @@ class VierGewinntGame(models.Model):
         else:
             p = getattr(self, f"player_{ self.current_player }_id")
             if p is None:
-                return f"{ VIERGEWINNT_PLAYER_EMOJIS[self.current_player] } Ich bin an der Reihe! (Berchne einen guten Zug...)"
+                return f"{ VIERGEWINNT_PLAYER_EMOJIS[self.current_player] } Ich bin an der Reihe! (Berechne einen guten Zug...)"
             else:
                 return f"{ VIERGEWINNT_PLAYER_EMOJIS[self.current_player] } <@{ p }> ist an der Reihe!"
 
