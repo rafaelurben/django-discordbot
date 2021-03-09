@@ -1,11 +1,90 @@
 from discord.ext import commands
 from discord import Embed, Member, User, Permissions
+from discordbot.errors import ErrorMessage
 
+VOTEKILL_EMOJI = "☠"
 
 class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.color = 0x5156ff
+
+    # Listeners
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        if not payload.user_id == self.bot.user.id:
+            emoji = payload.emoji.name
+            channel = await self.bot.fetch_channel(payload.channel_id)
+            message = await channel.fetch_message(payload.message_id)
+
+            if message.author.id == self.bot.user.id:
+                ### Votekill
+
+                if emoji == VOTEKILL_EMOJI and message.embeds and message.embeds[0].title.startswith("[Votekill]"):
+                    _,memberid,_,channelid,_ = message.embeds[0].title.split("'")
+
+                    voicechannel = await self.bot.fetch_channel(channelid)
+                    member = await channel.guild.fetch_member(memberid)
+
+                    if voicechannel and member:
+                        if not (member.voice and member.voice.channel and member.voice.channel == voicechannel):
+                            await message.delete()
+                        else:
+                            allowedvoterids = [
+                                member.id for member in voicechannel.members if not member.id == self.bot.user.id]
+                            voters = []
+
+                            for reaction in message.reactions:
+                                if reaction.emoji == VOTEKILL_EMOJI:
+                                    async for user in reaction.users():
+                                        if user.id in allowedvoterids:
+                                            voters.append(user)
+                                    break
+
+                            a = len(allowedvoterids)
+                            minvotercount = a if a <= 2 else a/2
+                            votercount = len(voters)
+
+                            print(f"{votercount} of {a} voted to kick {member.name}#{member.discriminator}! (Required {minvotercount})")
+
+                            if votercount >= minvotercount:
+                                emb = self.bot.getEmbed(
+                                    title="[Votekill completed]",
+                                    color=0x0078D7,
+                                    description="Voted to kill "+member.mention+"\n\nAll voters: "+", ".join([voter.mention for voter in voters])
+                                )
+                                await member.edit(voice_channel=None)
+                                await channel.send(embed=emb)
+                                await message.delete()
+                    else:
+                        await message.delete()
+                    
+
+
+    # Public commands
+
+    @commands.command(
+        brief="Votekill someone in your current voice channel"
+    )
+    @commands.guild_only()
+    async def votekill(self, ctx, member:Member):
+        if ctx.author.voice and ctx.author.voice.channel is not None:
+            if member.voice and member.voice.channel == ctx.author.voice.channel:
+                msg = await ctx.sendEmbed(
+                    title=f"[Votekill] '{member.id}' in '{ctx.author.voice.channel.id}'",
+                    color=0x0078D7,
+                    description=f"Stimme mit {VOTEKILL_EMOJI} ab um dafür zu stimmen, dass {member.mention} aus dem Sprachkanal fliegt!"
+                )
+                await msg.add_reaction(VOTEKILL_EMOJI)
+            else:
+                raise ErrorMessage("Du musst dich im gleichen Sprachkanal wie der betroffene Benutzer befinden.")
+        else:
+            raise ErrorMessage("Du musst dich in einem Sprachkanal befinden!")
+
+
+
+    # Moderator commands
 
 
     @commands.command(
