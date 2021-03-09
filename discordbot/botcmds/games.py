@@ -73,60 +73,62 @@ class Games(commands.Cog):
             channel = await self.bot.fetch_channel(payload.channel_id)
             message = await channel.fetch_message(payload.message_id)
 
-            ### AmongUs
+            if message.author.id == self.bot.user.id:
 
-            if (emoji in AMONGUS_EMOJI_COLORS or emoji == DELETE) and await DjangoConnection._hasAmongUsGame(text_message_id=payload.message_id):
-                try:
-                    await message.remove_reaction(emoji, payload.member)
-                except:
-                    pass
+                ### AmongUs
 
-                game = await DjangoConnection._getAmongUsGame(text_message_id=payload.message_id)
+                if (emoji in AMONGUS_EMOJI_COLORS or emoji == DELETE) and await DjangoConnection._hasAmongUsGame(text_message_id=payload.message_id):
+                    try:
+                        await message.remove_reaction(emoji, payload.member)
+                    except:
+                        pass
 
-                if emoji == DELETE:
-                    await game.remove_user(userid=payload.user_id)
-                else:
-                    c = AMONGUS_EMOJI_COLORS[payload.emoji.name]
-                    await game.set_user(userid=payload.user_id, color=c)
+                    game = await DjangoConnection._getAmongUsGame(text_message_id=payload.message_id)
 
-            ### VierGewinnt
+                    if emoji == DELETE:
+                        await game.remove_user(userid=payload.user_id)
+                    else:
+                        c = AMONGUS_EMOJI_COLORS[payload.emoji.name]
+                        await game.set_user(userid=payload.user_id, color=c)
 
-            if (emoji in VIERGEWINNT_NUMBER_EMOJIS) and await DjangoConnection._has(VierGewinntGame, message_id=payload.message_id):
-                try:
-                    await message.remove_reaction(emoji, payload.member)
-                except:
-                    pass
+                ### VierGewinnt
 
-                game = await DjangoConnection._get(VierGewinntGame, message_id=payload.message_id)
+                if (emoji in VIERGEWINNT_NUMBER_EMOJIS) and await DjangoConnection._has(VierGewinntGame, message_id=payload.message_id):
+                    try:
+                        await message.remove_reaction(emoji, payload.member)
+                    except:
+                        pass
 
-                if not game.finished:
-                    n = VIERGEWINNT_NUMBER_EMOJIS.index(emoji)
+                    game = await DjangoConnection._get(VierGewinntGame, message_id=payload.message_id)
 
-                    if game.process(n, payload.user_id):
-                        await DjangoConnection._save(game)
+                    if not game.finished:
+                        n = VIERGEWINNT_NUMBER_EMOJIS.index(emoji)
 
-                        embed = self.bot.getEmbed(
-                            title=f"Vier Gewinnt (#{game.pk})",
-                            color=0x0078D7,
-                            description=game.get_description()
-                        )
+                        if game.process(n, payload.user_id):
+                            await DjangoConnection._save(game)
 
-                        await message.edit(embed=embed)
+                            embed = self.bot.getEmbed(
+                                title=f"Vier Gewinnt (#{game.pk})",
+                                color=0x0078D7,
+                                description=game.get_description()
+                            )
 
-                    if game.process_bot():
-                        await DjangoConnection._save(game)
+                            await message.edit(embed=embed)
 
-                        embed = self.bot.getEmbed(
-                            title=f"Vier Gewinnt (#{game.pk})",
-                            color=0x0078D7,
-                            description=game.get_description()
-                        )
+                        if game.process_bot():
+                            await DjangoConnection._save(game)
 
-                        await message.edit(embed=embed)
+                            embed = self.bot.getEmbed(
+                                title=f"Vier Gewinnt (#{game.pk})",
+                                color=0x0078D7,
+                                description=game.get_description()
+                            )
 
-                    if game.finished:
-                        for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
-                            await message.remove_reaction(emoji, self.bot.user)
+                            await message.edit(embed=embed)
+
+                        if game.finished:
+                            for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
+                                await message.remove_reaction(emoji, self.bot.user)
 
 
     # Fortnite
