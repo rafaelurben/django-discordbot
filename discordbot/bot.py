@@ -7,6 +7,7 @@ from discord.ext import commands
 from discordbot.botmodules import serverdata, audio
 from discordbot.config import EXTENSIONFOLDER, EXTENSIONS, ALL_PREFIXES, MAIN_PREFIXES, DEBUG
 from discordbot.utils import chunks
+from discordbot.errors import ErrorMessage
 
 from rich.traceback import install as install_traceback
 install_traceback()
@@ -93,7 +94,7 @@ class MyContext(commands.Context):
         _command = command.replace("_", " ")
         cmd = self.bot.get_command(_command)
         if cmd is None:
-            raise commands.BadArgument(f"Der Befehl `{ _command }` wurde nicht gefunden! \nPS: Benutze im Command bitte kein Prefix! Für Subcommands, benutze command_subcommand.")
+            raise ErrorMessage(f"Der Befehl `{ _command }` wurde nicht gefunden! \nPS: Benutze im Command bitte kein Prefix! Für Subcommands, benutze command_subcommand.")
         self.message.content = self.prefix+_command+self.message.content.split(command)[1]
         self.message.author = member
         self.author = member

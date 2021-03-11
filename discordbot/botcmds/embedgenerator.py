@@ -1,5 +1,7 @@
 from discord.ext import commands
 from discord import Embed, Message, Color
+from discordbot.errors import ErrorMessage
+
 import random
 
 par = "//"
@@ -107,7 +109,7 @@ Verfügbare Parameter:""", inline=False, fields=[
                 text += f"\n{par}color{opt}{str(emb.color.r)}{opt}{str(emb.color.g)}{opt}{str(emb.color.b)}"
             await ctx.sendEmbed(title="Embed Command", description=text)
         else:
-            raise commands.BadArgument("Diese Nachricht hat kein Embed!")
+            raise ErrorMessage("Diese Nachricht hat kein Embed!")
 
 def setup(bot):
     bot.add_cog(EmbedGenerator(bot))

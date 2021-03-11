@@ -12,6 +12,7 @@ from datetime import timedelta
 from discordbot.models import AmongUsGame, AMONGUS_PLAYER_COLORS, AMONGUS_EMOJI_COLORS, VierGewinntGame, VIERGEWINNT_NUMBER_EMOJIS
 from discordbot.botmodules.serverdata import DjangoConnection
 from discordbot.botmodules import apis
+from discordbot.errors import ErrorMessage
 
 import requests
 import os
@@ -198,7 +199,7 @@ class Games(commands.Cog):
                 authorname="Powered by Fortnitetracker"
             )
         except KeyError:
-            raise commands.BadArgument(message="Spieler wurde auf der angegebenen Platform nicht gefunden!")
+            raise ErrorMessage(message="Spieler wurde auf der angegebenen Platform nicht gefunden!")
 
 
     # Minecraft
@@ -240,7 +241,7 @@ class Games(commands.Cog):
         api = apis.Minecraft
 
         if len(uuid) != 32:
-            raise commands.BadArgument("Eine UUID ist genau 32 Zeichen lang!")
+            raise ErrorMessage("Eine UUID ist genau 32 Zeichen lang!")
 
         JSON = api.getProfiles(uuid)
         EMBED = ctx.getEmbed(title="Minecraft Namen", description="Sortierung: Von neu bis alt.")
@@ -261,7 +262,7 @@ class Games(commands.Cog):
         api = apis.Minecraft
 
         if len(uuid) != 32:
-            raise commands.BadArgument("Eine UUID ist genau 32 Zeichen lang!")
+            raise ErrorMessage("Eine UUID ist genau 32 Zeichen lang!")
 
         JSON = api.getSkin(uuid)
         EMBED = ctx.getEmbed(title="Minecraft Skin", fields=[("Aktueller Name", JSON["name"]), ("UUID", JSON["id"])])
@@ -504,11 +505,11 @@ class Games(commands.Cog):
             textchannel = ctx.guild.get_channel(int(game.text_channel_id))
             voicechannel = ctx.guild.get_channel(int(game.voice_channel_id))
             if textchannel and voicechannel:
-                raise commands.BadArgument(message=f"Du hast bereits ein AmongUs-Spiel auf diesem Server! (ID { game.pk } - { textchannel.mention })")
+                raise ErrorMessage(message=f"Du hast bereits ein AmongUs-Spiel auf diesem Server! (ID { game.pk } - { textchannel.mention })")
             elif textchannel:
-                raise commands.BadArgument(message=f"Du hast bereits ein AmongUs-Spiel auf diesem Server, jedoch konnte der Sprachkanal nicht mehr gefunden werden! Versuche dein Game mit `/au delete` zu löschen. (ID { game.pk } - { textchannel.mention })")
+                raise ErrorMessage(message=f"Du hast bereits ein AmongUs-Spiel auf diesem Server, jedoch konnte der Sprachkanal nicht mehr gefunden werden! Versuche dein Game mit `/au delete` zu löschen. (ID { game.pk } - { textchannel.mention })")
             else:
-                raise commands.BadArgument(message=f"Du hast bereits ein AmongUs-Spiel auf diesem Server, jedoch konnte der Textkanal nicht mehr gefunden werden! (ID { game.pk })")
+                raise ErrorMessage(message=f"Du hast bereits ein AmongUs-Spiel auf diesem Server, jedoch konnte der Textkanal nicht mehr gefunden werden! (ID { game.pk })")
         else:
             category = await getAmongUsCategory(ctx.guild)
             textchannel = await category.create_text_channel(name=f"au-{ctx.author.name}#{ctx.author.discriminator}", reason="Benutzer hat AmongUs-Spiel erstellt.", topic=f"AmongUs Spiel von {ctx.author.name}#{ctx.author.discriminator}")
@@ -554,7 +555,7 @@ class Games(commands.Cog):
             )
             await ctx.author.send(embed=embed)
         else:
-            raise commands.BadArgument(message="Du hast kein AmongUs-Spiel auf diesem Server!")
+            raise ErrorMessage(message="Du hast kein AmongUs-Spiel auf diesem Server!")
 
     @amongus.command(
         name="reset",
@@ -577,9 +578,9 @@ class Games(commands.Cog):
                     description="Dein AmongUs Spiel wurde erfolgreich zurückgesetzt!"
                 )
             else:
-                raise commands.BadArgument(message="Der Sprachkanal zu deinem Spiel wurde nicht gefunden. Versuche dein Spiel mit `/amongus close` zu löschen")
+                raise ErrorMessage(message="Der Sprachkanal zu deinem Spiel wurde nicht gefunden. Versuche dein Spiel mit `/amongus close` zu löschen")
         else:
-            raise commands.BadArgument(message="Du hast kein AmongUs-Spiel auf diesem Server!")
+            raise ErrorMessage(message="Du hast kein AmongUs-Spiel auf diesem Server!")
 
     @amongus.command(
         name="apikey",
@@ -603,7 +604,7 @@ class Games(commands.Cog):
             )
             await ctx.author.send(embed=embed)
         else:
-            raise commands.BadArgument("Du hast kein AmongUs Spiel!")
+            raise ErrorMessage("Du hast kein AmongUs Spiel!")
 
 
     # VierGewinnt
@@ -647,7 +648,7 @@ class Games(commands.Cog):
             for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
                 await msg.add_reaction(emoji)
         else:
-            raise commands.BadArgument("Du kannst nicht gegen dich selbst oder Bots spielen... Wenn du einen Bot herausfordern möchtest, benutze bitte `/viergewinnt challenge`!")
+            raise ErrorMessage("Du kannst nicht gegen dich selbst oder Bots spielen... Wenn du einen Bot herausfordern möchtest, benutze bitte `/viergewinnt challenge`!")
 
     @viergewinnt.command(
         name="challenge",
@@ -779,7 +780,7 @@ class Games(commands.Cog):
                     description=game.get_description()
                 )
         else:
-            raise commands.BadArgument("Ein Spiel mit dieser ID konnte nicht gefunden werden! Möglicherweise gelöscht?")
+            raise ErrorMessage("Ein Spiel mit dieser ID konnte nicht gefunden werden! Möglicherweise gelöscht?")
 
 def setup(bot):
     bot.add_cog(Games(bot))

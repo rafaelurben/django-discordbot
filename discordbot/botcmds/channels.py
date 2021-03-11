@@ -1,5 +1,7 @@
 from discord.ext import commands
 from discord import Embed, User, Member, utils, PermissionOverwrite, Role
+from discordbot.errors import ErrorMessage
+
 import typing
 
 CHANNEL_NAMES_DEFAULT = ["SPRACHKANAL", "SPRACHKANAL ERSTELLEN", "NEUER SPRACHKANAL", ]
@@ -89,7 +91,7 @@ class Channels(commands.Cog):
         category = await getUserChannelCategory(ctx.guild)
         channel = await self.get_text_channel(ctx.author)
         if channel:
-            raise commands.BadArgument(message="Du hast bereits einen Textkanal! <#"+str(channel.id)+">")
+            raise ErrorMessage(message="Du hast bereits einen Textkanal! <#"+str(channel.id)+">")
         else:
             overwrites = { ctx.guild.default_role: PERM_TEXT_PRIVATE, ctx.author: PERM_TEXT_OWNER }
             newchannel = await category.create_text_channel(name=(ctx.author.name.lower()+"-"+ctx.author.discriminator), overwrites=overwrites, reason="Benutzer hat den Textkanal erstellt")
@@ -108,7 +110,7 @@ class Channels(commands.Cog):
             if not ctx.channel == channel:
                 await ctx.sendEmbed(title="Textkanal gelöscht", fields=[("Server", ctx.guild.name)])
         else:
-            raise commands.BadArgument(message="Du hattest gar keinen Textkanal!")
+            raise ErrorMessage(message="Du hattest gar keinen Textkanal!")
         return
 
     @textchannel.command(
@@ -121,7 +123,7 @@ class Channels(commands.Cog):
     async def textchannel_invite(self, ctx, wer: typing.Union[Member, Role]):
         channel = await self.get_text_channel(ctx.author)
         if not channel:
-            raise commands.BadArgument(
+            raise ErrorMessage(
                 message="Du hast noch keinen Textkanal!")
         else:
             await channel.set_permissions(wer, reason="Benuter hat Benutzer/Rolle eingeladen", read_messages=True, send_messages=True)
@@ -145,7 +147,7 @@ class Channels(commands.Cog):
     async def textchannel_open(self, ctx):
         channel = await self.get_text_channel(ctx.author)
         if not channel:
-            raise commands.BadArgument(
+            raise ErrorMessage(
                 message="Du hast noch keinen Textkanal!")
         else:
             await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal für alle Geöffnet", read_messages=True, send_messages=True)
@@ -159,7 +161,7 @@ class Channels(commands.Cog):
     async def textchannel_close(self, ctx):
         channel = await self.get_text_channel(ctx.author)
         if not channel:
-            raise commands.BadArgument(
+            raise ErrorMessage(
                 message="Du hast noch keinen Textkanal!")
         else:
             await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal nicht mehr für alle geöffnet!", read_messages=False, send_messages=False)
@@ -190,7 +192,7 @@ class Channels(commands.Cog):
         if channel:
             if ctx.author.voice:
                 await ctx.author.edit(voice_channel=channel,reason="Benutzer hat den Kanal erstellt")
-            raise commands.BadArgument(message="Du hast bereits einen Sprachkanal!")
+            raise ErrorMessage(message="Du hast bereits einen Sprachkanal!")
         else:
             overwrites = {ctx.guild.default_role: PERM_VOICE_PRIVATE, ctx.author: PERM_VOICE_OWNER}
             newchannel = await category.create_voice_channel(name=(ctx.author.name.lower()+"#"+ctx.author.discriminator), overwrites=overwrites, reason="Benutzer hat den Sprachkanal erstellt")
@@ -219,7 +221,7 @@ class Channels(commands.Cog):
                 ]
             )
         else:
-            raise commands.BadArgument(message="Du hattest gar keinen Sprachkanal!")
+            raise ErrorMessage(message="Du hattest gar keinen Sprachkanal!")
         return
 
 
@@ -233,7 +235,7 @@ class Channels(commands.Cog):
     async def voicechannel_invite(self, ctx, wer: typing.Union[Member,Role]):
         channel = await self.get_voice_channel(ctx.author)
         if not channel:
-            raise commands.BadArgument(message="Du hast noch keinen Sprachkanal!")
+            raise ErrorMessage(message="Du hast noch keinen Sprachkanal!")
         else:
             await channel.set_permissions(wer,reason="Benuter hat Benutzer/Rolle eingeladen", read_messages=True, connect=True, speak=True)
             if isinstance(wer, Member):
@@ -258,7 +260,7 @@ class Channels(commands.Cog):
     async def voicechannel_open(self, ctx):
         channel = await self.get_voice_channel(ctx.author)
         if not channel:
-            raise commands.BadArgument(
+            raise ErrorMessage(
                 message="Du hast noch keinen Sprachkanal!")
         else:
             await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal für alle Geöffnet", read_messages=True, connect=True, speak=True)
@@ -272,7 +274,7 @@ class Channels(commands.Cog):
     async def voicechannel_close(self, ctx):
         channel = await self.get_voice_channel(ctx.author)
         if not channel:
-            raise commands.BadArgument(
+            raise ErrorMessage(
                 message="Du hast noch keinen Sprachkanal!")
         else:
             await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal nicht mehr für alle geöffnet!", read_messages=True, connect=False, speak=True)

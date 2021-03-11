@@ -1,4 +1,4 @@
-from discord.ext.commands import BadArgument
+from discordbot.errors import ErrorMessage
 
 MORSE_CODE_DICT = { 'A':'.-',       'B':'-...',
                     'C':'-.-.',     'D':'-..',      'E':'.',
@@ -33,7 +33,7 @@ def morse_encrypt(message):
         morsecode += ' '
 
     if not morsecode.strip():
-        raise BadArgument(message="Der Text ist entweder leer oder enthält nur ungültige Zeichen!")
+        raise ErrorMessage(message="Der Text ist entweder leer oder enthält nur ungültige Zeichen!")
     return morsecode
 
 # Morsecode zu Text
@@ -58,5 +58,5 @@ def morse_decrypt(message):
                 char = ''
 
     if not text.replace("*","").strip():
-        raise BadArgument(message="Der Morsecode ist entweder leer oder enthält nur ungültige Zeichen!")
+        raise ErrorMessage(message="Der Morsecode ist entweder leer oder enthält nur ungültige Zeichen!")
     return text

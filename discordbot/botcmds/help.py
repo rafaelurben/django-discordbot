@@ -3,6 +3,7 @@ from discord import Embed
 import random
 
 from discordbot.config import HELP_HIDDEN_COGS
+from discordbot.errors import ErrorMessage
 
 class Help(commands.Cog):
     def __init__(self, bot):
@@ -95,7 +96,7 @@ class Help(commands.Cog):
             addCog(cogs[search], include_subcommands=True, hide_cogs=[])
 
         else:
-            raise commands.BadArgument("Ungültige(r) Kategorie/Befehl.\nBenutze den `/help` Befehl um alle Kategorien und Befehle zu sehen.")
+            raise ErrorMessage("Ungültige(r) Kategorie/Befehl.\nBenutze den `/help` Befehl um alle Kategorien und Befehle zu sehen.")
 
         await ctx.sendEmbed(
             title='Hilfe',

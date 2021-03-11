@@ -99,7 +99,7 @@ class Music(commands.Cog):
                 ctx.voice_client.play(player, after=lambda e: print('[Music] - Fehler: %s' % e) if e else None)
                 await ctx.sendEmbed(title="Memetime!", fields=[("Meme",str(filename).split(".")[0])])
             else:
-                raise commands.BadArgument(message="Es wurden keine mit '{}' übereinstimmende Audiodatei gefunden.".format(search))
+                raise ErrorMessage(message="Es wurden keine mit '{}' übereinstimmende Audiodatei gefunden.".format(search))
 
         @commands.command(
             brief='Spiele Musik',
@@ -264,10 +264,10 @@ class Music(commands.Cog):
                 try:
                     await ctx.sendEmbed(title="User Song", fields=[("Titel", activity.title),("Künstler", activity.artist),("Link", ("[Spotify](https://open.spotify.com/track/"+activity.track_id+")"))])
                 except AttributeError:
-                    raise commands.BadArgument(message="Scheinbar hört dieser Benutzer keinen richtigen Song.")
+                    raise ErrorMessage(message="Scheinbar hört dieser Benutzer keinen richtigen Song.")
                 found = True
         if not found:
-            raise commands.BadArgument(message="Dieser Benutzer hört keinen Song!")
+            raise ErrorMessage(message="Dieser Benutzer hört keinen Song!")
 
 
 

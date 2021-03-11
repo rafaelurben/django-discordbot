@@ -126,7 +126,7 @@ class Moderation(commands.Cog):
             await member.kick(reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
             await ctx.sendEmbed(title="Benutzer Gekickt", fields=[("Betroffener",member.mention),("Grund",Grund)])
         else:
-            raise commands.BadArgument(message="Deine Rolle ist nicht höher als die des Benutzers, den du kicken wolltest!")
+            raise ErrorMessage(message="Deine Rolle ist nicht höher als die des Benutzers, den du kicken wolltest!")
 
 
     @commands.command(
@@ -147,7 +147,7 @@ class Moderation(commands.Cog):
             await member.ban(reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
             await ctx.sendEmbed(title="Benutzer Gebannt", fields=[("Betroffener",member.mention),("Grund",Grund)])
         else:
-            raise commands.BadArgument(message="Deine Rolle ist nicht höher als die des Benutzers, den du bannen wolltest!")
+            raise ErrorMessage(message="Deine Rolle ist nicht höher als die des Benutzers, den du bannen wolltest!")
 
 
 
@@ -167,12 +167,12 @@ class Moderation(commands.Cog):
             Grund = "Leer"
         user = self.bot.get_user(userid)
         if user is None:
-            raise commands.BadArgument(message="Benutzer wurde nicht gefunden!")
+            raise ErrorMessage(message="Benutzer wurde nicht gefunden!")
         try:
             await ctx.guild.unban(user,reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
             await ctx.sendEmbed(title="Benutzer Entbannt", fields=[("Betroffener",user.mention),("Grund",Grund)])
         except:
-            raise commands.BadArgument(message="Benutzer wurde nicht gefunden!")
+            raise ErrorMessage(message="Benutzer wurde nicht gefunden!")
 
 
     @commands.command(
@@ -195,13 +195,13 @@ class Moderation(commands.Cog):
                         await member.edit(voice_channel=None,reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
                         await ctx.sendEmbed(title="Benutzer Getötet", fields=[("Betroffener",member.mention),("Grund",Grund)])
                     else:
-                        raise commands.BadArgument(message="Deine Rolle ist nicht höher als oder gleich wie die des Benutzers, den du töten wolltest!")
+                        raise ErrorMessage(message="Deine Rolle ist nicht höher als oder gleich wie die des Benutzers, den du töten wolltest!")
                 else:
                     raise commands.BotMissingPermissions([])
             else:
                 raise commands.MissingPermissions([])
         else:
-            raise commands.BadArgument(message="Der Benutzer befindet sich nicht in einem Sprachkanal.")
+            raise ErrorMessage(message="Der Benutzer befindet sich nicht in einem Sprachkanal.")
 
     @commands.command(
         brief="Bewegt einen Spieler zu dir",
@@ -223,9 +223,9 @@ class Moderation(commands.Cog):
                 else:
                     raise commands.MissingPermissions([])
             else:
-                raise commands.BadArgument(message="Du befindest sich nicht in einem Sprachkanal.")
+                raise ErrorMessage(message="Du befindest sich nicht in einem Sprachkanal.")
         else:
-            raise commands.BadArgument(message="Der Benutzer befindet sich nicht in einem Sprachkanal.")
+            raise ErrorMessage(message="Der Benutzer befindet sich nicht in einem Sprachkanal.")
 
 
 def setup(bot):

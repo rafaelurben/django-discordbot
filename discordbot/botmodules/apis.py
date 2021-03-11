@@ -10,7 +10,7 @@ class Minecraft():
         if not r.status_code == 204:
             return r.json()
         else:
-            raise commands.BadArgument(message="Spieler wurde nicht gefunden!")
+            raise ErrorMessage(message="Spieler wurde nicht gefunden!")
 
     @classmethod
     def getProfiles(self, UUID:str):
@@ -22,7 +22,7 @@ class Minecraft():
                     i["changedToAt"] = datetime.datetime.fromtimestamp(int(i["changedToAt"])/1000)
             return data
         else:
-            raise commands.BadArgument(message="UUID wurde nicht gefunden!")
+            raise ErrorMessage(message="UUID wurde nicht gefunden!")
 
     @classmethod
     def getSkin(self, UUID:str):
@@ -44,9 +44,9 @@ class Minecraft():
                 data.pop("properties")
                 return data
             else:
-                raise commands.BadArgument(message="Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!")
+                raise ErrorMessage(message="Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!")
         else:
-            raise commands.BadArgument(message="UUID wurde nicht gefunden!")
+            raise ErrorMessage(message="UUID wurde nicht gefunden!")
 
 
 class Fortnite():
@@ -80,4 +80,4 @@ class Fortnite():
         if platform.lower() in ["kbm","gamepad","touch"]:
             return self.__get_json(("https://api.fortnitetracker.com/v1/profile/%s/%s" % (platform.lower(), playername)))
         else:
-            raise commands.BadArgument("Die Plattform '"+platform+"' existiert nicht! Benutze kbm, gamepad oder touch!")
+            raise ErrorMessage("Die Plattform '"+platform+"' existiert nicht! Benutze kbm, gamepad oder touch!")

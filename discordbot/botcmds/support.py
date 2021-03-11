@@ -127,7 +127,7 @@ class Support(commands.Cog):
                 description=member.mention+" darf nun Befehle für dich ausführen!"
             )
         else:
-            raise commands.BadArgument("Dieser Benutzer darf bereits Befehle für dich ausführen!")
+            raise ErrorMessage("Dieser Benutzer darf bereits Befehle für dich ausführen!")
 
     @remote.command(
         name="allowraw",
@@ -145,7 +145,7 @@ class Support(commands.Cog):
                 description=str(id)+" darf nun Befehle für dich ausführen!"
             )
         else:
-            raise commands.BadArgument("Diese ID darf bereits Befehle für dich ausführen!")
+            raise ErrorMessage("Diese ID darf bereits Befehle für dich ausführen!")
 
     @remote.command(
         name="disallow",
@@ -161,7 +161,7 @@ class Support(commands.Cog):
                 description=member.mention+" darf nun nicht mehr Befehle für dich ausführen!"
             )
         else:
-            raise commands.BadArgument("Dieser Benutzer steht nicht auf deiner Liste!")
+            raise ErrorMessage("Dieser Benutzer steht nicht auf deiner Liste!")
 
     @remote.command(
         name="disallowraw",
@@ -179,7 +179,7 @@ class Support(commands.Cog):
                 description=str(id)+" darf nun nicht mehr Befehle für dich ausführen!"
             )
         else:
-            raise commands.BadArgument(
+            raise ErrorMessage(
                 "Diese ID steht nicht auf deiner Liste!")
 
     @remote.command(
@@ -206,7 +206,7 @@ class Support(commands.Cog):
         if await ctx.database._has(BotPermission, id_1=str(member.id), id_2=str(ctx.author.id), typ="remote_permission") or await ctx.database._has(BotPermission, id_1=str(member.id), id_2=str(ctx.message.webhook_id), typ="remote_permission"):
             await ctx.invoke_as(member, command, *args)
         else:
-            raise commands.BadArgument("Du darfs keine Befehle als diesen Benutzer ausführen!   ")
+            raise ErrorMessage("Du darfs keine Befehle als diesen Benutzer ausführen!   ")
 
 def setup(bot):
     bot.add_cog(Support(bot))
