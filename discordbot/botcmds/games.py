@@ -3,7 +3,7 @@
 from asgiref.sync import sync_to_async
 
 from discord.ext import commands, tasks
-from discord import Embed, utils, PermissionOverwrite, Color, NotFound, User, Member
+from discord import Embed, utils, PermissionOverwrite, Color, NotFound, User, Member, ChannelType
 
 from django.utils import timezone
 
@@ -151,19 +151,32 @@ class Games(commands.Cog):
     )
     async def fortnite_store(self, ctx):
         JSON = apis.Fortnite.getStore()
-        await ctx.sendEmbed(
+
+        if ctx.channel.type == ChannelType.private or ctx.channel.permissions_for(ctx.author).manage_messages:
+            receiver = ctx.channel
+        else:
+            receiver = ctx.author
+            await ctx.sendEmbed(
+                title="Fortnite Item Shop",
+                description="Please check your direct messages.",
+                color=0x1f871e
+            )
+
+        emb = ctx.getEmbed(
             title="Fortnite Item Shop",
             authorurl="http://fortnitetracker.com/",
             authorname="Powered by Fortnitetracker"
         )
+        await receiver.send(embed=emb)
         for i in range(len(JSON)):
-            await ctx.sendEmbed(
+            emb = ctx.getEmbed(
                 title=str(JSON[i]["name"]),
                 description=("Rarity: %s \n vBucks: %s" % (JSON[i]["rarity"],JSON[i]["vBucks"])),
                 thumbnailurl=str(JSON[i]["imageUrl"]),
                 footertext="",
                 footerurl="",
             )
+            await receiver.send(embed=emb)
 
     @fortnite.command(
         name="challenges",
