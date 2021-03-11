@@ -3,6 +3,7 @@ from discord import Embed, Member, User, Permissions
 from discordbot.errors import ErrorMessage
 
 VOTEKILL_EMOJI = "☠"
+VOTEKICK_EMOJI = "👋"
 
 class Moderation(commands.Cog):
     def __init__(self, bot):
@@ -50,22 +51,51 @@ class Moderation(commands.Cog):
 
                             if votercount >= minvotercount:
                                 emb = self.bot.getEmbed(
-                                    title="[Votekill completed]",
+                                    title="Benutzer getötet",
                                     color=0x0078D7,
-                                    description="Voted to kill "+member.mention+"\n\nAll voters: "+", ".join([voter.mention for voter in voters])
+                                    description=member.mention+" flog aus dem Kanal\nZählende Stimmen: "+", ".join([voter.mention for voter in voters])
                                 )
                                 await member.edit(voice_channel=None)
-                                await channel.send(embed=emb)
-                                await message.delete()
+                                await message.edit(embed=emb)
                     else:
                         await message.delete()
                     
+                ### Votekick
 
+                if emoji == VOTEKICK_EMOJI and message.embeds and message.embeds[0].title.startswith("[Votekick]"):
+                    _,memberid,_ = message.embeds[0].title.split("'")
+
+                    member = await channel.guild.fetch_member(memberid)
+                    if member:
+                        m = message.guild.member_count-1 # TODO: Subtract Bots
+
+                        minvotes = m/2 if m <= 200 else 100
+                        
+                        for reaction in message.reactions:
+                            if reaction.emoji == VOTEKICK_EMOJI:
+                                votes = (reaction.count-1 if reaction.me else reaction.count)
+
+                        print(f"{votes} of {m} voted to kick {member.name}#{member.discriminator}! (Required {minvotes})")
+
+                        if votes >= minvotes:
+                            emb = self.bot.getEmbed(
+                                title="Benutzer gekickt",
+                                color=0x0078D7,
+                                description=f"{member.mention} wurde vom Server gekickt!\nStimmen: {votes}"
+                            )
+                            await member.kick(reason=f"{votes} voted to kick this person.")
+                            await message.edit(embed=emb)
+                    else:
+                        await message.delete()
 
     # Public commands
 
     @commands.command(
-        brief="Votekill someone in your current voice channel"
+        brief="Stimme dafür, jemanden aus deinem Sprachkanal zu werfen.",
+        description="Jemand stört? Stimme dafür, dass ein Benutzer aus dem Sprachkanal fliegt. (dieser kann danach jedoch jederzeit wieder beitreten)",
+        aliases=[],
+        help="Benutze /votekill <Benutzer> um eine Abstimmung zu starten.",
+        usage="<Benutzer>"
     )
     @commands.guild_only()
     async def votekill(self, ctx, member:Member):
@@ -74,7 +104,7 @@ class Moderation(commands.Cog):
                 msg = await ctx.sendEmbed(
                     title=f"[Votekill] '{member.id}' in '{ctx.author.voice.channel.id}'",
                     color=0x0078D7,
-                    description=f"Stimme mit {VOTEKILL_EMOJI} ab um dafür zu stimmen, dass {member.mention} aus dem Sprachkanal fliegt!"
+                    description=f"Stimme mit {VOTEKILL_EMOJI} ab um dafür zu stimmen, dass {member.mention} aus dem Sprachkanal fliegt! (er kann danach jederzeit wieder beitreten)"
                 )
                 await msg.add_reaction(VOTEKILL_EMOJI)
             else:
@@ -82,7 +112,22 @@ class Moderation(commands.Cog):
         else:
             raise ErrorMessage("Du musst dich in einem Sprachkanal befinden!")
 
-
+    @commands.command(
+        brief="Stimme dafür, jemanden aus dem Server zu werfen.",
+        description="Jemand stört? Stimme dafür, dass ein Benutzer aus dem Server fliegt. (dieser kann danach jedoch jederzeit wieder mit einem Einladungslink beitreten)",
+        aliases=[],
+        help="Benutze /votekick <Benutzer> um eine Abstimmung zu starten.",
+        usage="<Benutzer>"
+    )
+    @commands.guild_only()
+    @commands.bot_has_permissions(kick_members = True)
+    async def votekick(self, ctx, member: Member):
+        msg = await ctx.sendEmbed(
+            title=f"[Votekick] '{member.id}'",
+            color=0x0078D7,
+            description=f"Stimme mit {VOTEKICK_EMOJI} ab um dafür zu stimmen, dass {member.mention} aus dem Server fliegt! (dieser kann danach jedoch jederzeit wieder mit einem Einladungslink beitreten)"
+        )
+        await msg.add_reaction(VOTEKICK_EMOJI)
 
     # Moderator commands
 
