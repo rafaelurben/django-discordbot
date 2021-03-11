@@ -69,6 +69,7 @@ class Basic(commands.Cog):
         help="Benutze /say <Text> und der Bot schickt dir den Text zurück",
         usage="<Text>"
         )
+    @commands.has_permissions(manage_messages=True)
     async def say(self, ctx, text:str, *args):
         txt = " ".join((text,)+args)
         await ctx.send(txt)
