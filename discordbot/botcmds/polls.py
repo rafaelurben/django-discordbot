@@ -17,6 +17,7 @@ class Polls(commands.Cog):
         usage="<Frage> [1-10 Antworten]",
         help="Eine Antwort pro Zeile. Wenn keine Antworten angegeben werden, wird standardmässig Ja und Nein verwendet."
     )
+    @commands.cooldown(1, 10, commands.BucketType.member)
     async def poll(self, ctx, *, msg):
         answers = msg.split("\n")
         question = answers.pop(0)
