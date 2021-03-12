@@ -137,20 +137,37 @@ class Moderation(commands.Cog):
         description="Leert den Chat",
         aliases=["cc"],
         help="Gib einfach /clearchat ein und der Chat wird bald leer sein",
-        usage=""
+        usage="[Limit]"
         )
     @commands.cooldown(1,2.0,commands.BucketType.channel)
     @commands.has_permissions(manage_messages = True)
     @commands.bot_has_permissions(manage_messages = True)
     @commands.guild_only()
-    async def clearchat(self,ctx):
-        await ctx.sendEmbed(title="Chat wird geleert...", description="Der Chat wird geleert!")
+    async def clearchat(self, ctx, limit:int=0):
+        await ctx.sendEmbed(title="Chat leeren...", description="Der Chat wird geleert!")
         try:
-            await ctx.message.channel.purge()
+            await ctx.message.channel.purge(limit=limit+1)
         except Exception as e:
             print("[Clearchat] - Error:", e)
             pass
 
+
+    @commands.command(
+        brief="Löscht alle Nachrichten von mir",
+        description="Löscht alle von diesem Bot gesendeten Nachrichten",
+        aliases=[],
+        help="Nicht mit /clearchat zu verwechseln!",
+        usage="",
+        hidden=True,
+    )
+    @commands.has_permissions(manage_messages = True)
+    async def cleanchat(self, ctx):
+        await ctx.sendEmbed(title="Chat aufräumen...", description="Der Chat wird aufgeräumt!")
+
+        def is_me(message):
+            return message.author.id == ctx.bot.user.id
+
+        await ctx.channel.purge(limit=100, check=is_me)
 
 
     @commands.command(
