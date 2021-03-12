@@ -78,7 +78,7 @@ class Games(commands.Cog):
 
                 ### AmongUs
 
-                if (emoji in AMONGUS_EMOJI_COLORS or emoji == DELETE) and await DjangoConnection._hasAmongUsGame(text_message_id=payload.message_id):
+                if (emoji in AMONGUS_EMOJI_COLORS or emoji == DELETE) and await DjangoConnection._has(AmongUsGame, text_message_id=payload.message_id):
                     try:
                         await message.remove_reaction(emoji, payload.member)
                     except:
