@@ -3,45 +3,8 @@ from discord import User, TextChannel, utils
 from datetime import datetime
 import typing
 
-from discordbot.config import INVITE_OWNER, INVITE_BOT, SPAM_ALLOWED
+from discordbot.config import INVITE_OWNER, INVITE_BOT, SPAM_ALLOWED, REGELN
 #from discordbot.errors import ErrorMessage
-
-REGELN = {
-    "1) Verhalten":
-        [
-            "Sei nett zu anderen Leuten und behandle sie so, wie auch du behandelt werden möchtest!", 
-            "Beleidige keine anderen Leute!",
-            "Benutze anständige Sprache!",
-            "Bleib beim Thema!",
-        ],
-    "2) Text":
-        [
-            "Spamming ist verboten!", 
-            "Werbung ohne Erlaubnis eines Administrators ist verboten!",
-        ],
-    "3) Ton":
-        [
-            "Benutze keinen Stimmverzerrer!", 
-            "Mache keine unnötigen Hintergrundgeräusche!", 
-            "Channel Hopping bitte unterlassen!", 
-            "Sprachaufnahmen sind nur mit Erlaubnis aller Teilnehmer gestattet!",
-        ],
-    "4) NSFW":
-        [
-            "Anstössige Inhalte ausserhalb NSFW-Kanälen werden sofort gelöscht und der Autor mit einem Bann/Mute bestraft!", 
-        ],
-    "5) Sicherheit":
-        [
-            "Anweisungen von Moderatoren, Supportern und Admins müssen befolgt werden!",
-            "Falls jemand ohne Grund nach deinen persönlichen Daten fragt, ignoriere bitte die Nachricht und meldet sie einem Admin oder dem Serverbesitzer! Bitte melde den Benutzer ebenfalls bei Discord!",
-            "Sende nie jemandem euer Passwort!",
-        ],
-    "6) Empfehlungen":
-        [
-            "Habe Spass!",
-        ],
-}
-
 
 class Basic(commands.Cog):
     def __init__(self, bot):

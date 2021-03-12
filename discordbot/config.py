@@ -26,10 +26,10 @@ EXTENSIONS = _s("EXTENSIONS", ['basic','support','moderation','games','help','ch
 
 ## Basic
 
-INVITE_OWNER = "https://rebrand.ly/RUdiscord"
-INVITE_BOT = "https://rebrand.ly/RUdiscordbot"
+INVITE_OWNER = _s("INVITE_OWNER", "https://go.rafaelurben.ch/discord")
+INVITE_BOT = _s("INVITE_BOT", "https://go.rafaelurben.ch/discordbot")
 
-SPAM_ALLOWED = False
+SPAM_ALLOWED = _s("SPAM_ALLOWED", False)
 
 ## Help
 
@@ -57,4 +57,42 @@ FFMPEG_OPTIONS_STREAM = {
 RADIOS = {
     "swisspop": "http://www.radioswisspop.ch/live/mp3.m3u",
     "nrjbern":  "https://energybern.ice.infomaniak.ch/energybern-high.mp3",
+}
+
+## Moderation
+
+REGELN = {
+    "1) Verhalten":
+        [
+            "Sei nett zu anderen Leuten und behandle sie so, wie auch du behandelt werden möchtest!",
+            "Beleidige keine anderen Leute!",
+            "Benutze anständige Sprache!",
+            "Bleib beim Thema!",
+        ],
+    "2) Text":
+        [
+            "Spamming ist verboten!",
+            "Werbung ohne Erlaubnis eines Administrators ist verboten!",
+        ],
+    "3) Ton":
+        [
+            "Benutze keinen Stimmverzerrer!",
+            "Mache keine unnötigen Hintergrundgeräusche!",
+            "Channel Hopping bitte unterlassen!",
+            "Sprachaufnahmen sind nur mit Erlaubnis aller Teilnehmer gestattet!",
+        ],
+    "4) NSFW":
+        [
+            "Anstössige Inhalte ausserhalb NSFW-Kanälen werden sofort gelöscht und der Autor mit einem Bann/Mute bestraft!",
+        ],
+    "5) Sicherheit":
+        [
+            "Anweisungen von Moderatoren, Supportern und Admins müssen befolgt werden!",
+            "Falls jemand ohne Grund nach deinen persönlichen Daten fragt, ignoriere bitte die Nachricht und meldet sie einem Admin oder dem Serverbesitzer! Bitte melde den Benutzer ebenfalls bei Discord!",
+            "Sende nie jemandem euer Passwort!",
+        ],
+    "6) Empfehlungen":
+        [
+            "Habe Spass!",
+        ],
 }
