@@ -36,7 +36,7 @@ class Music(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if MUSIC_MODULE:
+        if MUSIC_MODULE and os.path.exists(MEMESPATH) and os.path.isdir(MEMESPATH):
             # *Help I need somebody Help*
             if "i need somebody" in message.content.lower() and message.guild and message.author.voice:
                 filepath = os.path.join(MEMESPATH, "help-i-need-somebody.wav")
@@ -66,40 +66,41 @@ class Music(commands.Cog):
             raise ErrorMessage("Du bist mit keinem Sprachkanal in diesem Server verbunden!")
 
     if MUSIC_MODULE:
-        @commands.command(
-            brief='Liste alle Memes auf',
-            description='Liste alle Memes auf',
-        )
-        async def memes(self, ctx):
-            filenames = list(os.listdir(MEMESPATH))
-            await ctx.sendEmbed(title="Memes", description="\n".join(["- "+filename.split(".")[0] for filename in filenames]))
+        if os.path.exists(MEMESPATH) and os.path.isdir(MEMESPATH):
+            @commands.command(
+                brief='Liste alle Memes auf',
+                description='Liste alle Memes auf',
+            )
+            async def memes(self, ctx):
+                filenames = list(os.listdir(MEMESPATH))
+                await ctx.sendEmbed(title="Memes", description="\n".join(["- "+filename.split(".")[0] for filename in filenames]))
 
 
-        @commands.command(
-            brief='Spiele Memes',
-            description='Spiele Memes von einer Audiodatei!',
-            usage="<Suche>"
-        )
-        @commands.guild_only()
-        async def meme(self, ctx, search:str="windows-xp-error", *args):
-            search = " ".join((search,)+args)
-            filenames = list(os.listdir(MEMESPATH))
+            @commands.command(
+                brief='Spiele Memes',
+                description='Spiele Memes von einer Audiodatei!',
+                usage="<Suche>"
+            )
+            @commands.guild_only()
+            async def meme(self, ctx, search:str="windows-xp-error", *args):
+                search = " ".join((search,)+args)
+                filenames = list(os.listdir(MEMESPATH))
 
-            result = process.extractOne(search, filenames)
-            filename = result[0]
+                result = process.extractOne(search, filenames)
+                filename = result[0]
 
-            print("[Music] - Suchergebnis:", search, result)
+                print("[Music] - Suchergebnis:", search, result)
 
-            if result[1] >= 75:
-                player = PCMVolumeTransformer(FFmpegPCMAudio(source=os.path.join(MEMESPATH, filename), **FFMPEG_OPTIONS))
+                if result[1] >= 75:
+                    player = PCMVolumeTransformer(FFmpegPCMAudio(source=os.path.join(MEMESPATH, filename), **FFMPEG_OPTIONS))
 
-                if ctx.voice_client.is_playing():
-                    ctx.voice_client.stop()
+                    if ctx.voice_client.is_playing():
+                        ctx.voice_client.stop()
 
-                ctx.voice_client.play(player, after=lambda e: print('[Music] - Fehler: %s' % e) if e else None)
-                await ctx.sendEmbed(title="Memetime!", fields=[("Meme",str(filename).split(".")[0])])
-            else:
-                raise ErrorMessage(message="Es wurden keine mit '{}' übereinstimmende Audiodatei gefunden.".format(search))
+                    ctx.voice_client.play(player, after=lambda e: print('[Music] - Fehler: %s' % e) if e else None)
+                    await ctx.sendEmbed(title="Memetime!", fields=[("Meme",str(filename).split(".")[0])])
+                else:
+                    raise ErrorMessage(message="Es wurden keine mit '{}' übereinstimmende Audiodatei gefunden.".format(search))
 
         @commands.command(
             brief='Spiele Musik',
@@ -235,18 +236,18 @@ class Music(commands.Cog):
         async def autojoin(self, ctx):
             await self.ensure_voice(ctx)
 
-    # Generelle Commands
+        @commands.command(
+            brief='Erhalte Infos über einen Song',
+            description='Erhalte Infos über einen Song oder eine Playlist',
+            aliases=[],
+            hidden=True,
+        )
+        async def songinfo(self, ctx, query:str):
+            async with ctx.typing():
+                embdata = await ctx.audio.getInfoEmbedData(query)
+                await ctx.sendEmbed(**embdata)
 
-    @commands.command(
-        brief='Erhalte Infos über einen Song',
-        description='Erhalte Infos über einen Song oder eine Playlist',
-        aliases=[],
-        hidden=True,
-    )
-    async def songinfo(self, ctx, query:str):
-        async with ctx.typing():
-            embdata = await ctx.audio.getInfoEmbedData(query)
-            await ctx.sendEmbed(**embdata)
+    # Generelle Commands
 
     @commands.command(
         name='usersong',

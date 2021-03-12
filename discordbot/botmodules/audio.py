@@ -1,6 +1,7 @@
 import youtube_dl
 import os
 import asyncio
+import json
 
 from discord import PCMVolumeTransformer, FFmpegPCMAudio
 from discord.ext import commands
@@ -58,7 +59,6 @@ class AudioManager():
         if data:
             if DEBUG:
                 with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "_debug.test.json"), "w+") as f:
-                    import json
                     f.write(json.dumps(data, indent=2))
 
             if "entries" in data:
