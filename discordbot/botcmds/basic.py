@@ -147,14 +147,15 @@ class Basic(commands.Cog):
                 try:
                     invite = utils.get(list(await ctx.guild.invites()), max_age=0, max_uses=0)
                     if not invite:
-                        invite = await ctx.channel.create_invite()
+                        invite = await (ctx.guild.system_channel or ctx.channel).create_invite()
                 except:
                     invite = None
 
-        if invite:
-            await ctx.sendEmbed(title="Einladungen", fields=[("Dieser Server", invite.url or "Unbekannt"), ("Bot Owner Server", INVITE_OWNER), ("Bot", INVITE_BOT)])
-        else:
-            await ctx.sendEmbed(title="Einladungen", fields=[("Bot Owner Server",INVITE_OWNER), ("Bot",INVITE_BOT)])
+        gc = len(ctx.bot.guilds)
+        desc = f"Ich bin bereits auf {gc} Guild(s)! Du möchtest, dass diese Zahl steigt? Kein Problem! Du möchtest Leute auf diesen Server einladen? Auch kein Problem!"
+
+        inviteurl = invite.url if invite and invite.url else None
+        await ctx.sendEmbed(title="Einladungen", description=desc, fields=[("Dieser Server", f"[Beitreten]({inviteurl})" if inviteurl else "Unbekannt"), ("Bot Owner Server", f"[Beitreten]({INVITE_OWNER})"), ("Bot", f"[Beitreten]({INVITE_BOT})")])
 
 def setup(bot):
     bot.add_cog(Basic(bot))
