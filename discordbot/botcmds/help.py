@@ -25,21 +25,22 @@ class Help(commands.Cog):
             if not cog.qualified_name.lower() in hide_cogs:
                 commands_list = ''
                 for cmd in cog.walk_commands():
-                    if include_subcommands:
-                        depth = 0
-                        currentcmd = cmd
-                        while currentcmd.parent:
-                            depth += 1
-                            currentcmd = currentcmd.parent 
+                    if not cmd.hidden:
+                        if include_subcommands:
+                            depth = 0
+                            currentcmd = cmd
+                            while currentcmd.parent:
+                                depth += 1
+                                currentcmd = currentcmd.parent
 
-                        if depth == 0:
-                            commands_list += f'\n**{cmd.name}** - {cmd.brief}\n'
-                        elif depth == 1:
-                            commands_list += f'- {cmd.name} '
-                        # else:
-                        #    commands_list += "- "*depth + f'**{cmd.name}**\n'
-                    elif not cmd.parent:
-                        commands_list += f'**{cmd.name}** - {cmd.brief}\n'
+                            if depth == 0:
+                                commands_list += f'\n**{cmd.name}** - {cmd.brief}\n'
+                            elif depth == 1:
+                                commands_list += f'- {cmd.name} '
+                            # else:
+                            #    commands_list += "- "*depth + f'**{cmd.name}**\n'
+                        elif not cmd.parent:
+                            commands_list += f'**{cmd.name}** - {cmd.brief}\n'
 
                 fields.append((cog.qualified_name, commands_list.replace("\n\n", "\n")+'\u200b'))
 
