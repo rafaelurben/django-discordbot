@@ -1,25 +1,26 @@
 # pylint: disable=unused-variable
 
 from discord.ext import commands
-from discord import Embed
+from discord import Embed, ChannelType
 
 from discordbot.config import DEBUG
 from discordbot.errors import ErrorMessage
 
+import asyncio
+
 DEBUG_NO_RAISE_FOR = [
-    commands.CommandNotFound, 
-    commands.MissingRequiredArgument, 
-    commands.BadArgument, 
+    commands.DisabledCommand,
     commands.CommandOnCooldown,
-    commands.MissingAnyRole,
-    commands.MissingRole,
+    commands.CommandNotFound, 
+    commands.UserInputError, 
+    commands.CheckFailure,
 ]
 
 def setup(bot):
     @bot.event
     async def on_command_error(ctx, error):
         if isinstance(error, ErrorMessage):
-            await ctx.sendEmbed(title="Fehler", color=0xff0000, description=str(error), fields=[("Nachricht", ctx.message.content)])
+            errormsg = await ctx.sendEmbed(title="Fehler", color=0xff0000, description=str(error), fields=[("Nachricht", ctx.message.content)])
         else:
             EMBED = ctx.getEmbed(title="Fehler", color=0xff0000)
 
@@ -88,7 +89,7 @@ def setup(bot):
 
                 elif isinstance(error, commands.CommandOnCooldown):
                     EMBED.add_field(name="Info", value="Warte, bis du diesen Befehl erneut benutzen kannst!")
-                    EMBED.add_field(name="Zeit", value=f"Versuche es in {error.retry_after}s erneut!")
+                    EMBED.add_field(name="Zeit", value=f"Versuche es in {int(error.retry_after)}s erneut!")
             
                 else:
                     EMBED.add_field(name="Info", value="Bei einem Befehl ist ein Fehler aufgetreten!")
@@ -101,7 +102,13 @@ def setup(bot):
                 EMBED.add_field(name="Info", value="Leider konnte die Verbindung zur Datenbank nicht hergestellt werden. Bitte versuche es später noch einmal!")
             
             EMBED.add_field(name="Nachricht", value=ctx.message.content, inline=False)
-            await ctx.send(embed=EMBED)
+            errormsg = await ctx.send(embed=EMBED)
 
             if DEBUG and not True in [isinstance(error, cls) for cls in DEBUG_NO_RAISE_FOR]:
                 raise error
+
+        try:
+            await asyncio.sleep(10)
+            await errormsg.delete()
+        except commands.MessageNotFound:
+            pass
