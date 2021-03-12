@@ -161,6 +161,7 @@ class Moderation(commands.Cog):
         hidden=True,
     )
     @commands.has_permissions(manage_messages = True)
+    @commands.guild_only()
     async def cleanchat(self, ctx):
         await ctx.sendEmbed(title="Chat aufräumen...", description="Der Chat wird aufgeräumt!")
 
