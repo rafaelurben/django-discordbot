@@ -146,7 +146,10 @@ class Moderation(commands.Cog):
     async def clearchat(self, ctx, limit:int=0):
         await ctx.sendEmbed(title="Chat leeren...", description="Der Chat wird geleert!")
         try:
-            await ctx.message.channel.purge(limit=limit+1)
+            if limit > 0:
+                await ctx.message.channel.purge(limit=limit+1)
+            else:
+                await ctx.message.channel.purge()
         except Exception as e:
             print("[Clearchat] - Error:", e)
             pass
