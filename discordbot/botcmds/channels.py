@@ -3,12 +3,18 @@ from discord import Embed, User, Member, utils, PermissionOverwrite, Role
 from discordbot.errors import ErrorMessage
 
 import typing
+import random
 
 CHANNEL_NAMES_DEFAULT = ["SPRACHKANAL", "SPRACHKANAL ERSTELLEN", "NEUER SPRACHKANAL", ]
 CHANNEL_NAMES_PUBLIC = ["SPRACHKANAL [OFFEN]", "SPRACHKANAL ERSTELLEN [OFFEN]", "NEUER SPRACHKANAL [OFFEN]", ]
 CHANNEL_NAMES_PRIVATE = ["SPRACHKANAL [PRIVAT]", "SPRACHKANAL ERSTELLEN [PRIVAT]", "NEUER SPRACHKANAL [PRIVAT]", ]
 
-CATEGORY_NAMES = ["BENUTZERKANÄLE", "USERCHANNELS", "USER CHANNELS"]
+CHANNEL_NAME_TEXT = "benutzerkanäle"
+CHANNEL_NAME_PUBLIC = "Sprachkanal [offen]"
+CHANNEL_NAME_PRIVATE = "Sprachkanal [privat]"
+
+CATEGORY_NAMES = ["BENUTZERKANÄLE", "USERCHANNELS", "USER CHANNELS", "Benutzerkanäle", "Userchannels", "User channels"]
+CATEGORY_NAME = "Benutzerkanäle"
 
 PERM_VOICE_OWNER = PermissionOverwrite(connect=True, speak=True, view_channel=True, move_members=True, mute_members=True, deafen_members=True, stream=True, priority_speaker=True, use_voice_activation=True, create_instant_invite=True)
 PERM_VOICE_PRIVATE = PermissionOverwrite(connect=False, speak=True, view_channel=True)
@@ -17,16 +23,16 @@ PERM_VOICE_PUBLIC = PermissionOverwrite(connect=True, speak=True, view_channel=T
 PERM_TEXT_OWNER = PermissionOverwrite(read_messages=True, read_message_history=True, send_messages=True, manage_messages=True, send_tts_messages=True, manage_webhooks=True, add_reactions=True, embed_links=True, attach_files=True, create_instant_invite=True, external_emojis=True)
 PERM_TEXT_PRIVATE = PermissionOverwrite(read_messages=False)
 
+# HP_SORTING_HAT_CHANNEL_NAMES = ["[HP] SORTING HAT", "[HP] Sorting hat", "SORTING HAT", "Sorting hat"]
+# HP_SORTING_HAT_CHANNEL_NAME = "[HP] Sorting hat"
+# HP_SORTING_HAT_HOUSE_CHANNEL_NAMES = ["[HP] Gryffindor", "[HP] Hufflepuff", "[HP] Slytherin", "[HP] Ravenclaw"]
+
 async def getUserChannelCategory(guild):
-    category = utils.get(guild.categories, name="Benutzerkanäle")
-    if not category:
-        categoryoverwrites = { guild.default_role: PermissionOverwrite(read_messages=False, send_messages=False, connect=False, speak=False, move_members=False, use_voice_activation=True) }
-        textchanneloverwrites = { guild.default_role: PermissionOverwrite(read_messages=True, send_messages=True) }
-        voicechanneloverwrites = { guild.default_role: PermissionOverwrite(view_channel=True, connect=True, speak=False) }
-        category = await guild.create_category_channel(name="Benutzerkanäle", overwrites=categoryoverwrites, reason="Bereite Benutzerkanäle vor...")
-        await category.create_text_channel(name="benutzerkanäle", overwrites=textchanneloverwrites, reason="Bereite Benutzerkanäle vor...", topic="Hilfe: /help channels")
-        await category.create_voice_channel(name=CHANNEL_NAMES_PUBLIC[0], overwrites=voicechanneloverwrites, reason="Bereite Benutzerkanäle vor...")
-        await category.create_voice_channel(name=CHANNEL_NAMES_PRIVATE[0], overwrites=voicechanneloverwrites, reason="Bereite Benutzerkanäle vor...")
+    category = None
+    for cname in CATEGORY_NAMES:
+        category = utils.get(guild.categories, name=cname)
+        if category is not None:
+            break
     return category
 
 class Channels(commands.Cog):
@@ -48,24 +54,30 @@ class Channels(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
-        category = await getUserChannelCategory(member.guild)
-
         # Delete channel if empty
         if before.channel and before.channel.category and before.channel.category.name.upper() in CATEGORY_NAMES and "#" in before.channel.name and before.channel.members == []:
             await before.channel.delete(reason="Kanal war leer")
 
         # Create new channel
         if after.channel and after.channel.category and after.channel.category.name.upper() in CATEGORY_NAMES and after.channel.name.upper() in CHANNEL_NAMES_DEFAULT+CHANNEL_NAMES_PRIVATE+CHANNEL_NAMES_PUBLIC:
-            channel = await self.get_text_channel(member, category)
-            if channel:
-                await member.edit(voice_channel=channel,reason="Benutzer wollte einen Kanal erstellen, besitzte aber bereits einen Kanal")
-            else:
-                if after.channel.name.upper() in CHANNEL_NAMES_PRIVATE:
-                    overwrites = { member.guild.default_role: PERM_VOICE_PRIVATE, member: PERM_VOICE_OWNER}
+            category = after.channel.category
+            if category:
+                channel = await self.get_text_channel(member, category)
+                if channel:
+                    await member.edit(voice_channel=channel,reason="Benutzer wollte einen Kanal erstellen, besitzte aber bereits einen Kanal")
                 else:
-                    overwrites = { member.guild.default_role: PERM_VOICE_PUBLIC, member: PERM_TEXT_OWNER }
-                newchannel = await category.create_voice_channel(name=(member.name+"#"+member.discriminator),overwrites=overwrites,reason="Benutzer hat den Sprachkanal erstellt")
-                await member.edit(voice_channel=newchannel,reason="Benutzer hat den Sprachkanal erstellt")
+                    if after.channel.name.upper() in CHANNEL_NAMES_PRIVATE:
+                        overwrites = { member.guild.default_role: PERM_VOICE_PRIVATE, member: PERM_VOICE_OWNER}
+                    else:
+                        overwrites = { member.guild.default_role: PERM_VOICE_PUBLIC, member: PERM_TEXT_OWNER }
+                    newchannel = await category.create_voice_channel(name=(member.name+"#"+member.discriminator),overwrites=overwrites,reason="Benutzer hat den Sprachkanal erstellt")
+                    await member.edit(voice_channel=newchannel,reason="Benutzer hat den Sprachkanal erstellt")
+
+        # # Harry Potter sorting hat
+        # if after.channel and after.channel.name.upper() in HP_SORTING_HAT_CHANNEL_NAMES:
+        #     house = random.choice(HP_SORTING_HAT_HOUSE_CHANNEL_NAMES)
+        #     print(house)
+
 
     # Textchannels
 
@@ -80,6 +92,8 @@ class Channels(commands.Cog):
     async def textchannel(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send_help()
+        elif await getUserChannelCategory(ctx.guild) is None:
+            raise ErrorMessage("Dieses Modul wurde nicht aktiviert! Ein Administrator kann dieses Modul mit `/channelsetup` aktivieren.")
 
 
     @textchannel.command(
@@ -180,6 +194,8 @@ class Channels(commands.Cog):
     async def voicechannel(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send_help()
+        elif await getUserChannelCategory(ctx.guild) is None:
+            raise ErrorMessage("Dieses Modul wurde nicht aktiviert! Ein Administrator kann dieses Modul mit `/channelsetup` aktivieren.")
 
     @voicechannel.command(
         name="create",
@@ -280,7 +296,29 @@ class Channels(commands.Cog):
             await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal nicht mehr für alle geöffnet!", read_messages=True, connect=False, speak=True)
             await ctx.sendEmbed(title="Kanal geschlossen", description="Der Sprachkanal ist nun für alle auf diesem Server geöffnet!")
 
+    # Channels (General)
 
+    @commands.command(
+        name="channelsetup",
+        brief="Aktiviere dieses Modul",
+        help="Erstelle die Standardkanäle und Kategorie für dieses Modul",
+        hidden=True,
+    )
+    @commands.bot_has_permissions(manage_channels=True)
+    @commands.has_permissions(manage_channels=True)
+    async def channelsetup(self, ctx):
+        category = await getUserChannelCategory(ctx.guild)
+        if not category:
+            categoryoverwrites = { ctx.guild.default_role: PermissionOverwrite(read_messages=False, send_messages=False, connect=False, speak=False, move_members=False, use_voice_activation=True) }
+            textchanneloverwrites = { ctx.guild.default_role: PermissionOverwrite(read_messages=True, send_messages=True) }
+            voicechanneloverwrites = { ctx.guild.default_role: PermissionOverwrite(view_channel=True, connect=True, speak=False) }
+            category = await ctx.guild.create_category_channel(name=CATEGORY_NAME, overwrites=categoryoverwrites, reason="Bereite Benutzerkanäle vor...")
+            await category.create_text_channel(name=CHANNEL_NAME_TEXT, overwrites=textchanneloverwrites, reason="Bereite Benutzerkanäle vor...", topic="Hilfe: /help channels")
+            await category.create_voice_channel(name=CHANNEL_NAME_PUBLIC, overwrites=voicechanneloverwrites, reason="Bereite Benutzerkanäle vor...")
+            await category.create_voice_channel(name=CHANNEL_NAME_PRIVATE, overwrites=voicechanneloverwrites, reason="Bereite Benutzerkanäle vor...")
+            await ctx.sendEmbed(title="Kanäle aufgesetzt", description="Die erforderlichen Kanäle wurden erfolgreich erstellt!")
+        else:
+            raise ErrorMessage("Kategorie existiert bereits! Lösche sie zuerst um sie neu aufzusetzen!")
 
 def setup(bot):
     bot.add_cog(Channels(bot))
