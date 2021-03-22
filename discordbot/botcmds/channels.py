@@ -23,9 +23,7 @@ PERM_VOICE_PUBLIC = PermissionOverwrite(connect=True, speak=True, view_channel=T
 PERM_TEXT_OWNER = PermissionOverwrite(read_messages=True, read_message_history=True, send_messages=True, manage_messages=True, send_tts_messages=True, manage_webhooks=True, add_reactions=True, embed_links=True, attach_files=True, create_instant_invite=True, external_emojis=True)
 PERM_TEXT_PRIVATE = PermissionOverwrite(read_messages=False)
 
-# HP_SORTING_HAT_CHANNEL_NAMES = ["[HP] SORTING HAT", "[HP] Sorting hat", "SORTING HAT", "Sorting hat"]
-# HP_SORTING_HAT_CHANNEL_NAME = "[HP] Sorting hat"
-# HP_SORTING_HAT_HOUSE_CHANNEL_NAMES = ["[HP] Gryffindor", "[HP] Hufflepuff", "[HP] Slytherin", "[HP] Ravenclaw"]
+CHANNEL_NAMES_RANDOM = ["RANDOM CHANNEL", "[RANDOM CHANNEL]", "[HP] SORTING HAT", "SORTING HAT"]
 
 async def getUserChannelCategory(guild):
     category = None
@@ -73,10 +71,12 @@ class Channels(commands.Cog):
                     newchannel = await category.create_voice_channel(name=(member.name+"#"+member.discriminator),overwrites=overwrites,reason="Benutzer hat den Sprachkanal erstellt")
                     await member.edit(voice_channel=newchannel,reason="Benutzer hat den Sprachkanal erstellt")
 
-        # # Harry Potter sorting hat
-        # if after.channel and after.channel.name.upper() in HP_SORTING_HAT_CHANNEL_NAMES:
-        #     house = random.choice(HP_SORTING_HAT_HOUSE_CHANNEL_NAMES)
-        #     print(house)
+        # Join random channel
+        if after.channel and after.channel.category and ("[RND]" in after.channel.name.upper() or "[RANDOM]" in after.channel.name.upper() or after.channel.name.upper() in CHANNEL_NAMES_RANDOM):
+            channellist = after.channel.category.voice_channels
+            channellist.remove(after.channel)
+            channel = random.choice(channellist)
+            await member.edit(voice_channel=channel, reason="Random channel")
 
 
     # Textchannels
