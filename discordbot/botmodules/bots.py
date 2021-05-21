@@ -1,27 +1,28 @@
-from rich import print
+from rich import print as rprint
 from tqdm import tqdm
+
 
 class VierGewinntBot():
     # Constants
-    
-    ## Ratings [Sequence], (Points for P1, P2)
+
+    # Ratings [Sequence], (Points for P1, P2)
 
     RATING = [
-        ([1, 1, 1, 1],      ( 100000000000, -100000000000)),
-        ([2, 2, 2, 2],      (-100000000000,  100000000000)), 
-        ([0, 1, 1, 1, 0],   ( 1000,         -1000000)),
-        ([0, 2, 2, 2, 0],   (-1000000,       1000)), 
-        ([0, 1, 1, 1],      ( 100,          -1000000)), 
-        ([0, 2, 2, 2],      (-1000000,       100)), 
-        ([1, 1, 1, 0],      ( 100,          -1000000)),
+        ([1, 1, 1, 1],      (100000000000, -100000000000)),
+        ([2, 2, 2, 2],      (-100000000000,  100000000000)),
+        ([0, 1, 1, 1, 0],   (1000,         -1000000)),
+        ([0, 2, 2, 2, 0],   (-1000000,       1000)),
+        ([0, 1, 1, 1],      (100,          -1000000)),
+        ([0, 2, 2, 2],      (-1000000,       100)),
+        ([1, 1, 1, 0],      (100,          -1000000)),
         ([2, 2, 2, 0],      (-1000000,       100)),
-        ([1, 0, 1, 1],      ( 100,          -1000000)), 
-        ([2, 0, 2, 2],      (-1000000,       100)), 
-        ([1, 1, 0, 1],      ( 100,          -1000000)), 
-        ([2, 2, 0, 2],      (-1000000,       100)), 
-        ([0, 1, 1, 0],      ( 10,           -10)), 
-        ([0, 2, 2, 0],      (-10,            10)), 
-        ([0, 1, 0],         ( 1,            -1)),
+        ([1, 0, 1, 1],      (100,          -1000000)),
+        ([2, 0, 2, 2],      (-1000000,       100)),
+        ([1, 1, 0, 1],      (100,          -1000000)),
+        ([2, 2, 0, 2],      (-1000000,       100)),
+        ([0, 1, 1, 0],      (10,           -10)),
+        ([0, 2, 2, 0],      (-10,            10)),
+        ([0, 1, 0],         (1,            -1)),
         ([0, 2, 0],         (-1,             1)),
     ]
 
@@ -40,8 +41,7 @@ class VierGewinntBot():
     def seq_in_list(self, sequence, listtotest):
         if len(sequence) <= len(listtotest):
             return ', '.join(map(str, sequence)) in ', '.join(map(str, listtotest))
-        else:
-            return False
+        return False
 
     @classmethod
     def get_lines(self, board):
@@ -132,12 +132,12 @@ class VierGewinntBot():
                         otherplayer = 2 if playernr == 1 else 1
 
                         score = self._get_best_move(
-                            self.get_move_preview(board, i, playernr), 
-                            playernr=otherplayer, 
-                            level=level+1, 
-                            alpha=alpha, 
-                            beta=beta, 
-                            botnr=botnr, 
+                            self.get_move_preview(board, i, playernr),
+                            playernr=otherplayer,
+                            level=level+1,
+                            alpha=alpha,
+                            beta=beta,
+                            botnr=botnr,
                             maxdepth=maxdepth
                         )
 
@@ -155,8 +155,7 @@ class VierGewinntBot():
 
         if playernr == botnr:
             return max(scores)
-        else:
-            return min(scores)
+        return min(scores)
 
     # Main
 
@@ -168,12 +167,12 @@ class VierGewinntBot():
                 otherplayer = 2 if botnr == 1 else 1
 
                 score = self._get_best_move(
-                    self.get_move_preview(board, i, botnr), 
-                    playernr=otherplayer, 
-                    level=1, 
-                    alpha=-100000000000, 
-                    beta=100000000000, 
-                    botnr=botnr, 
+                    self.get_move_preview(board, i, botnr),
+                    playernr=otherplayer,
+                    level=1,
+                    alpha=-100000000000,
+                    beta=100000000000,
+                    botnr=botnr,
                     maxdepth=maxdepth
                 )
 
@@ -183,5 +182,5 @@ class VierGewinntBot():
 
         bestmove = scores.index(max(scores))
 
-        print(f"[VierGewinntBot] - Result ({ bestmove }):", scores)
+        rprint(f"[VierGewinntBot] - Result ({ bestmove }):", scores)
         return bestmove
