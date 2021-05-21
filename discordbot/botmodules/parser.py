@@ -58,7 +58,6 @@ class HTMLCleaner(HTMLParserOriginal):
         html = requests.get(url).text
         try:
             data = ">".join(html.split("<body")[1].split(">")[1:]).split("</body>")[0]
-        except:
+        except (AttributeError, ValueError, IndexError):
             data = html
         return self(data).data
-

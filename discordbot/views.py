@@ -19,7 +19,6 @@ def amongus_tracker_post(request):
         if AmongUsGame.objects.filter(id=id).exists():
             game = AmongUsGame.objects.get(id=id)
             return JsonResponse(game.post_data(data))
-        else:
-            return JsonResponse({"error": "id-not-found", "error_message": "Game with this ID not found!"})
-    except Exception as e:
+        return JsonResponse({"error": "id-not-found", "error_message": "Game with this ID not found!"})
+    except (AttributeError, ValueError, IndexError) as e:
         return JsonResponse({"error": "invalid-data", "error_message": str(e)})

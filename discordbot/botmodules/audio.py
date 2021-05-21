@@ -41,8 +41,7 @@ class AudioManager():
         if "youtube.com" in watchurl:
             data = await self.loop.run_in_executor(None, lambda: _ytdl.extract_info(watchurl, download=False))
             return [f for f in (data["entries"][0]["formats"] if "entries" in data else data["formats"]) if not f["acodec"] is None][0]
-        else:
-            return watchurl
+        return watchurl
 
     async def getSongs(self, query: str):
         data = await self.loop.run_in_executor(None, lambda: _ytdl.extract_info(query, download=False))
@@ -70,8 +69,7 @@ class AudioManager():
                         "authorname": data.get("title", "Unbekannt"),
                         "authorurl": data["webpage_url"] if "webpage_url" in data and "http" in data["webpage_url"] else ""
                     }
-                else:
-                    data = data["entries"][0]
+                data = data["entries"][0]
             src = await self.database.getOrCreateAudioSourceFromDict(data)
             return {
                 "title": src.title,

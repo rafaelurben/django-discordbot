@@ -1,5 +1,6 @@
 # pylint: disable=unused-variable
 
+from discord import DiscordException
 from discord.ext import commands
 
 from discordbot.config import DEBUG
@@ -12,5 +13,5 @@ def setup(bot):
         if ctx.guild is not None:
             try:
                 await ctx.message.delete()
-            except:
-                pass
+            except DiscordException:
+                ...

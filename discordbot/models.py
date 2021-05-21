@@ -60,8 +60,7 @@ class Server(models.Model):
                 elif count > 1:
                     description += f"{member.mention} ({count} Reports)\n"
             return description
-        else:
-            return user.getReports(server=self)
+        return user.getReports(server=self)
 
     def memberCount(self):
         return self.members.count()
@@ -168,8 +167,7 @@ class AudioSource(models.Model):
                 uploader_name=uploader_name,
                 uploader_url=uploader_url,
             )
-        else:
-            return None
+        return None
 
     @property
     def clickable(self):
@@ -377,8 +375,7 @@ class AmongUsGame(models.Model):
     def get_tracker_url(self):
         if DOMAIN:
             return DOMAIN+reverse("discordbot:amongus-tracker-post")
-        else:
-            return "Frage den Bot-Owner!"
+        return "Frage den Bot-Owner!"
 
     def reset(self):
         self.code = ""
@@ -413,8 +410,7 @@ class AmongUsGame(models.Model):
             self.last_tracking_data = timezone.now()
             self.save()
             return {"success": True}
-        else:
-            return {"error": "invalid-api-key", "error_message": "API Key is missing or wrong!"}
+        return {"error": "invalid-api-key", "error_message": "API Key is missing or wrong!"}
 
     def get_data(self):
         players = {c: {
@@ -530,15 +526,13 @@ class VierGewinntGame(models.Model):
             if self.winner_id:
                 if self.winner_id == "BOT":
                     return "Das Spiel ist beendet! Du hast leider verloren!"
-                else:
-                    return f"Das Spiel ist beendet! Gewonnen hat <@{self.winner_id}>!"
+                return f"Das Spiel ist beendet! Gewonnen hat <@{self.winner_id}>!"
             return "Das Spiel ist beendet! Unentschieden!"
-        else:
-            p = getattr(self, f"player_{ self.current_player }_id")
-            if p is None:
-                return f"{ VIERGEWINNT_PLAYER_EMOJIS[self.current_player] } Ich bin an der Reihe! (Berechne einen guten Zug...)"
-            else:
-                return f"{ VIERGEWINNT_PLAYER_EMOJIS[self.current_player] } <@{ p }> ist an der Reihe!"
+
+        p = getattr(self, f"player_{ self.current_player }_id")
+        if p is None:
+            return f"{ VIERGEWINNT_PLAYER_EMOJIS[self.current_player] } Ich bin an der Reihe! (Berechne einen guten Zug...)"
+        return f"{ VIERGEWINNT_PLAYER_EMOJIS[self.current_player] } <@{ p }> ist an der Reihe!"
 
     def get_description(self):
         return self._get_game_info()+"\n\n"+self._get_players()+"\n\n"+self._get_gameboard()
@@ -608,8 +602,7 @@ class VierGewinntGame(models.Model):
                     self.rows[h][n] = self.current_player
                     self._next_player()
                     return True
-        else:
-            return False
+        return False
 
     # Checks
 

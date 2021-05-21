@@ -24,8 +24,7 @@ class MusicQueue():
             player = self._players.pop(0)
             player.play(ctx)
             return player
-        else:
-            return None
+        return None
 
     async def sendNowPlaying(self, ctx):
         if ctx.voice_client and ctx.voice_client.source:
@@ -195,8 +194,7 @@ class DjangoConnection():
             audio.url_source = data.get("url", "")
             await self._save(audio)
             return audio
-        else:
-            return await AudioSource.create_from_dict(data)
+        return await AudioSource.create_from_dict(data)
 
     # Reports
 
@@ -213,10 +211,9 @@ class DjangoConnection():
         if dc_user is None:
             reports = await server.getReports()
             return reports
-        else:
-            user = await self.fetch_user(dc_user)
-            reports = await server.getReports(user=user)
-            return reports
+        user = await self.fetch_user(dc_user)
+        reports = await server.getReports(user=user)
+        return reports
 
     async def deleteReport(self, repid:int):
         server = await self.get_server()
