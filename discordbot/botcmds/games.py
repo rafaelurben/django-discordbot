@@ -12,7 +12,7 @@ from datetime import timedelta
 from discordbot.models import AmongUsGame, AMONGUS_PLAYER_COLORS, AMONGUS_EMOJI_COLORS, VierGewinntGame, VIERGEWINNT_NUMBER_EMOJIS
 from discordbot.botmodules.serverdata import DjangoConnection
 from discordbot.botmodules import apis
-from discordbot.errors import ErrorMessage
+from discordbot.errors import ErrorMessage, SuccessMessage
 
 import requests
 import os
@@ -581,19 +581,14 @@ class Games(commands.Cog):
             game = await ctx.database.getAmongUsGame()
             voicechannel = ctx.guild.get_channel(int(game.voice_channel_id))
 
-            if voicechannel is not None:
-                game.reset()
-                await ctx.database._save(game)
-                await voicechannel.edit(sync_permissions=True)
-                await ctx.sendEmbed(
-                    title="AmongUs Spiel zurückgesetzt!",
-                    color=0xFEDE29,
-                    description="Dein AmongUs Spiel wurde erfolgreich zurückgesetzt!"
-                )
-            else:
+            if voicechannel is None:
                 raise ErrorMessage(message="Der Sprachkanal zu deinem Spiel wurde nicht gefunden. Versuche dein Spiel mit `/amongus close` zu löschen")
-        else:
-            raise ErrorMessage(message="Du hast kein AmongUs-Spiel auf diesem Server!")
+
+            game.reset()
+            await ctx.database._save(game)
+            await voicechannel.edit(sync_permissions=True)
+            raise SuccessMessage("Dein AmongUs Spiel wurde erfolgreich zurückgesetzt!")
+        raise ErrorMessage(message="Du hast kein AmongUs-Spiel auf diesem Server!")
 
     @amongus.command(
         name="apikey",
@@ -735,11 +730,7 @@ class Games(commands.Cog):
     async def viergewinnt_reset(self, ctx, user: typing.Union[User, Member] = None):
         user = ctx.author if user is None else user if await self.bot.is_owner(user) else ctx.author
         await ctx.database._delete(await ctx.database._list(VierGewinntGame, get_as_queryset=True, player_1_id=str(user.id)))
-        await ctx.sendEmbed(
-            title="VierGewinnt Spiele gelöscht!",
-            description=f"Die VierGewinnt Spiele von { user.mention } wurden erfolgreich gelöscht!",
-            color=0x0078D7, 
-        )
+        raise SuccessMessage(f"Die VierGewinnt Spiele von { user.mention } wurden erfolgreich gelöscht!")
 
     @viergewinnt.command(
         name="resume",

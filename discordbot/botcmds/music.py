@@ -4,9 +4,10 @@ from fuzzywuzzy import process
 import os
 
 from discordbot.config import RADIOS, FFMPEG_OPTIONS, FILESPATH, MEMESPATH, MUSIC_MODULE
-from discordbot.errors import ErrorMessage
+from discordbot.errors import ErrorMessage, SuccessMessage
 
 #####
+
 
 class Music(commands.Cog):
     def __init__(self, bot):
@@ -59,11 +60,12 @@ class Music(commands.Cog):
         if ctx.author.voice and ctx.author.voice.channel.guild == ctx.guild:
             if ctx.voice_client is None:
                 await ctx.author.voice.channel.connect()
-            #elif ctx.voice_client.is_playing():
-                #ctx.voice_client.stop()
+            # elif ctx.voice_client.is_playing():
+                # ctx.voice_client.stop()
             await ctx.voice_client.move_to(ctx.author.voice.channel)
         else:
-            raise ErrorMessage("Du bist mit keinem Sprachkanal in diesem Server verbunden!")
+            raise ErrorMessage(
+                "Du bist mit keinem Sprachkanal in diesem Server verbunden!")
 
     if MUSIC_MODULE:
         if os.path.exists(MEMESPATH) and os.path.isdir(MEMESPATH):
@@ -75,14 +77,13 @@ class Music(commands.Cog):
                 filenames = list(os.listdir(MEMESPATH))
                 await ctx.sendEmbed(title="Memes", description="\n".join(["- "+filename.split(".")[0] for filename in filenames]))
 
-
             @commands.command(
                 brief='Spiele Memes',
                 description='Spiele Memes von einer Audiodatei!',
                 usage="<Suche>"
             )
             @commands.guild_only()
-            async def meme(self, ctx, search:str="windows-xp-error", *args):
+            async def meme(self, ctx, search: str = "windows-xp-error", *args):
                 search = " ".join((search,)+args)
                 filenames = list(os.listdir(MEMESPATH))
 
@@ -92,20 +93,23 @@ class Music(commands.Cog):
                 print("[Music] - Suchergebnis:", search, result)
 
                 if result[1] >= 75:
-                    player = PCMVolumeTransformer(FFmpegPCMAudio(source=os.path.join(MEMESPATH, filename), **FFMPEG_OPTIONS))
+                    player = PCMVolumeTransformer(FFmpegPCMAudio(
+                        source=os.path.join(MEMESPATH, filename), **FFMPEG_OPTIONS))
 
                     if ctx.voice_client.is_playing():
                         ctx.voice_client.stop()
 
-                    ctx.voice_client.play(player, after=lambda e: print('[Music] - Fehler: %s' % e) if e else None)
-                    await ctx.sendEmbed(title="Memetime!", fields=[("Meme",str(filename).split(".")[0])])
+                    ctx.voice_client.play(player, after=lambda e: print(
+                        '[Music] - Fehler: %s' % e) if e else None)
+                    await ctx.sendEmbed(title="Memetime!", fields=[("Meme", str(filename).split(".")[0])])
                 else:
-                    raise ErrorMessage(message="Es wurden keine mit '{}' übereinstimmende Audiodatei gefunden.".format(search))
+                    raise ErrorMessage(
+                        message="Es wurden keine mit '{}' übereinstimmende Audiodatei gefunden.".format(search))
 
         @commands.command(
             brief='Spiele Musik',
             description='Spiele Musik von Youtube und anderen Plattformen!',
-            aliases=["yt","youtube"],
+            aliases=["yt", "youtube"],
             usage="<Url/YT Suche>"
         )
         @commands.guild_only()
@@ -120,7 +124,6 @@ class Music(commands.Cog):
                     player.play(ctx)
                     await player.send(ctx)
 
-
         @commands.command(
             name='stream',
             brief='Streame einen Stream',
@@ -131,8 +134,7 @@ class Music(commands.Cog):
         @commands.guild_only()
         async def stream(self, ctx, search: str, *args):
             url = " ".join((search,)+args)
-            if url in RADIOS:
-                url = RADIOS[url]
+            url = RADIOS.get(url, url)
 
             async with ctx.typing():
                 player = await ctx.data.musicqueue.createYoutubePlayer(url, loop=self.bot.loop, stream=True)
@@ -202,7 +204,8 @@ class Music(commands.Cog):
         @commands.guild_only()
         async def volume(self, ctx, newvolume: float = None):
             if not ctx.voice_client.source:
-                raise ErrorMessage("Der Bot scheint aktuell nichts abzuspielen.")
+                raise ErrorMessage(
+                    "Der Bot scheint aktuell nichts abzuspielen.")
 
             oldvolume = ctx.voice_client.source.volume * 100
 
@@ -211,21 +214,21 @@ class Music(commands.Cog):
             else:
                 ctx.voice_client.source.volume = newvolume / 100
 
-                await ctx.sendEmbed(title="Lautstärke geändert", fields=[("Zuvor", str(oldvolume)+"%"),("Jetzt",str(newvolume)+"%")])
+                raise SuccessMessage("Lautstärke geändert", fields=[
+                                     ("Zuvor", str(oldvolume)+"%"), ("Jetzt", str(newvolume)+"%")])
 
         @commands.command(
             brief='Stoppe Musik',
             description='Stoppe Musik!',
-            aliases=["die","leave","disconnect"],
+            aliases=["die", "leave", "disconnect"],
             help="Benutze /stop um den Bot aus dem Sprachkanal zu entfernen.",
         )
         @commands.guild_only()
         async def stop(self, ctx):
             if ctx.voice_client:
                 await ctx.voice_client.disconnect()
-                await ctx.sendEmbed(title="Bye bye!")
-            else:
-                raise ErrorMessage("Der Bot war in gar keinem Sprachkanal!")
+                raise SuccessMessage("Bye bye!")
+            raise ErrorMessage("Der Bot war in gar keinem Sprachkanal!")
 
         @meme.before_invoke
         @play.before_invoke
@@ -242,7 +245,7 @@ class Music(commands.Cog):
             aliases=[],
             hidden=True,
         )
-        async def songinfo(self, ctx, query:str):
+        async def songinfo(self, ctx, query: str):
             async with ctx.typing():
                 embdata = await ctx.audio.getInfoEmbedData(query)
                 await ctx.sendEmbed(**embdata)
@@ -258,19 +261,18 @@ class Music(commands.Cog):
         usage="<Member>"
     )
     @commands.guild_only()
-    async def usersong(self, ctx, Member:Member):
+    async def usersong(self, ctx, Member: Member):
         found = False
         for activity in Member.activities:
             if str(activity.type) == "ActivityType.listening":
                 try:
-                    await ctx.sendEmbed(title="User Song", fields=[("Titel", activity.title),("Künstler", activity.artist),("Link", ("[Spotify](https://open.spotify.com/track/"+activity.track_id+")"))])
+                    await ctx.sendEmbed(title="User Song", fields=[("Titel", activity.title), ("Künstler", activity.artist), ("Link", ("[Spotify](https://open.spotify.com/track/"+activity.track_id+")"))])
                 except AttributeError:
-                    raise ErrorMessage(message="Scheinbar hört dieser Benutzer keinen richtigen Song.")
+                    raise ErrorMessage(
+                        message="Scheinbar hört dieser Benutzer keinen richtigen Song.")
                 found = True
         if not found:
             raise ErrorMessage(message="Dieser Benutzer hört keinen Song!")
-
-
 
 
 def setup(bot):

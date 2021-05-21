@@ -1,8 +1,8 @@
 from discord.ext import commands
-from discord import Embed, Member, User, Webhook, utils
+from discord import Embed, Member, User, Webhook, utils, DiscordException
 
 from discordbot.models import BotPermission, Report
-from discordbot.errors import ErrorMessage
+from discordbot.errors import ErrorMessage, SuccessMessage
 
 import time
 import typing
@@ -30,7 +30,7 @@ class Support(commands.Cog):
                 footerurl="",
                 footertext="",
                 )
-        except Exception as e:
+        except DiscordException as e:
             print("[Support] - No #reports channel found!", e)
 
     @commands.group(
@@ -55,9 +55,9 @@ class Support(commands.Cog):
         Grund = " ".join(args)
         Grund = Grund if Grund.rstrip(" ") else "Leer"
         report = await ctx.database.createReport(dc_user=member, reason=Grund)
-        await ctx.sendEmbed(title="Benutzer Gemeldet", fields=[("Betroffener",member.mention),("Grund",Grund)])
         await self.send_report(ctx, report)
-        return
+        raise SuccessMessage("Benutzer Gemeldet", fields=[
+                             ("Betroffener", member.mention), ("Grund", Grund)])
 
     @reports.command(
         name="delete",
@@ -67,13 +67,16 @@ class Support(commands.Cog):
         usage="<ID>"
     )
     @commands.has_any_role("Moderator", "Supporter", "Admin", "Administrator")
-    async def reports_delete(self, ctx, *repids):
+    async def reports_delete(self, ctx, *repids:int):
+        successids = []
         for repid in repids:
             if await ctx.database.deleteReport(repid=repid):
-                await ctx.sendEmbed(title=f"Report #{repid} gelöscht!")
-            else:
-                raise ErrorMessage(f"Report mit der ID {repid} wurde nicht gefunden!")
-        return
+                successids.append(f'#{repid}')
+        if not successids:
+            raise ErrorMessage(f"Report mit der ID {repid} wurde nicht gefunden!")
+        if len(successids) > 1:
+            raise SuccessMessage(f"Reports mit folgenden IDs gelöscht: {successids}")
+        raise SuccessMessage(f"Report #{repid} gelöscht!")
 
     @reports.command(
         name="view",
@@ -85,9 +88,9 @@ class Support(commands.Cog):
         )
     @commands.has_any_role("Moderator", "Supporter", "Admin", "Administrator")
     async def reports_view(self, ctx, member:Member=None):
-        if member == None:
+        if member is None:
             await ctx.sendEmbed(
-                title="Server Reports",
+                title="Serverreports",
                 description=(
                     f"Reports auf {ctx.guild.name}\n\n"+
                     await ctx.database.getReports()
@@ -95,17 +98,16 @@ class Support(commands.Cog):
             )
         else:
             await ctx.sendEmbed(
-                title="Mitglieder Reports",
+                title="Mitgliederreports",
                 description=("Mitglied: "+member.mention),
                 fields=await ctx.database.getReports(dc_user=member),
             )
-        return
 
     # Remote
     
     @commands.group(
         brief="Lasse jemanden Commands für dich ausführen",
-        description="Überlasse jemandem das Recht, Commands als dich auszuführen.",
+        description="Überlasse jemandem das Recht, Commands in deinem Namen auszuführen.",
         usage="<Unterbefehl> <Argumente>",
     )
     async def remote(self, ctx):
@@ -122,12 +124,8 @@ class Support(commands.Cog):
     async def remote_allow(self, ctx, member: typing.Union[Member, User]):
         if not await ctx.database._has(BotPermission, id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission"):
             await ctx.database._create(BotPermission, id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission")
-            await ctx.sendEmbed(
-                title="Benutzer erlaubt",
-                description=member.mention+" darf nun Befehle für dich ausführen!"
-            )
-        else:
-            raise ErrorMessage("Dieser Benutzer darf bereits Befehle für dich ausführen!")
+            raise SuccessMessage(member.mention+" darf nun Befehle für dich ausführen!")
+        raise ErrorMessage("Dieser Benutzer darf bereits Befehle für dich ausführen!")
 
     @remote.command(
         name="allowraw",
@@ -140,12 +138,8 @@ class Support(commands.Cog):
     async def remote_allowraw(self, ctx, id: int):
         if not await ctx.database._has(BotPermission, id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission"):
             await ctx.database._create(BotPermission, id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission")
-            await ctx.sendEmbed(
-                title="ID erlaubt",
-                description=str(id)+" darf nun Befehle für dich ausführen!"
-            )
-        else:
-            raise ErrorMessage("Diese ID darf bereits Befehle für dich ausführen!")
+            raise SuccessMessage(str(id)+" darf nun Befehle für dich ausführen!")
+        raise ErrorMessage("Diese ID darf bereits Befehle für dich ausführen!")
 
     @remote.command(
         name="disallow",
@@ -156,12 +150,8 @@ class Support(commands.Cog):
     async def remote_disallow(self, ctx, member: typing.Union[Member, User]):
         if await ctx.database._has(BotPermission, id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission"):
             await ctx.database._listdelete(BotPermission, id_1=str(ctx.author.id), id_2=str(member.id), typ="remote_permission")
-            await ctx.sendEmbed(
-                title="Benutzer verboten", 
-                description=member.mention+" darf nun nicht mehr Befehle für dich ausführen!"
-            )
-        else:
-            raise ErrorMessage("Dieser Benutzer steht nicht auf deiner Liste!")
+            raise SuccessMessage(member.mention+" darf nun nicht mehr Befehle für dich ausführen!")
+        raise ErrorMessage("Dieser Benutzer steht nicht auf deiner Liste!")
 
     @remote.command(
         name="disallowraw",
@@ -174,13 +164,8 @@ class Support(commands.Cog):
     async def remote_disallowraw(self, ctx, id: int):
         if await ctx.database._has(BotPermission, id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission"):
             await ctx.database._listdelete(BotPermission, id_1=str(ctx.author.id), id_2=str(id), typ="remote_permission")
-            await ctx.sendEmbed(
-                title="ID verboten",
-                description=str(id)+" darf nun nicht mehr Befehle für dich ausführen!"
-            )
-        else:
-            raise ErrorMessage(
-                "Diese ID steht nicht auf deiner Liste!")
+            raise SuccessMessage(str(id)+" darf nun nicht mehr Befehle für dich ausführen!")
+        raise ErrorMessage("Diese ID steht nicht auf deiner Liste!")
 
     @remote.command(
         name="list",
@@ -206,7 +191,7 @@ class Support(commands.Cog):
         if await ctx.database._has(BotPermission, id_1=str(member.id), id_2=str(ctx.author.id), typ="remote_permission") or await ctx.database._has(BotPermission, id_1=str(member.id), id_2=str(ctx.message.webhook_id), typ="remote_permission"):
             await ctx.invoke_as(member, command, *args)
         else:
-            raise ErrorMessage("Du darfs keine Befehle als diesen Benutzer ausführen!   ")
+            raise ErrorMessage("Du darfst keine Befehle für diesen Benutzer ausführen!")
 
 def setup(bot):
     bot.add_cog(Support(bot))

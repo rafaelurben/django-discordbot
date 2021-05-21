@@ -43,10 +43,8 @@ class Minecraft():
                     data["skin"] = None
                 data.pop("properties")
                 return data
-            else:
-                raise ErrorMessage(message="Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!")
-        else:
-            raise ErrorMessage(message="UUID wurde nicht gefunden!")
+            raise ErrorMessage(message="Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!")
+        raise ErrorMessage(message="UUID wurde nicht gefunden!")
 
 
 class Fortnite():
@@ -55,8 +53,7 @@ class Fortnite():
         key = os.environ.get("TRNAPIKEY", None)
         if key is None:
             raise ErrorMessage(message="Der Fortnite-Befehl ist leider deaktiviert (nicht konfiguriert)!") 
-        else:
-            return {'TRN-Api-Key': key}
+        return {'TRN-Api-Key': key}
 
     @classmethod
     def __get_json(self, url, **kwargs):
@@ -79,5 +76,4 @@ class Fortnite():
     def getStats(self, platform:str, playername:str):
         if platform.lower() in ["kbm","gamepad","touch"]:
             return self.__get_json(("https://api.fortnitetracker.com/v1/profile/%s/%s" % (platform.lower(), playername)))
-        else:
-            raise ErrorMessage("Die Plattform '"+platform+"' existiert nicht! Benutze kbm, gamepad oder touch!")
+        raise ErrorMessage("Die Plattform '"+platform+"' existiert nicht! Benutze kbm, gamepad oder touch!")

@@ -1,10 +1,11 @@
 from discord.ext import commands
-from discord import User, TextChannel, utils
+from discord import User, TextChannel, utils, DiscordException
 from datetime import datetime
 import typing
 
 from discordbot.config import INVITE_OWNER, INVITE_BOT, SPAM_ALLOWED, REGELN
 #from discordbot.errors import ErrorMessage
+
 
 class Basic(commands.Cog):
     def __init__(self, bot):
@@ -21,9 +22,9 @@ class Basic(commands.Cog):
     async def ping(self, ctx):
         start = datetime.timestamp(datetime.now())
         msg = await ctx.sendEmbed(title="Aktueller Ping", fields=[("Ping", "Berechnen...")])
-        embed = ctx.getEmbed(title="Aktueller Ping", fields=[("Ping", str(int(( datetime.timestamp( datetime.now() ) - start ) * 1000))+"ms")])
+        embed = ctx.getEmbed(title="Aktueller Ping", fields=[("Ping", str(
+            int((datetime.timestamp(datetime.now()) - start) * 1000))+"ms")])
         await msg.edit(embed=embed)
-        return
 
     @commands.command(
         brief="Schreibt dir nach",
@@ -31,9 +32,9 @@ class Basic(commands.Cog):
         aliases=["copy"],
         help="Benutze /say <Text> und der Bot schickt dir den Text zurück",
         usage="<Text>"
-        )
+    )
     @commands.has_permissions(manage_messages=True)
-    async def say(self, ctx, text:str, *args):
+    async def say(self, ctx, text: str, *args):
         txt = " ".join((text,)+args)
         await ctx.send(txt)
 
@@ -43,10 +44,9 @@ class Basic(commands.Cog):
         aliases=["defaultavatar"],
         help="Benutze /avatar <User> und du siehst, welchen Avatar die Person hat",
         usage="<User>"
-        )
-    async def avatar(self, ctx, user:User):
-        await ctx.sendEmbed(title="Avatar", fields=[("Benutzer",user.mention),("Standardavatar",user.default_avatar)], thumbnailurl=str(user.avatar_url))
-
+    )
+    async def avatar(self, ctx, user: User):
+        await ctx.sendEmbed(title="Avatar", fields=[("Benutzer", user.mention), ("Standardavatar", user.default_avatar)], thumbnailurl=str(user.avatar_url))
 
     @commands.command(
         brief="Spamt jemanden voll",
@@ -54,8 +54,8 @@ class Basic(commands.Cog):
         aliases=["troll"],
         help="Benutze /spam <User> und der Bot spamt den User voll",
         usage="<Kanal/Benutzer> [Anzahl<=10] [Text]"
-        )
-    async def spam(self, ctx, what:typing.Union[TextChannel,User]=None, anzahl:int=5, *args):
+    )
+    async def spam(self, ctx, what: typing.Union[TextChannel, User] = None, anzahl: int = 5, *args):
         if SPAM_ALLOWED:
             anzahl = int(anzahl if anzahl <= 10 else 10)
             text = str(" ".join(str(i) for i in args))
@@ -65,7 +65,6 @@ class Basic(commands.Cog):
                     await what.send(text+" von "+ctx.author.mention)
                 else:
                     await what.send("Spam"+" von "+ctx.author.mention)
-            return
         else:
             await ctx.invoke(ctx.bot.get_command("regeln"))
             await ctx.sendEmbed(
@@ -83,16 +82,18 @@ class Basic(commands.Cog):
         aliases=["rules"],
         help="Benutze /regeln um dich oder jemand anderes daran zu erinnern!",
         usage="<Kanal/Benutzer> [Anzahl<100] [Text]"
-        )
-    async def regeln(self,ctx):
-        EMBED = self.bot.getEmbed(title="Regeln", description="Das Nichtbeachten der Regeln kann mit einem Ban, Kick oder Mute bestraft werden!")
+    )
+    async def regeln(self, ctx):
+        EMBED = self.bot.getEmbed(
+            title="Regeln", description="Das Nichtbeachten der Regeln kann mit einem Ban, Kick oder Mute bestraft werden!")
         owner = self.bot.get_user(self.bot.owner_id)
         if owner:
-            EMBED.set_footer(text=f'Besitzer dieses Bots ist {owner.name}#{owner.discriminator}',icon_url=owner.avatar_url)
+            EMBED.set_footer(
+                text=f'Besitzer dieses Bots ist {owner.name}#{owner.discriminator}', icon_url=owner.avatar_url)
         for kategorie in REGELN:
-            EMBED.add_field(name=kategorie,value="```nimrod\n- "+ ("\n- ".join(regel for regel in REGELN[kategorie])) +"```",inline=False)
+            EMBED.add_field(name=kategorie, value="```nimrod\n- " + (
+                "\n- ".join(regel for regel in REGELN[kategorie])) + "```", inline=False)
         await ctx.send(embed=EMBED)
-
 
     @commands.command(
         brief="Erhalte eine Einladung",
@@ -100,18 +101,18 @@ class Basic(commands.Cog):
         aliases=["invitelink"],
         help="Benutze /invite und erhalte eine Einladung zu diesem Server, dem Bot-Server und einen Link, um den Bot zum eigenen Server hinzuzufügen",
         usage=""
-        )
-    async def invite(self,ctx):
+    )
+    async def invite(self, ctx):
         invite = None
         if ctx.guild:
             try:
                 invite = await ctx.guild.vanity_invite()
-            except:
+            except DiscordException:
                 try:
                     invite = utils.get(list(await ctx.guild.invites()), max_age=0, max_uses=0)
                     if not invite:
                         invite = await (ctx.guild.system_channel or ctx.channel).create_invite()
-                except:
+                except DiscordException:
                     invite = None
 
         gc = len(ctx.bot.guilds)
@@ -119,6 +120,7 @@ class Basic(commands.Cog):
 
         inviteurl = invite.url if invite and invite.url else None
         await ctx.sendEmbed(title="Einladungen", description=desc, fields=[("Dieser Server", f"[Beitreten]({inviteurl})" if inviteurl else "Unbekannt"), ("Bot Owner Server", f"[Beitreten]({INVITE_OWNER})"), ("Bot", f"[Beitreten]({INVITE_BOT})")])
+
 
 def setup(bot):
     bot.add_cog(Basic(bot))
