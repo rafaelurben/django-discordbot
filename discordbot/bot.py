@@ -155,6 +155,7 @@ bot = MyBot(
     activity=Activity(type=ActivityType.listening, name=(MAIN_PREFIXES[0] if MAIN_PREFIXES else "/")+"help"),
     status=Status.idle,
     help_command=None,
+    strip_after_prefix=True,
 )
 
 

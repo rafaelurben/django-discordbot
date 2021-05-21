@@ -504,8 +504,8 @@ class AmongUsTracker():
             time.sleep(speed)
 
 if __name__ == "__main__":
-    URL = "https://rafaelurben.herokuapp.com/discordbot/amongus/tracker/post"
-    ID = 0
+    URL = "https://app.rafaelurben.ch/discordbot/amongus/tracker/post"
+    ID = 1
     API_KEY = ""
 
     try:

@@ -40,9 +40,9 @@ RUNNING = '⏰'
 
 AMONGUS_TRACKER_INSTALL = """Konfiguriere den Tracker mit folgenden Daten:
                 
-Der Tracker kann [hier](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot/files/amongus/tracker.py) heruntergeladen werden. Er funktioniert vorerst nur für Windows uns ist (noch) buggy!
+Der Tracker kann [hier](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot-extras/amongus/tracker.py) heruntergeladen werden. Er funktioniert vorerst nur für Windows uns ist (noch) buggy!
 Bisher ist er auch auf die Bildschirmgrösse 1920x1080p beschränkt. Getestet wurde mit LDPlayer im Vollbildmodus.
-Benötigt werden Python, Pip und alle [requirements](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot/files/amongus/requirements.txt)."""
+Benötigt werden Python, pip und alle [requirements](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot-extras/amongus/requirements.txt)."""
 
 amongus_last_update = timezone.now()-timedelta(days=1)
 

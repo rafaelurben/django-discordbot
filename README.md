@@ -14,6 +14,8 @@ A Discordbot to run in a django environment.
 
 Planned features can be found in the [project board](https://github.com/rafaelurben/django-discordbot/projects/1?fullscreen=true).
 
+Feel free to open an issue or start a pull request. ;)
+
 ## Requirements
 
 Django Admin is installed and activated.

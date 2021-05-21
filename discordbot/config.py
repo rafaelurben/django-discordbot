@@ -65,21 +65,20 @@ REGELN = {
     "1) Verhalten":
         [
             "Sei nett zu anderen Leuten und behandle sie so, wie auch du behandelt werden möchtest!",
-            "Beleidige keine anderen Leute!",
+            "Habe Respekt vor deinen Mitmenschen!",
             "Benutze anständige Sprache!",
-            "Bleib beim Thema!",
         ],
     "2) Text":
         [
+            "Bleib beim Thema! Für off-topic gibt es andere Plätze.",
             "Spamming ist verboten!",
             "Werbung ohne Erlaubnis eines Administrators ist verboten!",
         ],
     "3) Ton":
         [
-            "Benutze keinen Stimmverzerrer!",
-            "Mache keine unnötigen Hintergrundgeräusche!",
+            "Stimmverzerrer, Sprach- und Videoaufnahmen sind nur mit Einverständnis aller Teilnehmer gestattet.",
+            "Mache wenn möglich keine unnötigen Hintergrundgeräusche!",
             "Channel Hopping bitte unterlassen!",
-            "Sprachaufnahmen sind nur mit Erlaubnis aller Teilnehmer gestattet!",
         ],
     "4) NSFW":
         [
@@ -87,12 +86,19 @@ REGELN = {
         ],
     "5) Sicherheit":
         [
-            "Anweisungen von Moderatoren, Supportern und Admins müssen befolgt werden!",
-            "Falls jemand ohne Grund nach deinen persönlichen Daten fragt, ignoriere bitte die Nachricht und meldet sie einem Admin oder dem Serverbesitzer! Bitte melde den Benutzer ebenfalls bei Discord!",
-            "Sende nie jemandem euer Passwort!",
+            "Blockiere Anfragen nach persönlichen Daten und melde sie jemandem aus dem Serverteam!",
+            "Melde schlimme oder wiederkehrende Fälle bitte auch Discord!",
+            "Sende nie jemandem dein Passwort!",
         ],
-    "6) Empfehlungen":
+    "6) Moderation":
         [
-            "Habe Spass!",
+            "Anweisungen vom Serverteam sind zu befolgen!",
+            "Das Serverteam kann dich bei falschem oder verdächtigem Verhalten ohne Vorwarnung bestrafen.",
+            "Regelmissachtungen können mit dem `/report add` Befehl gemeldet werden.",
+        ],
+    "7) Weiteres":
+        [
+            "Discords Bedingungen gelten hier auch!",
+            "Deine Handlungen haben Folgen - handle mit Verstand ;)",
         ],
 }
