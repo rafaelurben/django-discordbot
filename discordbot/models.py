@@ -24,9 +24,21 @@ class Member(models.Model):
     user = models.ForeignKey(
         "User", on_delete=models.CASCADE, related_name="servers")
 
+    settings = models.JSONField("Settings", default=dict)
+
+    # Settings
+
+    def getSetting(self, key, default=None):
+        return self.settings.get(key, default)
+
+    def setSetting(self, key, value):
+        self.settings[key] = value
+
+    # Others
+
     @admin.display(description="Mitglied")
     def __str__(self):
-        return str(self.server.name)+" - "+str(self.user.name)
+        return f"{self.server_id} <-> {self.user_id}"
 
     class Meta():
         verbose_name = "Mitglied"
@@ -90,7 +102,7 @@ class Server(models.Model):
 
     @admin.display(description="Guild")
     def __str__(self):
-        return self.name+" ("+str(self.id)+")"
+        return f"{self.name} ({self.id})"
 
     class Meta():
         verbose_name = "Guild"
@@ -136,9 +148,10 @@ class User(models.Model):
         return self.servers.filter(**filters).count()
 
     @sync_to_async
-    def joinServer(self, server):
+    def joinServer(self, server) -> Member:
         if not server.members.filter(id=self.id).exists():
             server.members.add(self)
+        return server.members.through.objects.get(server__id=server.id, user__id=self.id)
 
     @property
     def mention(self):
@@ -146,7 +159,7 @@ class User(models.Model):
 
     @admin.display(description="User")
     def __str__(self):
-        return self.name+" ("+str(self.id)+")"
+        return f"{self.name} ({self.id})"
 
     class Meta():
         verbose_name = "Benutzer"

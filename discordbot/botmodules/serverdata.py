@@ -73,6 +73,7 @@ class DjangoConnection():
         self.dc_user = dc_user
         self.dc_guild = dc_guild
         self._db_user = None
+        self._db_member = None
         self._db_server = None
         self._db_playlist = None
         
@@ -148,7 +149,7 @@ class DjangoConnection():
     # General
 
     @classmethod
-    async def fetch_user(self, dc_user):
+    async def fetch_user(self, dc_user) -> DB_User:
         if not await self._has(DB_User, id=str(dc_user.id)):
             user = await self._create(DB_User, id=str(dc_user.id), name=dc_user.name+"#"+dc_user.discriminator)
         else:
@@ -158,13 +159,13 @@ class DjangoConnection():
                 await self._save(user)
         return user
 
-    async def get_user(self):
+    async def get_user(self) -> DB_User:
         if self._db_user is None:
             self._db_user = await self.fetch_user(self.dc_user)
         return self._db_user
 
     @classmethod
-    async def fetch_server(self, dc_guild):
+    async def fetch_server(self, dc_guild) -> DB_Server:
         if not await self._has(DB_Server, id=str(dc_guild.id)):
             server = await self._create(DB_Server, id=str(dc_guild.id), name=dc_guild.name)
         else:
@@ -174,10 +175,17 @@ class DjangoConnection():
                 await self._save(server)
         return server
 
-    async def get_server(self):
+    async def get_server(self) -> DB_Server:
         if self._db_server is None:
             self._db_server = await self.fetch_server(self.dc_guild)
         return self._db_server
+
+    async def get_member(self) -> DB_Member:
+        if self._db_member is None:
+            user = await self.get_user()
+            server = await self.get_server()
+            self._db_member = await user.joinServer(server)
+        return self._db_member
 
     async def get_playlist(self):
         if self._db_playlist is None:
