@@ -1,5 +1,6 @@
 # pylint: disable=no-member, unsubscriptable-object
 
+from django.contrib import admin
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
@@ -17,13 +18,15 @@ import re
 
 # Basic
 
+
 class Member(models.Model):
     server = models.ForeignKey("Server", on_delete=models.CASCADE)
-    user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="servers")
+    user = models.ForeignKey(
+        "User", on_delete=models.CASCADE, related_name="servers")
 
+    @admin.display(description="Mitglied")
     def __str__(self):
         return str(self.server.name)+" - "+str(self.user.name)
-    __str__.short_description = "Mitglied"
 
     class Meta():
         verbose_name = "Mitglied"
@@ -31,23 +34,40 @@ class Member(models.Model):
 
     objects = models.Manager()
 
+
 class Server(models.Model):
     id = models.CharField("Discord ID", primary_key=True, max_length=20)
     name = models.CharField("Name", default="", blank=True, max_length=100)
     members = models.ManyToManyField("User", through="Member")
 
-    playlist = models.ForeignKey("Playlist", on_delete=models.SET_NULL, default=None, blank=True, null=True, related_name="+")
+    playlist = models.ForeignKey("Playlist", on_delete=models.SET_NULL,
+                                 default=None, blank=True, null=True, related_name="+")
+
+    settings = models.JSONField("Settings", default=dict)
+
+    # Settings
+
+    def getSetting(self, key, default=None):
+        return self.settings.get(key, default)
+
+    def setSetting(self, key, value):
+        self.settings[key] = value
+
+    # Playlist
 
     @sync_to_async
     def getPlaylist(self):
         if self.playlist is None:
-            self.playlist = Playlist.objects.create(server=self, title="Playlist in "+self.name)
+            self.playlist = Playlist.objects.create(
+                server=self, title="Playlist in "+self.name)
             self.save()
         return self.playlist
 
+    # Reports
+
+    @admin.display(description="Reports")
     def reportCount(self):
         return self.reports.count()
-    reportCount.short_description = "Reports"
 
     @sync_to_async
     def getReports(self, user=None):
@@ -62,13 +82,15 @@ class Server(models.Model):
             return description
         return user.getReports(server=self)
 
+    # Others
+
+    @admin.display(description="Mitglieder")
     def memberCount(self):
         return self.members.count()
-    memberCount.short_description = "Members"
 
+    @admin.display(description="Guild")
     def __str__(self):
         return self.name+" ("+str(self.id)+")"
-    __str__.short_description = "Guild"
 
     class Meta():
         verbose_name = "Guild"
@@ -76,26 +98,30 @@ class Server(models.Model):
 
     objects = models.Manager()
 
+
 class User(models.Model):
     id = models.CharField("Discord ID", primary_key=True, max_length=20)
     name = models.CharField("Name", default="", blank=True, max_length=100)
 
+    settings = models.JSONField("Settings", default=dict)
+
+    # Settings
+
+    def getSetting(self, key, default=None):
+        return self.settings.get(key, default)
+
+    def setSetting(self, key, value):
+        self.settings[key] = value
+
+    # Reports
+
+    @admin.display(description="Reports")
     def reportCount(self, **filters):
         return self.reports.filter(**filters).count()
-    reportCount.short_description = "Reports"
 
+    @admin.display(description="Created reports")
     def createdReportCount(self, **filters):
         return self.created_reports.filter(**filters).count()
-    createdReportCount.short_description = "Created reports"
-
-    def serverCount(self, **filters):
-        return self.servers.filter(**filters).count()
-    serverCount.short_description = "Server count"
-
-    @sync_to_async
-    def joinServer(self, server):
-        if not server.members.filter(id=self.id).exists():
-            server.members.add(self)
 
     def getReports(self, **filters):
         reports = self.reports.filter(**filters)
@@ -103,21 +129,33 @@ class User(models.Model):
             report.getEmbedField() for report in reports
         ]
 
+    # Servers
+
+    @admin.display(description="Server count")
+    def serverCount(self, **filters):
+        return self.servers.filter(**filters).count()
+
+    @sync_to_async
+    def joinServer(self, server):
+        if not server.members.filter(id=self.id).exists():
+            server.members.add(self)
+
     @property
     def mention(self):
         return "<@"+str(self.id)+">"
 
+    @admin.display(description="User")
     def __str__(self):
         return self.name+" ("+str(self.id)+")"
-    __str__.short_description = "User"
 
     class Meta():
         verbose_name = "Benutzer"
         verbose_name_plural = "Benutzer"
-    
+
     objects = models.Manager()
 
 # Music
+
 
 class AudioSource(models.Model):
     url_source = models.TextField("Url (Source)")
@@ -129,12 +167,13 @@ class AudioSource(models.Model):
     description = models.TextField("Description", max_length=2048)
     duration = models.IntegerField("Duration", default=0, blank=True)
 
-    uploader_name = models.CharField("Uploader name", max_length=256, default="", blank=True)
+    uploader_name = models.CharField(
+        "Uploader name", max_length=256, default="", blank=True)
     uploader_url = models.URLField("Uploader Url", default="", blank=True)
 
     @classmethod
     @sync_to_async
-    def create_from_dict(self, data:dict):
+    def create_from_dict(self, data: dict):
         # if "formats" in data:
         #     data.pop("formats")
         # if "thumbnails" in data:
@@ -148,18 +187,19 @@ class AudioSource(models.Model):
             url_thumbnail = data.get('thumbnail', "")[:200]
 
             title = data.get('title', 'Unbekannter Titel')[:256]
-            description = data.get('description', "Keine Beschreibung gefunden.")[:2048]
+            description = data.get(
+                'description', "Keine Beschreibung gefunden.")[:2048]
             duration = int(data.get('duration', 0))
-            
+
             uploader_name = data.get('uploader', "")[:256]
             uploader_url = data.get('uploader_url', "")[:200]
-            
+
             return self.objects.create(
                 url_source=url_source,
 
                 url_watch=url_watch,
                 url_thumbnail=url_thumbnail,
-                
+
                 title=title,
                 description=description,
                 duration=duration,
@@ -176,19 +216,20 @@ class AudioSource(models.Model):
     @property
     def duration_calc(self):
         h = str(self.duration//3600)
-        m = str(self.duration%3600//60)
-        s = str(self.duration%3600%60)
+        m = str(self.duration % 3600//60)
+        s = str(self.duration % 3600 % 60)
         return f"{h}:{m}:{s}" if h != "0" else f"{m}:{s}"
 
+    @admin.display(description="Audio source")
     def __str__(self):
         return f"{self.title} [{self.duration_calc}]"
-    __str__.short_description = "Audio source"
 
     class Meta():
         verbose_name = "Audio source"
         verbose_name_plural = "Audio sources"
 
     objects = models.Manager()
+
 
 class PlaylistPosition(models.Model):
     source = models.ForeignKey('AudioSource', on_delete=models.PROTECT)
@@ -201,12 +242,15 @@ class PlaylistPosition(models.Model):
 
     objects = models.Manager()
 
+
 class Playlist(models.Model):
-    server = models.ForeignKey('Server', on_delete=models.CASCADE, related_name="playlists")
+    server = models.ForeignKey(
+        'Server', on_delete=models.CASCADE, related_name="playlists")
     title = models.CharField("Title", max_length=256, default="Server default")
 
     sources = models.ManyToManyField('AudioSource', through="PlaylistPosition")
-    current_pos = models.PositiveSmallIntegerField("Current position", default=0)
+    current_pos = models.PositiveSmallIntegerField(
+        "Current position", default=0)
 
     @sync_to_async
     def addSource(self, source):
@@ -223,7 +267,7 @@ class Playlist(models.Model):
                 s.save()
 
     @sync_to_async
-    def switchPositions(self, pos1:int, pos2:int):
+    def switchPositions(self, pos1: int, pos2: int):
         if self.sources.count() > max(pos1, pos2):
             o1 = self.sources.through.objects.get(playlist=self, position=pos1)
             o2 = self.sources.through.objects.get(playlist=self, position=pos2)
@@ -245,7 +289,8 @@ class Playlist(models.Model):
     @sync_to_async
     def next(self):
         self.current_pos += 1
-        obj = self.sources.through.objects.get(playlist=self, position=self.current_pos)
+        obj = self.sources.through.objects.get(
+            playlist=self, position=self.current_pos)
         self.save()
         return obj
 
@@ -259,9 +304,12 @@ class Playlist(models.Model):
 # Support
 
 class Report(models.Model):
-    server = models.ForeignKey("Server", on_delete=models.CASCADE, related_name="reports")
-    user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="reports")
-    reported_by = models.ForeignKey("User", on_delete=models.SET_NULL, null=True, related_name="created_reports", verbose_name="Gemeldet von")
+    server = models.ForeignKey(
+        "Server", on_delete=models.CASCADE, related_name="reports")
+    user = models.ForeignKey(
+        "User", on_delete=models.CASCADE, related_name="reports")
+    reported_by = models.ForeignKey("User", on_delete=models.SET_NULL,
+                                    null=True, related_name="created_reports", verbose_name="Gemeldet von")
 
     reason = models.CharField("Grund", default="", blank=True, max_length=250)
     timestamp = models.DateTimeField("Zeitpunkt", auto_now_add=True)
@@ -273,9 +321,9 @@ class Report(models.Model):
             False
         )
 
+    @admin.display(description="Report")
     def __str__(self):
         return "Report #"+str(self.pk)
-    __str__.short_description = "Report"
 
     class Meta():
         verbose_name = "Report"
@@ -285,7 +333,8 @@ class Report(models.Model):
 
 # Games
 
-## AmongUs
+# AmongUs
+
 
 AMONGUS_PLAYER_COLORS = {
     'red':      ("#C51111", (179, 17, 17),   ":heart:",                 '❤'),
@@ -304,74 +353,100 @@ AMONGUS_PLAYER_COLORS = {
 
 AMONGUS_EMOJI_COLORS = {v[3]: k for k, v in AMONGUS_PLAYER_COLORS.items()}
 
+
 class AmongUsGame(models.Model):
     api_key = models.UUIDField("API Key", default=uuid.uuid4)
 
     creator = models.ForeignKey("User", on_delete=models.CASCADE)
     guild = models.ForeignKey("Server", on_delete=models.CASCADE)
-    
+
     voice_channel_id = models.CharField("Voice channel ID", max_length=20)
     text_channel_id = models.CharField("Text channel ID", max_length=20)
-    text_message_id = models.CharField("Text message ID", max_length=20, default=None, null=True)
+    text_message_id = models.CharField(
+        "Text message ID", max_length=20, default=None, null=True)
 
     code = models.CharField("Gamecode", max_length=6, default="", blank=True)
 
     last_edited = models.DateTimeField("Last edited", auto_now=True)
-    last_tracking_data = models.DateTimeField("Last tracking data", default=None, null=True)
+    last_tracking_data = models.DateTimeField(
+        "Last tracking data", default=None, null=True)
 
     state_ingame = models.BooleanField("In game", default=False)
     state_meeting = models.BooleanField("Meeting ongoing", default=False)
 
-    p_red_name = models.CharField("Red's name", max_length=50, default="", blank=True)
+    p_red_name = models.CharField(
+        "Red's name", max_length=50, default="", blank=True)
     p_red_alive = models.BooleanField("Red's alive", default=True)
     p_red_exists = models.BooleanField("Red exists", default=False)
-    p_red_userid = models.CharField("Red's Discord ID", max_length=50, default="", blank=True)
-    p_blue_name = models.CharField("Blue's name", max_length=50, default="", blank=True)
+    p_red_userid = models.CharField(
+        "Red's Discord ID", max_length=50, default="", blank=True)
+    p_blue_name = models.CharField(
+        "Blue's name", max_length=50, default="", blank=True)
     p_blue_alive = models.BooleanField("Blue's alive", default=True)
     p_blue_exists = models.BooleanField("Blue exists", default=False)
-    p_blue_userid = models.CharField("Blue's Discord ID", max_length=50, default="", blank=True)
-    p_green_name = models.CharField("Green's name", max_length=50, default="", blank=True)
+    p_blue_userid = models.CharField(
+        "Blue's Discord ID", max_length=50, default="", blank=True)
+    p_green_name = models.CharField(
+        "Green's name", max_length=50, default="", blank=True)
     p_green_alive = models.BooleanField("Green's alive", default=True)
     p_green_exists = models.BooleanField("Green exists", default=False)
-    p_green_userid = models.CharField("Green's Discord ID", max_length=50, default="", blank=True)
-    p_pink_name = models.CharField("Pink's name", max_length=50, default="", blank=True)
+    p_green_userid = models.CharField(
+        "Green's Discord ID", max_length=50, default="", blank=True)
+    p_pink_name = models.CharField(
+        "Pink's name", max_length=50, default="", blank=True)
     p_pink_alive = models.BooleanField("Pink's alive", default=True)
     p_pink_exists = models.BooleanField("Pink exists", default=False)
-    p_pink_userid = models.CharField("Pink's Discord ID", max_length=50, default="", blank=True)
-    p_orange_name = models.CharField("Orange's name", max_length=50, default="", blank=True)
+    p_pink_userid = models.CharField(
+        "Pink's Discord ID", max_length=50, default="", blank=True)
+    p_orange_name = models.CharField(
+        "Orange's name", max_length=50, default="", blank=True)
     p_orange_alive = models.BooleanField("Orange's alive", default=True)
     p_orange_exists = models.BooleanField("Orange exists", default=False)
-    p_orange_userid = models.CharField("Orange's Discord ID", max_length=50, default="", blank=True)
-    p_yellow_name = models.CharField("Yellow's name", max_length=50, default="", blank=True)
+    p_orange_userid = models.CharField(
+        "Orange's Discord ID", max_length=50, default="", blank=True)
+    p_yellow_name = models.CharField(
+        "Yellow's name", max_length=50, default="", blank=True)
     p_yellow_alive = models.BooleanField("Yellow's alive", default=True)
     p_yellow_exists = models.BooleanField("Yellow exists", default=False)
-    p_yellow_userid = models.CharField("Yellow's Discord ID", max_length=50, default="", blank=True)
-    p_black_name = models.CharField("Black's name", max_length=50, default="", blank=True)
+    p_yellow_userid = models.CharField(
+        "Yellow's Discord ID", max_length=50, default="", blank=True)
+    p_black_name = models.CharField(
+        "Black's name", max_length=50, default="", blank=True)
     p_black_alive = models.BooleanField("Black's alive", default=True)
     p_black_exists = models.BooleanField("Black exists", default=False)
-    p_black_userid = models.CharField("Black's Discord ID", max_length=50, default="", blank=True)
-    p_white_name = models.CharField("White's name", max_length=50, default="", blank=True)
+    p_black_userid = models.CharField(
+        "Black's Discord ID", max_length=50, default="", blank=True)
+    p_white_name = models.CharField(
+        "White's name", max_length=50, default="", blank=True)
     p_white_alive = models.BooleanField("White's alive", default=True)
     p_white_exists = models.BooleanField("White exists", default=False)
-    p_white_userid = models.CharField("White's Discord ID", max_length=50, default="", blank=True)
-    p_purple_name = models.CharField("Purple's name", max_length=50, default="", blank=True)
+    p_white_userid = models.CharField(
+        "White's Discord ID", max_length=50, default="", blank=True)
+    p_purple_name = models.CharField(
+        "Purple's name", max_length=50, default="", blank=True)
     p_purple_alive = models.BooleanField("Purple's alive", default=True)
     p_purple_exists = models.BooleanField("Purple exists", default=False)
-    p_purple_userid = models.CharField("Purple's Discord ID", max_length=50, default="", blank=True)
-    p_brown_name = models.CharField("Brown's name", max_length=50, default="", blank=True)
+    p_purple_userid = models.CharField(
+        "Purple's Discord ID", max_length=50, default="", blank=True)
+    p_brown_name = models.CharField(
+        "Brown's name", max_length=50, default="", blank=True)
     p_brown_alive = models.BooleanField("Brown's alive", default=True)
     p_brown_exists = models.BooleanField("Brown exists", default=False)
-    p_brown_userid = models.CharField("Brown's Discord ID", max_length=50, default="", blank=True)
-    p_cyan_name = models.CharField("Cyan's name", max_length=50, default="", blank=True)
+    p_brown_userid = models.CharField(
+        "Brown's Discord ID", max_length=50, default="", blank=True)
+    p_cyan_name = models.CharField(
+        "Cyan's name", max_length=50, default="", blank=True)
     p_cyan_alive = models.BooleanField("Cyan's alive", default=True)
     p_cyan_exists = models.BooleanField("Cyan exists", default=False)
-    p_cyan_userid = models.CharField("Cyan's Discord ID", max_length=50, default="", blank=True)
-    p_lime_name = models.CharField("Lime's name", max_length=50, default="", blank=True)
+    p_cyan_userid = models.CharField(
+        "Cyan's Discord ID", max_length=50, default="", blank=True)
+    p_lime_name = models.CharField(
+        "Lime's name", max_length=50, default="", blank=True)
     p_lime_alive = models.BooleanField("Lime's alive", default=True)
     p_lime_exists = models.BooleanField("Lime exists", default=False)
-    p_lime_userid = models.CharField("Lime's Discord ID", max_length=50, default="", blank=True)
+    p_lime_userid = models.CharField(
+        "Lime's Discord ID", max_length=50, default="", blank=True)
 
-    
     def get_tracker_url(self):
         if DOMAIN:
             return DOMAIN+reverse("discordbot:amongus-tracker-post")
@@ -386,7 +461,7 @@ class AmongUsGame(models.Model):
             setattr(self, f'p_{c}_exists', False)
             setattr(self, f'p_{c}_alive', True)
 
-    def post_data(self, data:dict):
+    def post_data(self, data: dict):
         if "api_key" in data and data["api_key"] == str(self.api_key):
             if "reset" in data and data["reset"]:
                 self.reset()
@@ -401,12 +476,15 @@ class AmongUsGame(models.Model):
                 for c in data["players"]:
                     if c in AMONGUS_PLAYER_COLORS:
                         if "name" in data["players"][c]:
-                            setattr(self, f'p_{c}_name', data["players"][c]["name"])
+                            setattr(self, f'p_{c}_name',
+                                    data["players"][c]["name"])
                         if "alive" in data["players"][c]:
-                            setattr(self, f'p_{c}_alive', data["players"][c]["alive"])
+                            setattr(self, f'p_{c}_alive',
+                                    data["players"][c]["alive"])
                         if "exists" in data["players"][c]:
-                            setattr(self, f'p_{c}_exists', data["players"][c]["exists"])
-                            
+                            setattr(self, f'p_{c}_exists',
+                                    data["players"][c]["exists"])
+
             self.last_tracking_data = timezone.now()
             self.save()
             return {"success": True}
@@ -414,11 +492,11 @@ class AmongUsGame(models.Model):
 
     def get_data(self):
         players = {c: {
-                "name": getattr(self, f'p_{c}_name'),
-                "alive": getattr(self, f'p_{c}_alive'),
-                "userid": getattr(self, f'p_{c}_userid'),
-                "exists": getattr(self, f'p_{c}_exists'),
-            } for c in AMONGUS_PLAYER_COLORS
+            "name": getattr(self, f'p_{c}_name'),
+            "alive": getattr(self, f'p_{c}_alive'),
+            "userid": getattr(self, f'p_{c}_userid'),
+            "exists": getattr(self, f'p_{c}_exists'),
+        } for c in AMONGUS_PLAYER_COLORS
         }
 
         return {
@@ -461,14 +539,17 @@ class AmongUsGame(models.Model):
     objects = models.Manager()
 
 
-## VierGewinnt
+# VierGewinnt
 
 VIERGEWINNT_PLAYER_EMOJIS = ["⬛", "🟥", "🟨"]
 VIERGEWINNT_WALL_EMOJI = "🟦"
-VIERGEWINNT_NUMBER_EMOJIS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+VIERGEWINNT_NUMBER_EMOJIS = ["1️⃣", "2️⃣", "3️⃣",
+                             "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+
 
 def VIERGEWINNT_DEFAULT_GAME():
     return [[0 for _ in range(7)] for _ in range(6)]
+
 
 class VierGewinntGame(models.Model):
     width = models.PositiveSmallIntegerField("Width", default=7)
@@ -478,11 +559,14 @@ class VierGewinntGame(models.Model):
 
     finished = models.BooleanField("Finished", default=False)
 
-    current_player = models.PositiveSmallIntegerField("Current player", default=1)
+    current_player = models.PositiveSmallIntegerField(
+        "Current player", default=1)
 
     player_1_id = models.CharField("Player 1 ID", max_length=32)
-    player_2_id = models.CharField("Player 2 ID", max_length=32, default=None, null=True)
-    winner_id = models.CharField("Winner ID", max_length=32, default=None, null=True)
+    player_2_id = models.CharField(
+        "Player 2 ID", max_length=32, default=None, null=True)
+    winner_id = models.CharField(
+        "Winner ID", max_length=32, default=None, null=True)
 
     channel_id = models.CharField("Channel ID", max_length=32)
     message_id = models.CharField("Message ID", max_length=32)
@@ -493,7 +577,7 @@ class VierGewinntGame(models.Model):
     # Create
 
     @classmethod
-    def create(self, width:int=7, height:int=6, **kwargs):
+    def create(self, width: int = 7, height: int = 6, **kwargs):
         width = 10 if width > 10 else 4 if width < 4 else width
         height = 4 if height < 4 else 14 if height > 14 else height
         kwargs["game"] = [[0 for _ in range(width)] for _ in range(height)]
@@ -507,8 +591,9 @@ class VierGewinntGame(models.Model):
         N = VIERGEWINNT_NUMBER_EMOJIS
 
         numberline = (W+"".join(N[:int(self.width)])+W+"\n")
-        gamelines = "\n".join([(W+"".join([P[p] for p in row])+W) for row in self.rows])+"\n"
-        
+        gamelines = "\n".join([(W+"".join([P[p] for p in row])+W)
+                               for row in self.rows])+"\n"
+
         return numberline + gamelines + numberline
 
     def _get_players(self):
@@ -551,7 +636,7 @@ class VierGewinntGame(models.Model):
     @property
     def dias(self):
         dias = []
-        w = 0 
+        w = 0
         h = self.height-1
         while w < self.width:
             dia = []
@@ -588,14 +673,15 @@ class VierGewinntGame(models.Model):
     # Functions
 
     def _next_player(self):
-        self.current_player = (self.current_player+1 if self.current_player < 2 else 1)
+        self.current_player = (self.current_player +
+                               1 if self.current_player < 2 else 1)
 
     def _can_add_to_column(self, n: int):
         if n >= self.width:
             return None
         return not self.rows[0][n]
 
-    def _add_to_column(self, n:int):
+    def _add_to_column(self, n: int):
         if self._can_add_to_column(n):
             for h in range(self.height-1, -1, -1):
                 if not self.game[h][n]:
@@ -619,13 +705,14 @@ class VierGewinntGame(models.Model):
 
     # Process Input
 
-    def process(self, col:int, playerid):
+    def process(self, col: int, playerid):
         if not (self.finished or self.winner_id):
             if getattr(self, "player_"+str(self.current_player)+"_id", None) == str(playerid):
                 if self._add_to_column(col):
                     w = self._get_winner()
                     if w:
-                        self.winner_id = getattr(self, "player_"+str(w)+"_id", None)
+                        self.winner_id = getattr(
+                            self, "player_"+str(w)+"_id", None)
                         self.finished = True
                     elif self._is_full():
                         self.finished = True
@@ -633,7 +720,7 @@ class VierGewinntGame(models.Model):
         return False
 
     def process_bot(self):
-        if not self.finished and getattr(self, f"player_{self.current_player}_id") is None: 
+        if not self.finished and getattr(self, f"player_{self.current_player}_id") is None:
             if self._add_to_column(VierGewinntBot.get_best_move(board=self.game, botnr=self.current_player, maxdepth=4)):
                 w = self._get_winner()
                 if w:
@@ -654,7 +741,8 @@ class VierGewinntGame(models.Model):
 
 # Support
 
-## BotPermission (for Remote)
+# BotPermission (for Remote)
+
 
 class BotPermission(models.Model):
     id_1 = models.CharField("ID 1", max_length=32)
@@ -664,6 +752,7 @@ class BotPermission(models.Model):
     objects = models.Manager()
 
 # Notifier
+
 
 NOTIFIER_WHERE_TYPES = [
     ("channel", "Kanal"),
@@ -675,17 +764,22 @@ NOTIFIER_FREQUENCIES = [
     ("minute",  "Minütlich"),
 ]
 
-class NotifierSub(models.Model):
-    name = models.CharField("Name", default="Unbenannte Mitteilung", max_length=50)
 
-    where_type = models.CharField("Wohin: Typ", max_length=8, choices=NOTIFIER_WHERE_TYPES)
+class NotifierSub(models.Model):
+    name = models.CharField(
+        "Name", default="Unbenannte Mitteilung", max_length=50)
+
+    where_type = models.CharField(
+        "Wohin: Typ", max_length=8, choices=NOTIFIER_WHERE_TYPES)
     where_id = models.CharField("Wohin: ID", max_length=32)
 
-    frequency = models.CharField("Häufigkeit", max_length=8, choices=NOTIFIER_FREQUENCIES)
+    frequency = models.CharField(
+        "Häufigkeit", max_length=8, choices=NOTIFIER_FREQUENCIES)
 
     url = models.URLField("URL")
 
-    must_contain_regex = models.CharField("Muss Regex enthalten", default="", blank=True, max_length=32)
+    must_contain_regex = models.CharField(
+        "Muss Regex enthalten", default="", blank=True, max_length=32)
 
     last_hash = models.CharField("Letzter Hash", max_length=32, editable=False)
 
