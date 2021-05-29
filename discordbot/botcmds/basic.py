@@ -3,7 +3,7 @@ from discord import User, TextChannel, utils, DiscordException
 from datetime import datetime
 import typing
 
-from discordbot.config import INVITE_OWNER, INVITE_BOT, SPAM_ALLOWED, REGELN
+from discordbot.config import INVITE_OWNER, INVITE_BOT, REGELN
 #from discordbot.errors import ErrorMessage
 
 
@@ -49,32 +49,25 @@ class Basic(commands.Cog):
         await ctx.sendEmbed(title="Avatar", fields=[("Benutzer", user.mention), ("Standardavatar", user.default_avatar)], thumbnailurl=str(user.avatar_url))
 
     @commands.command(
-        brief="Spamt jemanden voll",
-        description="Schickt jemandem ein paar Nachrichten",
+        brief="Spamt einen Benutzer oder Textkanal voll",
+        description="Schickt jemandem 'ein paar' Nachrichten",
         aliases=["troll"],
-        help="Benutze /spam <User> und der Bot spamt den User voll",
-        usage="<Kanal/Benutzer> [Anzahl<=10] [Text]"
+        help="Benutze /spam <Kanal/Benutzer> und der Bot spamt den User voll",
+        usage="<Kanal/Benutzer> [Text]"
     )
-    async def spam(self, ctx, what: typing.Union[TextChannel, User] = None, anzahl: int = 5, *args):
-        if SPAM_ALLOWED:
-            anzahl = int(anzahl if anzahl <= 10 else 10)
-            text = str(" ".join(str(i) for i in args))
-            empty = not (len(text) > 0 and not text == (" "*len(text)))
-            for _ in range(anzahl):
-                if not empty:
-                    await what.send(text+" von "+ctx.author.mention)
-                else:
-                    await what.send("Spam"+" von "+ctx.author.mention)
-        else:
-            await ctx.invoke(ctx.bot.get_command("regeln"))
-            await ctx.sendEmbed(
-                title="Spam verboten",
-                description="Schon vergessen, dass Spam laut Regeln verboten ist? Hast du wirklich gedacht, ich breche meine eigenen Regeln?"
-            )
-            if ctx.guild is not None:
-                report = await ctx.database.createReport(dc_user=ctx.author, reason="Tried to use /spam", reportedby_dc_user=ctx.guild.me)
-                cog = ctx.bot.get_cog("Support")
-                await cog.send_report(ctx, report)
+    async def spam(self, ctx):
+        await ctx.invoke(ctx.bot.get_command("regeln"))
+        await ctx.sendEmbed(
+            title="Spam verboten",
+            description="Schon vergessen, dass Spam laut Regeln verboten ist? "
+                        "Hast du wirklich gedacht, ich breche meine eigenen Regeln? "
+                        "Scheinbar magst du Trolls, [das](https://www.youtube.com/watch?v=dQw4w9WgXcQ) "
+                        "sollte dir also gefallen."
+        )
+        if ctx.guild is not None:
+            report = await ctx.database.createReport(dc_user=ctx.author, reason="Tried to use /spam", reportedby_dc_user=ctx.guild.me)
+            cog = ctx.bot.get_cog("Support")
+            await cog.send_report(ctx, report)
 
     @commands.command(
         brief="Zeigt die Regeln",

@@ -29,8 +29,6 @@ EXTENSIONS = _s("EXTENSIONS", ['basic','support','moderation','games','help','ch
 INVITE_OWNER = _s("INVITE_OWNER", "https://go.rafaelurben.ch/discord")
 INVITE_BOT = _s("INVITE_BOT", "https://go.rafaelurben.ch/discordbot")
 
-SPAM_ALLOWED = _s("SPAM_ALLOWED", False)
-
 ## Help
 
 HELP_HIDDEN_COGS = ["owneronly", "notifier"]
