@@ -1,6 +1,8 @@
 from discord.ext import commands
-from discord import Embed, User, Member, utils, PermissionOverwrite, Role
+from discord import Member, utils, PermissionOverwrite, Role, CategoryChannel
 from discordbot.errors import ErrorMessage, SuccessMessage
+
+from discordbot.botmodules.serverdata import DjangoConnection
 
 import typing
 import random
@@ -35,7 +37,7 @@ CHANNEL_NAMES_RANDOM = ["RANDOM CHANNEL",
                         "[RANDOM CHANNEL]", "[HP] SORTING HAT", "SORTING HAT"]
 
 
-async def getUserChannelCategory(guild):
+async def getUserChannelCategory(guild) -> CategoryChannel:
     category = None
     for cname in CATEGORY_NAMES:
         category = utils.get(guild.categories, name=cname)
@@ -56,12 +58,12 @@ class Channels(commands.Cog):
             member.name+"#"+member.discriminator))
         return channel
 
-    async def get_text_channel(self, member, category=None):
-        if not category:
-            category = await getUserChannelCategory(member.guild)
-        channel = utils.get(member.guild.text_channels, name=(
-            member.name.lower()+"-"+member.discriminator))
-        return channel
+    async def get_text_channel(self, ctx):
+        member = await ctx.database.get_member()
+        channelid = member.getSetting("CHANNELS_TEXT_ID")
+        if channelid is None:
+            return None
+        return ctx.guild.get_channel(channelid)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -73,7 +75,7 @@ class Channels(commands.Cog):
         if after.channel and after.channel.category and after.channel.category.name.upper() in CATEGORY_NAMES and after.channel.name.upper() in CHANNEL_NAMES_DEFAULT+CHANNEL_NAMES_PRIVATE+CHANNEL_NAMES_PUBLIC:
             category = after.channel.category
             if category:
-                channel = await self.get_text_channel(member, category)
+                channel = await self.get_voice_channel(member, category)
                 if channel:
                     await member.edit(voice_channel=channel, reason="Benutzer wollte einen Kanal erstellen, besitzte aber bereits einen Kanal")
                 else:
@@ -117,14 +119,18 @@ class Channels(commands.Cog):
     )
     async def textchannel_create(self, ctx):
         category = await getUserChannelCategory(ctx.guild)
-        channel = await self.get_text_channel(ctx.author)
+        channel = await self.get_text_channel(ctx)
         if channel:
             raise ErrorMessage(
                 message="Du hast bereits einen Textkanal! <#"+str(channel.id)+">")
         overwrites = {ctx.guild.default_role: PERM_TEXT_PRIVATE,
-                        ctx.author: PERM_TEXT_OWNER}
+                      ctx.author: PERM_TEXT_OWNER}
         newchannel = await category.create_text_channel(name=(ctx.author.name.lower()+"-"+ctx.author.discriminator), overwrites=overwrites, reason="Benutzer hat den Textkanal erstellt")
         await ctx.sendEmbed(title="Textkanal erstellt", fields=[("Kanal", newchannel.mention)])
+        
+        member = await ctx.database.get_member()
+        member.setSetting("CHANNELS_TEXT_ID", newchannel.id)
+        await ctx.database._save(member)
 
     @textchannel.command(
         name="delete",
@@ -132,9 +138,14 @@ class Channels(commands.Cog):
         aliases=['del'],
     )
     async def textchannel_delete(self, ctx):
-        channel = await self.get_text_channel(ctx.author)
+        channel = await self.get_text_channel(ctx)
         if channel:
             await channel.delete(reason="Benutzer hat den Textkanal gelöscht")
+
+            member = await ctx.database.get_member()
+            member.setSetting("CHANNELS_TEXT_ID", None)
+            await ctx.database._save(member)
+
             if not ctx.channel == channel:
                 raise SuccessMessage("Textkanal gelöscht")
         else:
@@ -148,7 +159,7 @@ class Channels(commands.Cog):
         usage="<Mitglied/Rolle>",
     )
     async def textchannel_invite(self, ctx, wer: typing.Union[Member, Role]):
-        channel = await self.get_text_channel(ctx.author)
+        channel = await self.get_text_channel(ctx)
         if not channel:
             raise ErrorMessage(
                 message="Du hast noch keinen Textkanal!")
@@ -172,7 +183,7 @@ class Channels(commands.Cog):
         aliases=["publish", "pub"],
     )
     async def textchannel_open(self, ctx):
-        channel = await self.get_text_channel(ctx.author)
+        channel = await self.get_text_channel(ctx)
         if not channel:
             raise ErrorMessage(
                 message="Du hast noch keinen Textkanal!")
@@ -185,7 +196,7 @@ class Channels(commands.Cog):
         aliases=["unpublish", "unpub"],
     )
     async def textchannel_close(self, ctx):
-        channel = await self.get_text_channel(ctx.author)
+        channel = await self.get_text_channel(ctx)
         if not channel:
             raise ErrorMessage(
                 message="Du hast noch keinen Textkanal!")
