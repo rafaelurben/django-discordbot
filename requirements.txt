@@ -5,7 +5,7 @@ discord.py[voice]==1.7.2
 opuslib==3.0.1
 ffmpeg==1.4
 fuzzywuzzy[speedup]==0.18.0
-youtube-dl==2021.5.16
+youtube-dl==2021.6.6
 rich==10.2.2
 tqdm==4.61.0
 dnspython==2.1.0
