@@ -8,7 +8,7 @@ class Command(BaseCommand):
     help = 'Runs the Discord bot'
 
     def add_arguments(self, parser):
-        parser.add_argument('--token', help="Discords Bot Token", type=str)
+        parser.add_argument('--token', help="The token for your bot", type=str)
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS("[Bot] - Bot wird gestartet..."))
@@ -20,6 +20,6 @@ class Command(BaseCommand):
         elif 'DISCORD_BOTTOKEN' in os.environ:
             run(os.environ.get('DISCORD_BOTTOKEN'))
         else:
-            print("[Bot] - No TOKEN found!")
+            self.stdout.write(self.style.ERROR("[Bot] - No TOKEN found!"))
 
         self.stdout.write(self.style.SUCCESS("[Bot] - Bot wurde beendet!"))

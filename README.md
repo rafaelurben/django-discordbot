@@ -1,4 +1,4 @@
-# Discordbot
+# django-discordbot
 
 [![PyPI](https://img.shields.io/pypi/v/django-discordbot)](https://pypi.org/project/django-discordbot)
 ![PyPI - Django Version](https://img.shields.io/pypi/djversions/django-discordbot)
@@ -12,7 +12,7 @@
 
 [![CodeFactor](https://www.codefactor.io/repository/github/rafaelurben/django-discordbot/badge)](https://www.codefactor.io/repository/github/rafaelurben/django-discordbot)
 
-A Discordbot running in a django environment.
+A Discord bot running in a django environment. The current version of the bot itself is German, but I might consider adding translations in the future.
 
 Planned features can be found in the [project board](https://github.com/rafaelurben/django-discordbot/projects/1?fullscreen=true).
 
@@ -20,27 +20,8 @@ Feel free to open an issue or start a pull request. ;)
 
 ## Requirements
 
-Django Admin is installed and activated.
+Basic Python and Django knowledge.
 
-## Quick start
+## Documentation
 
-1.  Add "discordbot" to your INSTALLED_APPS setting like this::
-
-    ```python
-    INSTALLED_APPS = [
-        ...
-        'discordbot',
-    ]
-    ```
-
-2.  Include the discordbot URLconf in your project urls.py like this::
-
-    ```python
-    path('discordbot/', include('discordbot.urls')),
-    ```
-
-3.  Run `python manage.py migrate` to create the models.
-
-4.  Visit <http://127.0.0.1:8000/admin/discordbot/> to manage the stored data
-
-5.  Run the bot via `python manage.py run-discordbot`
+You can find a documentation in the [docs folder](./docs/index.md).
