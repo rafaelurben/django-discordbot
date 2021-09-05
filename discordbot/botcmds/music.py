@@ -250,30 +250,6 @@ class Music(commands.Cog):
                 embdata = await ctx.audio.getInfoEmbedData(query)
                 await ctx.sendEmbed(**embdata)
 
-    # Generelle Commands
-
-    @commands.command(
-        name='usersong',
-        brief='Stalke musikhörende Leute',
-        description='Erhalte Links zu dem Song, welcher jemand gerade hört',
-        aliases=[],
-        help="Benutze /usersong <Member> um den Song zu erhalten",
-        usage="<Member>"
-    )
-    @commands.guild_only()
-    async def usersong(self, ctx, Member: Member):
-        found = False
-        for activity in Member.activities:
-            if str(activity.type) == "ActivityType.listening":
-                try:
-                    await ctx.sendEmbed(title="User Song", fields=[("Titel", activity.title), ("Künstler", activity.artist), ("Link", ("[Spotify](https://open.spotify.com/track/"+activity.track_id+")"))])
-                except AttributeError:
-                    raise ErrorMessage(
-                        message="Scheinbar hört dieser Benutzer keinen richtigen Song.")
-                found = True
-        if not found:
-            raise ErrorMessage(message="Dieser Benutzer hört keinen Song!")
-
 
 def setup(bot):
     bot.add_cog(Music(bot))

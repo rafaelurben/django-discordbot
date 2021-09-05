@@ -39,16 +39,6 @@ class Basic(commands.Cog):
         await ctx.send(txt)
 
     @commands.command(
-        brief="Siehe den Avatar eines Benutzers",
-        description="Erhalte den Standardavatar und Avatar eines Benutzers",
-        aliases=["defaultavatar"],
-        help="Benutze /avatar <User> und du siehst, welchen Avatar die Person hat",
-        usage="<User>"
-    )
-    async def avatar(self, ctx, user: User):
-        await ctx.sendEmbed(title="Avatar", fields=[("Benutzer", user.mention), ("Standardavatar", user.default_avatar)], thumbnailurl=str(user.avatar_url))
-
-    @commands.command(
         brief="Spamt einen Benutzer oder Textkanal voll",
         description="Schickt jemandem 'ein paar' Nachrichten",
         aliases=["troll"],
