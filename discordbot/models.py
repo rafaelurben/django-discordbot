@@ -590,11 +590,13 @@ class VierGewinntGame(models.Model):
     # Create
 
     @classmethod
-    def create(self, width: int = 7, height: int = 6, **kwargs):
+    @sync_to_async
+    def creategame(self, width: int = 7, height: int = 6, **kwargs):
         width = 10 if width > 10 else 4 if width < 4 else width
         height = 4 if height < 4 else 14 if height > 14 else height
-        kwargs["game"] = [[0 for _ in range(width)] for _ in range(height)]
-        return self.objects.create(width=width, height=height, **kwargs)
+        game = [[0 for _ in range(width)] for _ in range(height)]
+        print("create game", width, height, game, kwargs)
+        return self.objects.create(width=width, height=height, game=game, **kwargs)
 
     # Show
 

@@ -643,7 +643,7 @@ class Games(commands.Cog):
                 description=f"Duell gegen {user.mention} wird erstellt..."
             )
 
-            game = await ctx.database._create(VierGewinntGame, channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=str(user.id), width=width, height=height)
+            game = await VierGewinntGame.creategame(width=width, height=height, channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=str(user.id))
 
             embed = ctx.bot.getEmbed(
                 title=f"Vier Gewinnt (#{game.pk})",
@@ -671,7 +671,7 @@ class Games(commands.Cog):
             description=f"Challenge gegen einen Bot wird erstellt..."
         )
 
-        game = await ctx.database._create(VierGewinntGame, channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=None, width=width, height=height)
+        game = await VierGewinntGame.creategame(width=width, height=height, channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=None)
 
         embed = ctx.bot.getEmbed(
             title=f"Vier Gewinnt (#{game.pk})",
