@@ -65,7 +65,7 @@ class Server():
 
 ### NEW
 
-from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AudioSource, Playlist, AmongUsGame, VierGewinntGame, BotPermission, NotifierSub
+from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AudioSource, Playlist, AmongUsGame, VierGewinntGame, BotPermission
 from django.db import connection, connections
 
 class DjangoConnection():

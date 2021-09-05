@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Server, User, Report, Member, AmongUsGame, AMONGUS_PLAYER_COLORS, VierGewinntGame, NotifierSub
+from .models import Server, User, Report, Member, AmongUsGame, AMONGUS_PLAYER_COLORS, VierGewinntGame, NotifierSource, NotifierTarget
 
 # General
 
@@ -136,15 +136,23 @@ class VierGewinntAdmin(admin.ModelAdmin):
     readonly_fields = ('get_description',)
 
 
-@admin.register(NotifierSub)
-class NotifierSubAdmin(admin.ModelAdmin):
-    list_display = ('name', 'where_type', 'where_id',
-                    'frequency', 'url', 'must_contain_regex',)
+# Notifier
+
+class NotifierSourceTargetInline(admin.TabularInline):
+    model = NotifierTarget
+    extra = 0
+
+    fields = ('where_type', 'where_id', 'must_contain_regex')
+
+@admin.register(NotifierSource)
+class NotifierSourceAdmin(admin.ModelAdmin):
+    list_display = ('name', 'frequency', 'url')
     ordering = ('id',)
+
+    inlines = [NotifierSourceTargetInline]
 
     fieldsets = [
         (None, {"fields": ('name',)}),
-        ("Ziel", {"fields": ('where_type', 'where_id',)}),
-        ("Herkunft", {"fields": ('url', 'frequency')}),
-        ("Filter", {"fields": ('must_contain_regex',)})
+        ("Herkunft", {"fields": ('url',)}),
+        ("Einstellungen", {"fields": ('frequency',)}),
     ]

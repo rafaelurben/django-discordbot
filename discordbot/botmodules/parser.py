@@ -50,14 +50,14 @@ class HTMLCleaner(HTMLParserOriginal):
             self.data += "__"
 
     @classmethod
-    def from_data(self, data):
-        return self(data).data
+    def from_data(cls, data):
+        return cls(data).data
 
     @classmethod
-    def from_url(self, url):
+    def from_url(cls, url):
         html = requests.get(url).text
         try:
             data = ">".join(html.split("<body")[1].split(">")[1:]).split("</body>")[0]
         except (AttributeError, ValueError, IndexError):
             data = html
-        return self(data).data
+        return cls(data).data

@@ -769,49 +769,72 @@ class BotPermission(models.Model):
 
 NOTIFIER_WHERE_TYPES = [
     ("channel", "Kanal"),
-    ("member",  "Mitglied (DM)"),
+    ("member", "Mitglied (DM)"),
 ]
 
 NOTIFIER_FREQUENCIES = [
-    ("hour",    "Stündlich"),
-    ("minute",  "Minütlich"),
+    ("hour", "Stündlich"),
+    ("minute", "Minütlich"),
 ]
 
 
-class NotifierSub(models.Model):
+class NotifierSource(models.Model):
     name = models.CharField(
-        "Name", default="Unbenannte Mitteilung", max_length=50)
+        verbose_name="Name", default="Unbenannte Quelle", max_length=50)
 
-    where_type = models.CharField(
-        "Wohin: Typ", max_length=8, choices=NOTIFIER_WHERE_TYPES)
-    where_id = models.CharField("Wohin: ID", max_length=32)
+    url = models.URLField(verbose_name="URL")
 
     frequency = models.CharField(
-        "Häufigkeit", max_length=8, choices=NOTIFIER_FREQUENCIES)
-
-    url = models.URLField("URL")
-
-    must_contain_regex = models.CharField(
-        "Muss Regex enthalten", default="", blank=True, max_length=32)
+        verbose_name="Abfragehäufigkeit", max_length=8, choices=NOTIFIER_FREQUENCIES, default="hour")
 
     last_hash = models.CharField("Letzter Hash", max_length=32, editable=False)
 
-    def process(self):
+    @sync_to_async
+    def fetch_update(self, initialfetch=False):
+        # Initialfetch being true means that the hash will return a new value
+        # even if there was no change. (after (re)start)
+
         data = HTMLCleaner.from_url(self.url)
         thishash = str(hash(data))
         if thishash != str(self.last_hash):
             self.last_hash = thishash
-            if (not self.must_contain_regex) or re.search(self.must_contain_regex, data):
-                return data
-            return True
-        return False
+
+            if initialfetch:
+                return True, True, True
+            else:
+                targets = [t for t in self.targets.all() if t.check_regex(data)]
+                return True, data, targets
+        return False, False, False
 
     def __str__(self):
         return self.name
-    __str__.short_description = "NotifierSub"
+    __str__.short_description = "NotifierSource"
 
     class Meta:
-        verbose_name = 'NotifierSub'
-        verbose_name_plural = 'NotifierSubs'
+        verbose_name = 'NotifierSource'
+        verbose_name_plural = 'NotifierSources'
 
     objects = models.Manager()
+
+
+class NotifierTarget(models.Model):
+    source = models.ForeignKey(
+        to='NotifierSource', on_delete=models.CASCADE, related_name="targets")
+
+    must_contain_regex = models.CharField(
+        verbose_name="Muss Regex enthalten", default="", blank=True, max_length=32)
+
+    where_type = models.CharField(
+        verbose_name="Wohin: Typ", max_length=8, choices=NOTIFIER_WHERE_TYPES)
+    where_id = models.CharField(
+        verbose_name="Wohin: ID", max_length=32)
+
+    def check_regex(self, data):
+        return (not self.must_contain_regex) or re.search(self.must_contain_regex, data)
+
+    def __str__(self):
+        return ""
+
+    class Meta:
+        verbose_name = 'NotifierTarget'
+        verbose_name_plural = 'NotifierTargets'
