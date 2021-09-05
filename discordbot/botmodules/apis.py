@@ -1,32 +1,41 @@
-from discord.ext import commands
-import requests, datetime, base64, os
+"These APIS are here to help certain modules interacting with external content"
+
+import datetime
+import requests
+import base64
+import os
 
 from discordbot.errors import ErrorMessage
 
+
 class Minecraft():
     @classmethod
-    def getProfile(self, NAME:str):
-        r = requests.get('https://api.mojang.com/users/profiles/minecraft/'+NAME)
+    def getProfile(cls, NAME: str):
+        r = requests.get(
+            'https://api.mojang.com/users/profiles/minecraft/'+NAME)
         if not r.status_code == 204:
             return r.json()
         else:
             raise ErrorMessage(message="Spieler wurde nicht gefunden!")
 
     @classmethod
-    def getProfiles(self, UUID:str):
-        r = requests.get('https://api.mojang.com/user/profiles/'+str(UUID)+'/names')
+    def getProfiles(cls, UUID: str):
+        r = requests.get(
+            'https://api.mojang.com/user/profiles/'+str(UUID)+'/names')
         if not r.status_code == 204:
             data = r.json()
             for i in data:
                 if "changedToAt" in i:
-                    i["changedToAt"] = datetime.datetime.fromtimestamp(int(i["changedToAt"])/1000)
+                    i["changedToAt"] = datetime.datetime.fromtimestamp(
+                        int(i["changedToAt"])/1000)
             return data
         else:
             raise ErrorMessage(message="UUID wurde nicht gefunden!")
 
     @classmethod
-    def getSkin(self, UUID:str):
-        r = requests.get('https://sessionserver.mojang.com/session/minecraft/profile/'+str(UUID))
+    def getSkin(cls, UUID: str):
+        r = requests.get(
+            'https://sessionserver.mojang.com/session/minecraft/profile/'+str(UUID))
         if not r.status_code == 204:
             data = r.json()
             if not "error" in data:
@@ -43,37 +52,40 @@ class Minecraft():
                     data["skin"] = None
                 data.pop("properties")
                 return data
-            raise ErrorMessage(message="Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!")
+            raise ErrorMessage(
+                message="Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!")
         raise ErrorMessage(message="UUID wurde nicht gefunden!")
 
 
 class Fortnite():
     @classmethod
-    def __get_headers(self):
+    def __get_headers(cls):
         key = os.environ.get("TRNAPIKEY", None)
         if key is None:
-            raise ErrorMessage(message="Der Fortnite-Befehl ist leider deaktiviert (nicht konfiguriert)!") 
+            raise ErrorMessage(
+                message="Der Fortnite-Befehl ist leider deaktiviert (nicht konfiguriert)!")
         return {'TRN-Api-Key': key}
 
     @classmethod
-    def __get_json(self, url, **kwargs):
+    def __get_json(cls, url, **kwargs):
         try:
-            r = requests.get(url, headers=self.__get_headers())
+            r = requests.get(url, headers=cls.__get_headers())
             j = r.json(**kwargs)
             return j
         except (KeyError, ValueError) as e:
             print("[Fortnite API] - Error:", e)
 
     @classmethod
-    def getStore(self):
-        return self.__get_json('https://api.fortnitetracker.com/v1/store')
+    def getStore(cls):
+        return cls.__get_json('https://api.fortnitetracker.com/v1/store')
 
     @classmethod
-    def getChallenges(self):
-        return self.__get_json('https://api.fortnitetracker.com/v1/challenges')["items"]
+    def getChallenges(cls):
+        return cls.__get_json('https://api.fortnitetracker.com/v1/challenges')["items"]
 
     @classmethod
-    def getStats(self, platform:str, playername:str):
-        if platform.lower() in ["kbm","gamepad","touch"]:
-            return self.__get_json(("https://api.fortnitetracker.com/v1/profile/%s/%s" % (platform.lower(), playername)))
-        raise ErrorMessage("Die Plattform '"+platform+"' existiert nicht! Benutze kbm, gamepad oder touch!")
+    def getStats(cls, platform: str, playername: str):
+        if platform.lower() in ["kbm", "gamepad", "touch"]:
+            return cls.__get_json(("https://api.fortnitetracker.com/v1/profile/%s/%s" % (platform.lower(), playername)))
+        raise ErrorMessage("Die Plattform '"+platform +
+                           "' existiert nicht! Benutze kbm, gamepad oder touch!")
