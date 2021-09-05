@@ -1,9 +1,9 @@
 :root {
-  --discordbot-darkest: #2C1320;
-  --discordbot-dark: #5F4B66;
-  --discordbot-default: #8C9EFF;
-  --discordbot-light: #FD3E81;
-  --discordbot-lightest: #EB9486;
+  --discordbot-darkest: #000000;
+  --discordbot-dark: #EB459E;
+  --discordbot-default: #5865F2;
+  --discordbot-light: #ED4245;
+  --discordbot-lightest: #FEE75C;
 
   /* Default:
   --default-darkest: #036;
