@@ -81,7 +81,7 @@ class Games(commands.Cog):
                 if (emoji in AMONGUS_EMOJI_COLORS or emoji == DELETE) and await DjangoConnection._has(AmongUsGame, text_message_id=payload.message_id):
                     try:
                         await message.remove_reaction(emoji, payload.member)
-                    except DiscordException:
+                    except (DiscordException, AttributeError):
                         ...
 
                     game = await DjangoConnection._getAmongUsGame(text_message_id=payload.message_id)
@@ -97,7 +97,7 @@ class Games(commands.Cog):
                 if (emoji in VIERGEWINNT_NUMBER_EMOJIS) and await DjangoConnection._has(VierGewinntGame, message_id=payload.message_id):
                     try:
                         await message.remove_reaction(emoji, payload.member)
-                    except DiscordException:
+                    except (AttributeError, DiscordException):
                         ...
 
                     game = await DjangoConnection._get(VierGewinntGame, message_id=payload.message_id)

@@ -124,9 +124,12 @@ class DjangoConnection():
 
     @classmethod
     @sync_to_async
-    def _list(self, model, _order_by=("pk",), **filters):
+    def _list(self, model, _order_by=("pk",), get_as_queryset=False, **filters):
         self.ensure_connection()
-        return list(model.objects.filter(**filters).order_by(*_order_by))
+        qs = model.objects.filter(**filters).order_by(*_order_by)
+        if get_as_queryset:
+            return qs
+        return list(qs)
 
     @classmethod
     @sync_to_async
