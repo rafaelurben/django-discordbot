@@ -695,15 +695,15 @@ class Games(commands.Cog):
         challenges = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",), player_1_id=str(user.id), player_2_id__isnull=True)
         duels_created = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",), player_1_id=str(user.id), player_2_id__isnull=False)
         duels_invited = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",), player_2_id=str(user.id))
-        challengetext = "" if challenges else "Du hast noch keine Challenges erstellt."
+        challengetext = "" if challenges else "Noch keine Challenges erstellt."
         for g in challenges:
             challengetext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
                               if g.finished else RUNNING) + f" ({ g.id }) BOT " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
-        duelscreatedtext = "" if duels_created else "Du hast noch keine Duelle erstellt."
+        duelscreatedtext = "" if duels_created else "Noch keine Duelle erstellt."
         for g in duels_created:
             duelscreatedtext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO) 
                                  if g.finished else RUNNING) + f" ({ g.id }) <@{ g.player_2_id }> " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
-        duelsinvitedtext = "" if duels_invited else "Du wurdest noch nicht zu einem Duell eingeladen."
+        duelsinvitedtext = "" if duels_invited else "Noch zu keinem Duell eingeladen."
         for g in duels_invited:
             duelsinvitedtext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
                                  if g.finished else RUNNING) + f" ({ g.id }) <@{ g.player_1_id }> " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
