@@ -709,9 +709,9 @@ class Games(commands.Cog):
                                  if g.finished else RUNNING) + f" ({ g.id }) <@{ g.player_1_id }> " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
 
         await ctx.sendEmbed(
-            title="VierGewinnt Spiele", 
-            description="Vier Gewinnt Spiele von "+user.mention, 
-            color=0x0078D7, 
+            title="VierGewinnt Spiele",
+            description="Vier Gewinnt Spiele von "+user.mention,
+            color=0x0078D7,
             inline=False,
             fields=[
                 ("Challenges", challengetext+"\u200b"), 
@@ -729,7 +729,7 @@ class Games(commands.Cog):
     )
     async def viergewinnt_reset(self, ctx, user: typing.Union[User, Member] = None):
         user = ctx.author if user is None else user if await self.bot.is_owner(user) else ctx.author
-        await ctx.database._delete(await ctx.database._list(VierGewinntGame, get_as_queryset=True, player_1_id=str(user.id)))
+        await ctx.database._listdelete(VierGewinntGame, player_1_id=str(user.id))
         raise SuccessMessage(f"Die VierGewinnt Spiele von { user.mention } wurden erfolgreich gelöscht!")
 
     @viergewinnt.command(

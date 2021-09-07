@@ -1,9 +1,11 @@
-from discord.ext import commands
+"Module used to manage database connections in the Discord bot"
 
-from discordbot.botmodules.audio import AudioManager, YouTubePlayer
-from discordbot.errors import ErrorMessage
+from django.db.models import Model as DjangoModel
 
 from asgiref.sync import sync_to_async
+
+from discordbot.botmodules.audio import YouTubePlayer
+from discordbot.errors import ErrorMessage
 
 #####
 
@@ -65,7 +67,7 @@ class Server():
 
 ### NEW
 
-from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AudioSource, Playlist, AmongUsGame, VierGewinntGame, BotPermission
+from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AudioSource, AmongUsGame
 from django.db import connection, connections
 
 class DjangoConnection():
@@ -76,7 +78,7 @@ class DjangoConnection():
         self._db_member = None
         self._db_server = None
         self._db_playlist = None
-        
+
     @classmethod
     def ensure_connection(self):
         if connection.connection and not connection.is_usable():
@@ -86,80 +88,78 @@ class DjangoConnection():
 
     @classmethod
     @sync_to_async
-    def _save(self, obj):
-        self.ensure_connection()
+    def _save(cls, obj: DjangoModel) -> None:
+        "Saves the given object"
+        cls.ensure_connection()
         obj.save()
 
     @classmethod
     @sync_to_async
-    def _delete(self, obj):
-        self.ensure_connection()
+    def _delete(cls, obj: DjangoModel) -> None:
+        "Deletes the given object"
+        cls.ensure_connection()
         obj.delete()
 
     @classmethod
-    async def _del(self, obj):
-        await self._delete(obj)
-
-    @classmethod
     @sync_to_async
-    def _create(self, model, **kwargs):
-        self.ensure_connection()
+    def _create(cls, model: DjangoModel, **kwargs) -> DjangoModel:
+        "Creates a new object and returns it"
+        cls.ensure_connection()
         return model.objects.create(**kwargs)
 
     @classmethod
     @sync_to_async
-    def _exists(self, model, **filters):
-        self.ensure_connection()
+    def _exists(cls, model: DjangoModel, **filters) -> bool:
+        "Checks if an object exists"
+        cls.ensure_connection()
         return model.objects.filter(**filters).exists()
 
     @classmethod
-    async def _has(self, model, **filters):
-        return await self._exists(model, **filters)
+    async def _has(cls, model: DjangoModel, **filters) -> bool:
+        "Synonym for ._exists"
+        return await cls._exists(model, **filters)
 
     @classmethod
     @sync_to_async
-    def _get(self, model, **filters):
-        self.ensure_connection()
+    def _get(cls, model: DjangoModel, **filters) -> DjangoModel:
+        "Gets an object from the database"
+        cls.ensure_connection()
         return model.objects.get(**filters)
 
     @classmethod
     @sync_to_async
-    def _list(self, model, _order_by=("pk",), get_as_queryset=False, **filters):
-        self.ensure_connection()
-        qs = model.objects.filter(**filters).order_by(*_order_by)
-        if get_as_queryset:
-            return qs
-        return list(qs)
+    def _list(cls, model: DjangoModel, _order_by: tuple = ("pk",), **filters) -> list:
+        "Gets a list of objects matching the given filters from the database"
+        cls.ensure_connection()
+        return list(model.objects.filter(**filters).order_by(*_order_by))
 
     @classmethod
     @sync_to_async
-    def _listdelete(self, model, **filters):
-        self.ensure_connection()
+    def _listdelete(cls, model: DjangoModel, **filters) -> None:
+        "Finds and deletes a Django queryset with given filters."
+        cls.ensure_connection()
         model.objects.filter(**filters).delete()
 
     @classmethod
-    async def _listdel(self, model, **filters):
-        await self._listdelete(model, **filters)
-
-    @classmethod
-    async def _getdel(self, model, **filters):
-        if await self._has(model, **filters):
-            obj = await self._get(DB_Report, **filters)
-            await self._delete(obj)
+    async def _getdel(cls, model: DjangoModel, **filters) -> bool:
+        "Deletes an object with given filters if it exists and returns True, False otherwise"
+        if await cls._has(model, **filters):
+            obj = await cls._get(DB_Report, **filters)
+            await cls._delete(obj)
             return True
         return False
 
     # General
 
     @classmethod
-    async def fetch_user(self, dc_user) -> DB_User:
-        if not await self._has(DB_User, id=str(dc_user.id)):
-            user = await self._create(DB_User, id=str(dc_user.id), name=dc_user.name+"#"+dc_user.discriminator)
+    async def fetch_user(cls, dc_user) -> DB_User:
+        if not await cls._has(DB_User, id=str(dc_user.id)):
+            user = await cls._create(DB_User, id=str(dc_user.id), name=dc_user.name+"#"+dc_user.discriminator)
         else:
-            user = await self._get(DB_User, id=str(dc_user.id))
+            user = await cls._get(DB_User, id=str(dc_user.id))
             if not user.name == (dc_user.name+"#"+dc_user.discriminator):
                 user.name = (dc_user.name+"#"+dc_user.discriminator)
-                await self._save(user)
+                await cls._save(user)
         return user
 
     async def get_user(self) -> DB_User:
@@ -168,14 +168,14 @@ class DjangoConnection():
         return self._db_user
 
     @classmethod
-    async def fetch_server(self, dc_guild) -> DB_Server:
-        if not await self._has(DB_Server, id=str(dc_guild.id)):
-            server = await self._create(DB_Server, id=str(dc_guild.id), name=dc_guild.name)
+    async def fetch_server(cls, dc_guild) -> DB_Server:
+        if not await cls._has(DB_Server, id=str(dc_guild.id)):
+            server = await cls._create(DB_Server, id=str(dc_guild.id), name=dc_guild.name)
         else:
-            server = await self._get(DB_Server, id=str(dc_guild.id))
+            server = await cls._get(DB_Server, id=str(dc_guild.id))
             if not server.name == dc_guild.name:
                 server.name = dc_guild.name
-                await self._save(server)
+                await cls._save(server)
         return server
 
     async def get_server(self) -> DB_Server:
@@ -199,17 +199,17 @@ class DjangoConnection():
     # Music
 
     @classmethod
-    async def getOrCreateAudioSourceFromDict(self, data):
-        if await self._exists(AudioSource, url_watch=data.get("webpage_url", data.get("url", None))):
-            audio = await self._get(AudioSource, url_watch=data.get("webpage_url", data.get("url")))
+    async def getOrCreateAudioSourceFromDict(cls, data):
+        if await cls._exists(AudioSource, url_watch=data.get("webpage_url", data.get("url", None))):
+            audio = await cls._get(AudioSource, url_watch=data.get("webpage_url", data.get("url")))
             audio.url_source = data.get("url", "")
-            await self._save(audio)
+            await cls._save(audio)
             return audio
         return await AudioSource.create_from_dict(data)
 
     # Reports
 
-    async def createReport(self, dc_user, reason:str="", reportedby_dc_user=None):
+    async def createReport(self, dc_user, reason: str="", reportedby_dc_user=None):
         server = await self.get_server()
         user = (await self.get_user()) if reportedby_dc_user is None else (await self.fetch_user(reportedby_dc_user))
         await user.joinServer(server)
@@ -226,23 +226,23 @@ class DjangoConnection():
         reports = await server.getReports(user=user)
         return reports
 
-    async def deleteReport(self, repid:int):
+    async def deleteReport(self, repid: int):
         server = await self.get_server()
         return await self._getdel(DB_Report, server=server, id=repid)
 
     # AmongUs
 
-    async def getAmongUsGame(self, **kwargs):
+    async def getAmongUsGame(self, **kwargs) -> AmongUsGame:
         user = await self.get_user()
         server = await self.get_server()
         return await self._get(AmongUsGame, creator=user, guild=server, **kwargs)
 
-    async def hasAmongUsGame(self, **kwargs):
+    async def hasAmongUsGame(self, **kwargs) -> bool:
         user = await self.get_user()
         server = await self.get_server()
         return await self._has(AmongUsGame, creator=user, guild=server, **kwargs)
 
-    async def createAmongUsGame(self, **kwargs):
+    async def createAmongUsGame(self, **kwargs) -> AmongUsGame:
         user = await self.get_user()
         server = await self.get_server()
         return await self._create(AmongUsGame, creator=user, guild=server, **kwargs)
