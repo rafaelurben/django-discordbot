@@ -1,5 +1,11 @@
 # django-discordbot
 
+**⚠️ IMPORTANT INFORMATION ⚠️**
+
+**This project is no longer actively maintained. Please read [this article](https://github.com/rafaelurben/django-discordbot/discussions/139) for more information.**
+
+------
+
 [![PyPI](https://img.shields.io/pypi/v/django-discordbot)](https://pypi.org/project/django-discordbot)
 ![PyPI - Django Version](https://img.shields.io/pypi/djversions/django-discordbot)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/django-discordbot)
