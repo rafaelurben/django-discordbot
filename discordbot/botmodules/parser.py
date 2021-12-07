@@ -55,9 +55,13 @@ class HTMLCleaner(HTMLParserOriginal):
 
     @classmethod
     def from_url(cls, url):
-        html = requests.get(url).text
         try:
-            data = ">".join(html.split("<body")[1].split(">")[1:]).split("</body>")[0]
-        except (AttributeError, ValueError, IndexError):
-            data = html
-        return cls(data).data
+            html = requests.get(url).text
+            try:
+                data = ">".join(html.split("<body")[1].split(">")[1:]).split("</body>")[0]
+            except (AttributeError, ValueError, IndexError):
+                data = html
+            return cls(data).data
+        except requests.exceptions.RequestException:
+            print("HTMLParser Error: The request couldn't be completed.")
+            return "The request couldn't be completed."
