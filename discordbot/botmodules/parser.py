@@ -10,8 +10,6 @@ class HTMLCleaner(HTMLParserOriginal):
 
         self.feed(data)
 
-        self.data = "\n".join(i.strip(" ") for i in self.data.split("\n"))
-
         for i in ["\n\r", "\r\n", "\n\n\n\n"]:
             while i in self.data:
                 self.data = self.data.replace(i, "\n\n")
@@ -19,6 +17,11 @@ class HTMLCleaner(HTMLParserOriginal):
         self.data = self.data.strip(" ")
 
     def handle_data(self, data):
+        data.replace("*", "\\*")
+        data.replace("_", "\\_")
+        data.replace("~", "\\~")
+        data = data.strip(" \t ")
+        data = data.strip()
         self.data += data+"\n"
 
     def handle_starttag(self, tag, attrs=None):
@@ -60,8 +63,9 @@ class HTMLCleaner(HTMLParserOriginal):
             try:
                 data = ">".join(html.split("<body")[1].split(">")[1:]).split("</body>")[0]
             except (AttributeError, ValueError, IndexError):
+                print("HTMLParser Error: Couldn't strip body tag")
                 data = html
             return cls(data).data
         except requests.exceptions.RequestException:
-            print("HTMLParser Error: The request couldn't be completed.")
+            print("HTMLParser Error: The request to '"+url+"' raised an exception.")
             return "The request couldn't be completed."

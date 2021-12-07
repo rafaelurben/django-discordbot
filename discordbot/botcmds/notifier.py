@@ -23,6 +23,7 @@ class Notifier(commands.Cog):
     #
 
     async def notifier_update(self, frequency:str, initial:bool=False):
+        print("[Notifier] - Fetching Notifier Sources...")
         for source in await DjangoConnection._list(NotifierSource, frequency=frequency):
             updated, data, targets = await source.fetch_update(initialfetch=initial)
             if updated:
