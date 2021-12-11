@@ -63,9 +63,10 @@ class HTMLCleaner(HTMLParserOriginal):
             try:
                 data = ">".join(html.split("<body")[1].split(">")[1:]).split("</body>")[0]
             except (AttributeError, ValueError, IndexError):
-                print("HTMLParser Error: Couldn't strip body tag")
+                print("HTMLParser Error: Couldn't strip body tag in '"+url+"'!")
                 data = html
             return cls(data).data
-        except requests.exceptions.RequestException:
-            print("HTMLParser Error: The request to '"+url+"' raised an exception.")
-            return "The request couldn't be completed."
+        except requests.exceptions.RequestException as error:
+            print("HTMLParser Error: The request to '"+url+"' raised an exception:", error)
+            return "Beim Abfragen der URL '"+url+"' ist ein Fehler aufgetreten. \n" \
+                   "Möglicherweise ist die Seite offline oder der Zugriff wurde verweigert."

@@ -4,7 +4,7 @@ from discord.ext import commands, tasks
 from discord import errors
 
 from discordbot.botmodules.serverdata import DjangoConnection
-from discordbot.models import NotifierSource, NotifierTarget
+from discordbot.models import NotifierSource
 
 class Notifier(commands.Cog):
     def __init__(self, bot):
@@ -37,7 +37,7 @@ class Notifier(commands.Cog):
                             elif target.where_type == "member":
                                 where = self.bot.get_user(int(target.where_id)) or await self.bot.fetch_user(int(target.where_id))
                             emb = self.bot.getEmbed(
-                                title="Neue Änderung!",
+                                title="Inhalt wurde geändert!",
                                 description=str(data),
                                 authorname=source.name,
                                 authorurl=source.url,
