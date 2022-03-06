@@ -2,7 +2,7 @@
 
 **⚠️ IMPORTANT INFORMATION ⚠️**
 
-**This project is no longer actively maintained. Please read [this article](https://github.com/rafaelurben/django-discordbot/discussions/139) for more information.**
+**This project will soon be maintained again. After the [death of discord.py](https://github.com/rafaelurben/django-discordbot/discussions/139), there's now a [rebirth of discord.py](https://github.com/rafaelurben/django-discordbot/discussions/161) happening. See you again soon!**
 
 ------
 
