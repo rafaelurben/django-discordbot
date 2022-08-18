@@ -1,91 +1,74 @@
-from discord.ext import commands
-from discord import utils
-import typing
 import socket
-import dns
+import dns.rdatatype
 import dns.resolver
 
-#from discordbot.config import 
-from discordbot.errors import ErrorMessage
+from discord import app_commands
+from discord.ext import commands
+import discord
+
+from discordbot import utils
 
 class Domains(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.color = 0x5a03fc
 
-    @commands.command(
-        brief="Erhalte die IP einer Domain",
+    @app_commands.command(
+        name='ip',
         description="Frage die IP-Adresse ab, welche hinter einer Domain steckt.",
-        aliases=["ip"],
-        help="",
-        usage="<Domain>"
-        )
-    async def getip(self, ctx, domain:str):
+    )
+    @app_commands.describe(domain="Domain, welche abgefragt werden soll.")
+    async def cmd_ip(self, interaction: discord.Interaction, domain: str):
         try:
             ip = socket.gethostbyname(domain)
-            await ctx.sendEmbed(
-                title="IP-Info",
-                description=f"Die IP hinter '{domain}' lautet '{ip}'!",
-            )
+            await interaction.response.send_message(f"Die IP-Adresse von {domain} ist {ip}.")
         except socket.gaierror:
-            raise ErrorMessage(f"Die Domain '{domain}' konnte nicht gefunden werden!")
+            await interaction.response.send_message(f"Die Domain '{domain}' konnte nicht gefunden werden!", ephemeral=True)
 
-    @commands.command(
-        brief="Frage DNS-Einträge ab",
+    @app_commands.command(
+        name='dns',
         description="Frage bestimmte DNS-Einträge einer Domain ab.",
-        aliases=["getdns"],
-        help="",
-        usage="<Domain> <Typ (CNAME, A, MX...)>"
     )
-    async def dns(self, ctx, domain: str, typ: str="A"):
+    @app_commands.describe(
+        domain="Domain, welche abgefragt werden soll.",
+        typ="Typ des DNS-Eintrags, welcher abgefragt werden soll. (z.B. A, CNAME, MX, etc.)",
+    )
+    async def cmd_dns(self, interaction: discord.Interaction, domain: str, typ: str="A"):
         typ = typ.upper()
         try:
-            result = dns.resolver.query(domain, typ)
+            result = dns.resolver.resolve(domain, typ)
             if typ == "A":
-                await ctx.sendEmbed(
-                    title="DNS-Info",
-                    description=f"DNS-Einträge des Typs A für '{domain}'!",
-                    inline=False,
-                    fields=[
-                        ("IP", ipval.to_text()) for ipval in result
-                    ]
-                )
+                fields=[
+                    ("IP", ipval.to_text()) for ipval in result
+                ]
             elif typ == "CNAME":
-                await ctx.sendEmbed(
-                    title="DNS-Info",
-                    description=f"DNS-Einträge des Typs CNAME für '{domain}'!",
-                    inline=False,
-                    fields=[
-                        ("CNAME Target", cnameval.target) for cnameval in result
-                    ]
-                )
+                fields=[
+                    ("CNAME Target", cnameval.target) for cnameval in result
+                ]
             elif typ == "MX":
-                await ctx.sendEmbed(
-                    title="DNS-Info",
-                    description=f"DNS-Einträge des Typs MX für '{domain}'!",
-                    inline=False,
-                    fields=[
-                        ("MX Record", mxdata.exchange) for mxdata in result
-                    ]
-                )
+                fields=[
+                    ("MX Record", mxdata.exchange) for mxdata in result
+                ]
             else:
-                await ctx.sendEmbed(
-                    title="DNS-Info",
-                    description=f"DNS-Einträge des Typs '{typ}' für '{domain}'!",
-                    inline=False,
-                    fields=[
-                        ("Eintrag", str(data)) for data in result
-                    ]
-                )
+                fields=[
+                    ("Eintrag", str(data)) for data in result
+                ]
+            emb = utils.getEmbed(
+                title=utils.CHECK+"DNS-Info",
+                description=f"DNS-Einträge des Typs '{typ}' für '{domain}'!",
+                inline=False,
+                fields=fields
+            )
+            await interaction.response.send_message(embed=emb)
         except dns.resolver.NXDOMAIN:
-            raise ErrorMessage(
-                f"Die Domain '{domain}' konnte nicht gefunden werden!")
+            await interaction.response.send_message(
+                f"Die Domain '{domain}' konnte nicht gefunden werden!", ephemeral=True)
         except dns.resolver.NoAnswer:
-            raise ErrorMessage(
-                f"Für die Domain '{domain}' konnten keine DNS-Einträge des Typs '{typ}' gefunden werden!")
+            await interaction.response.send_message(
+                f"Für die Domain '{domain}' konnten keine DNS-Einträge des Typs '{typ}' gefunden werden!", ephemeral=True)
         except dns.rdatatype.UnknownRdatatype:
-            raise ErrorMessage(
-                f"Unbekannter DNS-Record Typ: {typ}")
+            await interaction.response.send_message(
+                f"Unbekannter DNS-Record Typ: {typ}", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Domains(bot))
