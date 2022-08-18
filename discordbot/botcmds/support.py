@@ -193,5 +193,5 @@ class Support(commands.Cog):
         else:
             raise ErrorMessage("Du darfst keine Befehle für diesen Benutzer ausführen!")
 
-def setup(bot):
-    bot.add_cog(Support(bot))
+async def setup(bot):
+    await bot.add_cog(Support(bot))

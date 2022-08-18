@@ -87,5 +87,5 @@ class Domains(commands.Cog):
             raise ErrorMessage(
                 f"Unbekannter DNS-Record Typ: {typ}")
 
-def setup(bot):
-    bot.add_cog(Domains(bot))
+async def setup(bot):
+    await bot.add_cog(Domains(bot))

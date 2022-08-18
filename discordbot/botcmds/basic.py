@@ -105,5 +105,5 @@ class Basic(commands.Cog):
         await ctx.sendEmbed(title="Einladungen", description=desc, fields=[("Dieser Server", f"[Beitreten]({inviteurl})" if inviteurl else "Unbekannt"), ("Bot Owner Server", f"[Beitreten]({INVITE_OWNER})"), ("Bot", f"[Beitreten]({INVITE_BOT})")])
 
 
-def setup(bot):
-    bot.add_cog(Basic(bot))
+async def setup(bot):
+    await bot.add_cog(Basic(bot))

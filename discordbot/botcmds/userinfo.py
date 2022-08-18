@@ -56,5 +56,5 @@ class UserInfo(commands.Cog):
         if not found:
             raise ErrorMessage(message="Dieser Benutzer hört keinen Song!")
 
-def setup(bot):
-    bot.add_cog(UserInfo(bot))
+async def setup(bot):
+    await bot.add_cog(UserInfo(bot))
