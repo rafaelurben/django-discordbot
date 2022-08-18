@@ -18,7 +18,7 @@ class UserInfo(commands.Cog):
         usage="<User>"
     )
     async def userinfo(self, ctx, user: discord.User):
-        d = datetime.now()-user.created_at
+        d = discord.utils.utcnow()-user.created_at
         await ctx.sendEmbed(
             title="Benutzerinformationen",
             description=f"Infos über den Benutzer {user.mention}",

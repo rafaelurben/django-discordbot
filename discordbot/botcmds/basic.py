@@ -1,7 +1,7 @@
 from discord.ext import commands
 from discord import User, TextChannel, utils, DiscordException
+import discord
 from datetime import datetime
-import typing
 
 from discordbot.config import INVITE_OWNER, INVITE_BOT, REGELN
 #from discordbot.errors import ErrorMessage
@@ -20,10 +20,10 @@ class Basic(commands.Cog):
         usage=""
     )
     async def ping(self, ctx):
-        start = datetime.timestamp(datetime.now())
+        start = datetime.timestamp(discord.utils.utcnow())
         msg = await ctx.sendEmbed(title="Aktueller Ping", fields=[("Ping", "Berechnen...")])
         embed = ctx.getEmbed(title="Aktueller Ping", fields=[("Ping", str(
-            int((datetime.timestamp(datetime.now()) - start) * 1000))+"ms")])
+            int((datetime.timestamp(discord.utils.utcnow()) - start) * 1000))+"ms")])
         await msg.edit(embed=embed)
 
     @commands.command(
