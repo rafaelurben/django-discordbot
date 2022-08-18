@@ -786,5 +786,5 @@ class Games(commands.Cog):
         else:
             raise ErrorMessage("Ein Spiel mit dieser ID konnte nicht gefunden werden! Möglicherweise gelöscht?")
 
-def setup(bot):
-    bot.add_cog(Games(bot))
+async def setup(bot):
+    await bot.add_cog(Games(bot))

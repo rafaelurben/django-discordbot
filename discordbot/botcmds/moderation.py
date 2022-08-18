@@ -295,5 +295,5 @@ class Moderation(commands.Cog):
             message="Der Benutzer befindet sich nicht in einem Sprachkanal.")
 
 
-def setup(bot):
-    bot.add_cog(Moderation(bot))
+async def setup(bot):
+    await bot.add_cog(Moderation(bot))

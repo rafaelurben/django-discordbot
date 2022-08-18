@@ -1,5 +1,6 @@
 import os
 from django.conf import settings
+from discord.ext import commands
 
 # Discordbot Configuration
 # Helper function
@@ -12,6 +13,14 @@ def _s(name: str, default=None, prefix: str = "DISCORDBOT_"):
 
 
 DEBUG = _s("DEBUG", False)
+
+DEBUG_NO_RAISE_FOR = (
+    commands.DisabledCommand,
+    commands.CommandOnCooldown,
+    commands.CommandNotFound,
+    commands.UserInputError,
+    commands.CheckFailure,
+)
 
 DOMAIN = _s("DOMAIN", None)
 

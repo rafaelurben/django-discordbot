@@ -26,5 +26,5 @@ class Converters(commands.Cog):
         await ctx.sendEmbed(title="Morsecode", fields=[("Morsecode", morse.replace("  "," | ")),("Text", text)])
 
 
-def setup(bot):
-    bot.add_cog(Converters(bot))
+async def setup(bot):
+    await bot.add_cog(Converters(bot))

@@ -18,7 +18,7 @@ class UserInfo(commands.Cog):
         usage="<User>"
     )
     async def userinfo(self, ctx, user: discord.User):
-        d = datetime.now()-user.created_at
+        d = discord.utils.utcnow()-user.created_at
         await ctx.sendEmbed(
             title="Benutzerinformationen",
             description=f"Infos über den Benutzer {user.mention}",
@@ -26,10 +26,10 @@ class UserInfo(commands.Cog):
                 ("ID", str(user.id)),
                 ("Account erstellt am", f"<t:{int(datetime.timestamp(user.created_at))}>"),
                 ("Account erstellt vor", f"{d.days} Tag(en)"),
-                ("Standardavatar", f"[{user.default_avatar}]({user.default_avatar_url})"),
+                ("Standardavatar", f"[{user.default_avatar.key}]({user.default_avatar})"),
                 ],
             inline=False,
-            thumbnailurl=str(user.avatar_url))
+            thumbnailurl=str(user.avatar))
 
     @commands.command(
         brief='Stalke musikhörende Leute',
@@ -56,5 +56,5 @@ class UserInfo(commands.Cog):
         if not found:
             raise ErrorMessage(message="Dieser Benutzer hört keinen Song!")
 
-def setup(bot):
-    bot.add_cog(UserInfo(bot))
+async def setup(bot):
+    await bot.add_cog(UserInfo(bot))

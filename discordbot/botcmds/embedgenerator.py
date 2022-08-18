@@ -111,5 +111,5 @@ Verfügbare Parameter:""", inline=False, fields=[
         else:
             raise ErrorMessage("Diese Nachricht hat kein Embed!")
 
-def setup(bot):
-    bot.add_cog(EmbedGenerator(bot))
+async def setup(bot):
+    await bot.add_cog(EmbedGenerator(bot))

@@ -22,5 +22,5 @@ class PRESET(commands.Cog):
     async def preset(self, ctx):
         pass
 
-def setup(bot):
-    bot.add_cog(PRESET(bot))
+async def setup(bot):
+    await bot.add_cog(PRESET(bot))

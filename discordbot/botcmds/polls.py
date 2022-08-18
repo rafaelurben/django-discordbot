@@ -37,5 +37,5 @@ class Polls(commands.Cog):
             for e in NUMBER_EMOJIS[:len(answers)]:
                 await msg.add_reaction(e)
 
-def setup(bot):
-    bot.add_cog(Polls(bot))
+async def setup(bot):
+    await bot.add_cog(Polls(bot))

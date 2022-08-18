@@ -1,6 +1,11 @@
+import os
+
 from django.core.management.base import BaseCommand, CommandError
 
-import os
+from rich.traceback import install as install_traceback
+install_traceback()
+from rich.pretty import install as install_pretty
+install_pretty()
 
 from discordbot.bot import run
 

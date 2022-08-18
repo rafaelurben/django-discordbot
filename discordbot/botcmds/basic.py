@@ -1,7 +1,7 @@
 from discord.ext import commands
 from discord import User, TextChannel, utils, DiscordException
+import discord
 from datetime import datetime
-import typing
 
 from discordbot.config import INVITE_OWNER, INVITE_BOT, REGELN
 #from discordbot.errors import ErrorMessage
@@ -20,10 +20,10 @@ class Basic(commands.Cog):
         usage=""
     )
     async def ping(self, ctx):
-        start = datetime.timestamp(datetime.now())
+        start = datetime.timestamp(discord.utils.utcnow())
         msg = await ctx.sendEmbed(title="Aktueller Ping", fields=[("Ping", "Berechnen...")])
         embed = ctx.getEmbed(title="Aktueller Ping", fields=[("Ping", str(
-            int((datetime.timestamp(datetime.now()) - start) * 1000))+"ms")])
+            int((datetime.timestamp(discord.utils.utcnow()) - start) * 1000))+"ms")])
         await msg.edit(embed=embed)
 
     @commands.command(
@@ -72,7 +72,7 @@ class Basic(commands.Cog):
         owner = self.bot.get_user(self.bot.owner_id)
         if owner:
             EMBED.set_footer(
-                text=f'Besitzer dieses Bots ist {owner.name}#{owner.discriminator}', icon_url=owner.avatar_url)
+                text=f'Besitzer dieses Bots ist {owner.name}#{owner.discriminator}', icon_url=owner.avatar)
         for kategorie in REGELN:
             EMBED.add_field(name=kategorie, value="```nimrod\n- " + (
                 "\n- ".join(regel for regel in REGELN[kategorie])) + "```", inline=False)
@@ -105,5 +105,5 @@ class Basic(commands.Cog):
         await ctx.sendEmbed(title="Einladungen", description=desc, fields=[("Dieser Server", f"[Beitreten]({inviteurl})" if inviteurl else "Unbekannt"), ("Bot Owner Server", f"[Beitreten]({INVITE_OWNER})"), ("Bot", f"[Beitreten]({INVITE_BOT})")])
 
 
-def setup(bot):
-    bot.add_cog(Basic(bot))
+async def setup(bot):
+    await bot.add_cog(Basic(bot))
