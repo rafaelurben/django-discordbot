@@ -44,6 +44,7 @@ class Owneronly(commands.Cog):
             EMBED.add_field(name="Status", value="Reloaded all categories!")
         await msg.edit(embed=EMBED)
         print("[Bot] - Reload completed!")
+        await self.bot.tree.sync()
 
     @commands.command(
         brief="Stoppe den Bot",

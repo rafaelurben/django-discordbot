@@ -69,6 +69,7 @@ class Bot(commands.Bot):
             except commands.errors.ExtensionAlreadyLoaded:
                 pass
         print("[Bot] - Loaded extensions!")
+        await self.tree.sync()
 
     async def on_connect(self):
         print("[Bot] - Connected!")
