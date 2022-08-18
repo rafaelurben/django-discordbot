@@ -21,11 +21,11 @@ class Owneronly(commands.Cog):
         if extension in EXTENSIONS:
             print("[Bot] - Reloading '"+extension+"' extension...")
             try:
-                self.bot.unload_extension(EXTENSIONFOLDER+"."+extension)
+                await self.bot.unload_extension(EXTENSIONFOLDER+"."+extension)
             except commands.errors.ExtensionNotLoaded:
                 pass
             try:
-                self.bot.load_extension(EXTENSIONFOLDER+"."+extension)
+                await self.bot.load_extension(EXTENSIONFOLDER+"."+extension)
             except commands.errors.ExtensionAlreadyLoaded:
                 pass
             EMBED.add_field(
@@ -34,11 +34,11 @@ class Owneronly(commands.Cog):
             print("[Bot] - Reloading all extensions...")
             for extension in EXTENSIONS:
                 try:
-                    self.bot.unload_extension(EXTENSIONFOLDER+"."+extension)
+                    await self.bot.unload_extension(EXTENSIONFOLDER+"."+extension)
                 except commands.errors.ExtensionNotLoaded:
                     pass
                 try:
-                    self.bot.load_extension(EXTENSIONFOLDER+"."+extension)
+                    await self.bot.load_extension(EXTENSIONFOLDER+"."+extension)
                 except commands.errors.ExtensionAlreadyLoaded:
                     pass
             EMBED.add_field(name="Status", value="Reloaded all categories!")
