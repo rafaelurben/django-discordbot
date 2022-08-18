@@ -72,7 +72,7 @@ class Basic(commands.Cog):
         owner = self.bot.get_user(self.bot.owner_id)
         if owner:
             EMBED.set_footer(
-                text=f'Besitzer dieses Bots ist {owner.name}#{owner.discriminator}', icon_url=owner.avatar_url)
+                text=f'Besitzer dieses Bots ist {owner.name}#{owner.discriminator}', icon_url=owner.avatar)
         for kategorie in REGELN:
             EMBED.add_field(name=kategorie, value="```nimrod\n- " + (
                 "\n- ".join(regel for regel in REGELN[kategorie])) + "```", inline=False)
