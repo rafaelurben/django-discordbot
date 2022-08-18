@@ -4,8 +4,8 @@ import discord
 from discord.ext import commands
 
 from discordbot.botmodules import serverdata, audio
-from discordbot.utils import chunks
 from discordbot.errors import ErrorMessage
+from discordbot import utils
 
 CONVERTERS = {
     discord.Member: commands.MemberConverter,
@@ -32,7 +32,7 @@ class Context(commands.Context):
 
     async def sendEmbed(self, title: str, *args, receiver=None, message: str = "", description: str = "", fields: list = list(), **kwargs):
         if len(description) > 2048:
-            desc = list(chunks(description, 2042))
+            desc = list(utils.chunks(description, 2042))
             for i in range(len(desc)):
                 if i == 0:
                     await (receiver or self).send(message, embed=self.getEmbed(f"{title} ({i+1}/{len(desc)})", *args, description=desc[i]+" [...]", fields=fields, **kwargs))
@@ -41,7 +41,7 @@ class Context(commands.Context):
                 else:
                     await (receiver or self).send(embed=self.getEmbed(f"{title} ({i+1}/{len(desc)})", *args, description=desc[i]+" [...]", **kwargs))
         elif len(fields) > 25:
-            flds = list(chunks(fields, 25))
+            flds = list(utils.chunks(fields, 25))
             for i in range(len(flds)):
                 if i == 0:
                     await (receiver or self).send(message, embed=self.getEmbed(f"{title} ({i+1}/{len(flds)})", *args, description=description, fields=flds[i], **kwargs))
@@ -52,22 +52,8 @@ class Context(commands.Context):
         else:
             return await (receiver or self).send(message, embed=self.getEmbed(title=title, *args, description=description, fields=fields, **kwargs))
 
-    def getEmbed(self, title:str, description:str="", color:int=0x000000, fields:list=[], inline=True, thumbnailurl:str=None, authorurl:str="", authorname:str=None, footertext:str="Angefordert von USER", footerurl:str="AVATARURL", timestamp=False):
-        EMBED = discord.Embed(title=title[:256], description=description[:2048], color=color or getattr(self.cog, "color", 0x000000))
-        EMBED.set_footer(text=footertext.replace("USER", str(self.author.name+"#"+self.author.discriminator))[:2048], icon_url=footerurl.replace("AVATARURL", str(self.author.avatar)))
-        
-        if timestamp:
-            EMBED.timestamp = datetime.utcnow() if timestamp is True else timestamp
-        for field in fields[:25]:
-            EMBED.add_field(name=field[0][:256], value=(field[1][:1018]+" [...]" if len(field[1]) > 1024 else field[1]), inline=bool(field[2] if len(field) > 2 else inline))
-        if thumbnailurl:
-            EMBED.set_thumbnail(url=thumbnailurl.strip())
-        if authorname:
-            if authorurl and ("https://" in authorurl or "http://" in authorurl):
-                EMBED.set_author(name=authorname[:256], url=authorurl.strip())
-            else:
-                EMBED.set_author(name=authorname[:256])
-        return EMBED
+    def getEmbed(self, title:str, description:str="", color:int=0x000000, fields:list=list(), inline=True, thumbnailurl:str=None, authorurl:str="", authorname:str=None, footertext:str="Angefordert von USER", footerurl:str="AVATARURL", timestamp=False):
+        return utils.getEmbed(author=self.author, title=title, description=description, color=color or getattr(self.cog, "color", 0x000000), fields=fields, inline=inline, thumbnailurl=thumbnailurl, authorurl=authorurl, authorname=authorname, footertext=footertext, footerurl=footerurl, timestamp=timestamp)
 
     async def tick(self, value=True):
         emoji = '\N{WHITE HEAVY CHECK MARK}' if value else '\N{CROSS MARK}'
