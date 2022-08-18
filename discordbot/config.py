@@ -34,7 +34,7 @@ MAIN_PREFIXES = _s("MAIN_PREFIXES", ["/"])
 
 EXTENSIONFOLDER = "discordbot.botcmds"
 EXTENSIONS = _s("EXTENSIONS", ['basic', 'support', 'moderation', 'games', 'help', 'channels', 'userinfo',
-                               'music', 'owneronly', 'converters', 'embedgenerator', 'notifier', 'polls', 'domains'])
+                               'music', 'owneronly', 'converters', 'embedgenerator', 'notifier', 'polls', 'networking'])
 
 # Basic
 
@@ -43,7 +43,7 @@ INVITE_BOT = _s("INVITE_BOT", "https://go.rafaelurben.ch/discordbot")
 
 # Help
 
-HELP_HIDDEN_COGS = ["owneronly", "notifier", "domains"]
+HELP_HIDDEN_COGS = ["owneronly", "notifier", "networking"]
 
 # Music
 

@@ -8,12 +8,14 @@ import discord
 
 from discordbot import utils
 
-class Domains(commands.Cog):
+class Networking(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.color = 0x5a03fc
 
-    @app_commands.command(
+    group = app_commands.Group(name="net", description="Eine Sammlung von Netzwerkfunktionen")
+
+    @group.command(
         name='ip',
         description="Frage die IP-Adresse ab, welche hinter einer Domain steckt.",
     )
@@ -25,7 +27,7 @@ class Domains(commands.Cog):
         except socket.gaierror:
             await interaction.response.send_message(f"Die Domain '{domain}' konnte nicht gefunden werden!", ephemeral=True)
 
-    @app_commands.command(
+    @group.command(
         name='dns',
         description="Frage bestimmte DNS-Einträge einer Domain ab.",
     )
@@ -71,4 +73,4 @@ class Domains(commands.Cog):
                 f"Unbekannter DNS-Record Typ: {typ}", ephemeral=True)
 
 async def setup(bot):
-    await bot.add_cog(Domains(bot))
+    await bot.add_cog(Networking(bot))
