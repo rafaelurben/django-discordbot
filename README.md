@@ -2,7 +2,7 @@
 
 **⚠️ IMPORTANT INFORMATION ⚠️**
 
-**This project will soon be maintained again. After the [death of discord.py](https://github.com/rafaelurben/django-discordbot/discussions/139), there's now a [rebirth of discord.py](https://github.com/rafaelurben/django-discordbot/discussions/161) happening. See you again soon!**
+**After the [death of discord.py](https://github.com/rafaelurben/django-discordbot/discussions/139) and the [rebirth of discord.py](https://github.com/rafaelurben/django-discordbot/discussions/161), version 2 of discord.py has been released! That means it's time for v2 of django-discordbot! 🎉 See you soon ;)**
 
 ------
 
