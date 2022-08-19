@@ -43,7 +43,7 @@ INVITE_BOT = _s("INVITE_BOT", "https://go.rafaelurben.ch/discordbot")
 
 # Help
 
-HELP_HIDDEN_COGS = ["owneronly", "notifier", 'help', "networking", "userinfo"]
+HELP_HIDDEN_COGS = ["owneronly", "notifier", 'help', "networking", "userinfo", "converters"]
 
 # Music
 
