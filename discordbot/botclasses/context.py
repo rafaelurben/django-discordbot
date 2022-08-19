@@ -43,9 +43,6 @@ class Context(commands.Context):
         except discord.HTTPException:
             pass
 
-    async def send_help(self):
-        await self.invoke(self.bot.get_command("help"), self.invoked_with)
-
     async def invoke_as(self, member, command, *args):
         _command = command.replace("_", " ")
         cmd = self.bot.get_command(_command)
