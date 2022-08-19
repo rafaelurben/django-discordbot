@@ -754,17 +754,6 @@ class VierGewinntGame(models.Model):
 
     objects = models.Manager()
 
-# Support
-
-# BotPermission (for Remote)
-
-
-class BotPermission(models.Model):
-    id_1 = models.CharField("ID 1", max_length=32)
-    id_2 = models.CharField("ID 2", max_length=32)
-    typ = models.CharField("Typ", max_length=32)
-
-    objects = models.Manager()
 
 # Notifier
 
