@@ -42,23 +42,3 @@ class Context(commands.Context):
             await self.message.add_reaction(emoji)
         except discord.HTTPException:
             pass
-
-    async def invoke_as(self, member, command, *args):
-        _command = command.replace("_", " ")
-        cmd = self.bot.get_command(_command)
-        if cmd is None:
-            raise ErrorMessage(f"Der Befehl `{ _command }` wurde nicht gefunden! \nPS: Benutze im Command bitte kein Prefix! Für Subcommands, benutze command_subcommand.")
-        self.message.content = self.prefix+_command+self.message.content.split(command)[1]
-        self.message.author = member
-        self.author = member
-        self.database = type(self.database)(self.author, self.guild)
-        annotations = cmd.callback.__annotations__
-        annotations.pop("return", None)
-        arguments = list(args)
-        for i, cls in enumerate(annotations.values()):
-            if len(arguments) > i:
-                if cls in CONVERTERS:
-                    arguments[i] = await CONVERTERS[cls]().convert(self, arguments[i])
-                else:
-                    arguments[i] = cls(arguments[i])
-        await self.invoke(cmd, *arguments)

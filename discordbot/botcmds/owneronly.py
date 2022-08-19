@@ -105,16 +105,6 @@ class Owneronly(commands.Cog):
                                 )
 
     @commands.command(
-        brief="Führe einen Command als jemanden anderes aus",
-        usage="<Member> <Command> [Argumente]",
-        aliases=["runas"],
-        help="Falls Unterbefehle verwendet werden, benutze bitte befehl_unterbefehl als Command",
-    )
-    @commands.is_owner()
-    async def sudo(self, ctx, member: typing.Union[Member, User], command: str, *args):
-        await ctx.invoke_as(member, command, *args)
-
-    @commands.command(
         brief="Erhalte diesen Chat",
         usage="[Messages = 100]",
         aliases=["archiv", "log"],
