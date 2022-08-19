@@ -93,7 +93,7 @@ class Help(commands.Cog):
             addCog(cogs[search], include_subcommands=True, hide_cogs=[])
 
         else:
-            await interaction.response.send_message("Ungültige(r) Kategorie/Befehl.\nBenutze den `/help` Befehl um alle Kategorien und Befehle zu sehen.", ephemeral=True)
+            return await interaction.response.send_message("Ungültige(r) Kategorie/Befehl.\nBenutze den `/help` Befehl um alle Kategorien und Befehle zu sehen.", ephemeral=True)
 
         await interaction.response.send_message(
             embed=utils.getEmbed(
