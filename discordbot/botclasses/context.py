@@ -31,26 +31,7 @@ class Context(commands.Context):
             self.data = serverdata.Server.getServer(self.guild.id)
 
     async def sendEmbed(self, title: str, *args, receiver=None, message: str = "", description: str = "", fields: list = list(), **kwargs):
-        if len(description) > 2048:
-            desc = list(utils.chunks(description, 2042))
-            for i in range(len(desc)):
-                if i == 0:
-                    await (receiver or self).send(message, embed=self.getEmbed(f"{title} ({i+1}/{len(desc)})", *args, description=desc[i]+" [...]", fields=fields, **kwargs))
-                elif i == len(desc)-1:
-                    return await (receiver or self).send(embed=self.getEmbed(f"{title} ({i+1}/{len(desc)})", *args, description=desc[i], **kwargs))
-                else:
-                    await (receiver or self).send(embed=self.getEmbed(f"{title} ({i+1}/{len(desc)})", *args, description=desc[i]+" [...]", **kwargs))
-        elif len(fields) > 25:
-            flds = list(utils.chunks(fields, 25))
-            for i in range(len(flds)):
-                if i == 0:
-                    await (receiver or self).send(message, embed=self.getEmbed(f"{title} ({i+1}/{len(flds)})", *args, description=description, fields=flds[i], **kwargs))
-                elif i == len(flds)-1:
-                    return await (receiver or self).send(embed=self.getEmbed(f"{title} ({i+1}/{len(flds)})", *args, fields=flds[i], **kwargs))
-                else:
-                    await (receiver or self).send(embed=self.getEmbed(f"{title} ({i+1}/{len(flds)})", *args, fields=flds[i], **kwargs))
-        else:
-            return await (receiver or self).send(message, embed=self.getEmbed(title=title, *args, description=description, fields=fields, **kwargs))
+        return await utils.sendEmbed(receiver or self.channel, title, *args, message=message, description=description, fields=fields, **kwargs)
 
     def getEmbed(self, title:str, description:str="", color:int=0x000000, fields:list=list(), inline=True, thumbnailurl:str=None, authorurl:str="", authorname:str=None, footertext:str="Angefordert von USER", footerurl:str="AVATARURL", timestamp=False):
         return utils.getEmbed(author=self.author, title=title, description=description, color=color or getattr(self.cog, "color", 0x000000), fields=fields, inline=inline, thumbnailurl=thumbnailurl, authorurl=authorurl, authorname=authorname, footertext=footertext, footerurl=footerurl, timestamp=timestamp)

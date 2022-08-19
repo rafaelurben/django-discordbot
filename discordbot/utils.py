@@ -24,3 +24,25 @@ def getEmbed(author=None, title:str="", description:str="", color:int=0x000000, 
         else:
             emb.set_author(name=authorname[:256])
     return emb
+
+async def sendEmbed(receiver, title: str, *args, message: str = "", description: str = "", fields: list = list(), **kwargs):
+    if len(description) > 2048:
+        desc = list(chunks(description, 2042))
+        for i in range(len(desc)):
+            if i == 0:
+                await receiver.send(message, embed=getEmbed(f"{title} ({i+1}/{len(desc)})", *args, description=desc[i]+" [...]", fields=fields, **kwargs))
+            elif i == len(desc)-1:
+                return await receiver.send(embed=getEmbed(f"{title} ({i+1}/{len(desc)})", *args, description=desc[i], **kwargs))
+            else:
+                await receiver.send(embed=getEmbed(f"{title} ({i+1}/{len(desc)})", *args, description=desc[i]+" [...]", **kwargs))
+    elif len(fields) > 25:
+        flds = list(chunks(fields, 25))
+        for i in range(len(flds)):
+            if i == 0:
+                await receiver.send(message, embed=getEmbed(f"{title} ({i+1}/{len(flds)})", *args, description=description, fields=flds[i], **kwargs))
+            elif i == len(flds)-1:
+                return await receiver.send(embed=getEmbed(f"{title} ({i+1}/{len(flds)})", *args, fields=flds[i], **kwargs))
+            else:
+                await receiver.send(embed=getEmbed(f"{title} ({i+1}/{len(flds)})", *args, fields=flds[i], **kwargs))
+    else:
+        return await receiver.send(message, embed=getEmbed(title=title, *args, description=description, fields=fields, **kwargs))
