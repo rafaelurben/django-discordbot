@@ -1,11 +1,9 @@
 from discord.ext import commands
-from discord import Embed, Member, User, Webhook, utils, DiscordException
+from discord import app_commands
+import discord
 
-from discordbot.models import BotPermission, Report
+from discordbot.models import Report
 from discordbot.errors import ErrorMessage, SuccessMessage
-
-import time
-import typing
 
 class Support(commands.Cog):
     def __init__(self, bot):
@@ -16,7 +14,7 @@ class Support(commands.Cog):
 
     async def send_report(self, ctx, report):
         try:
-            channel = utils.get(ctx.guild.channels, name="reports")
+            channel = discord.utils.get(ctx.guild.channels, name="reports")
             await ctx.sendEmbed(
                 title=f"Neuer Report ({report.pk})",
                 fields=[
@@ -30,7 +28,7 @@ class Support(commands.Cog):
                 footerurl="",
                 footertext="",
                 )
-        except DiscordException as e:
+        except discord.DiscordException as e:
             print("[Support] - No #reports channel found!", e)
 
     @commands.group(
@@ -51,7 +49,7 @@ class Support(commands.Cog):
         aliases=["add", "+"],
         usage="<Member> [Grund]"
         )
-    async def reports_create(self, ctx, member: Member, *args):
+    async def reports_create(self, ctx, member: discord.Member, *args):
         Grund = " ".join(args)
         Grund = Grund if Grund.rstrip(" ") else "Leer"
         report = await ctx.database.createReport(dc_user=member, reason=Grund)
@@ -87,7 +85,7 @@ class Support(commands.Cog):
         usage="[Member]"
         )
     @commands.has_any_role("Moderator", "Supporter", "Admin", "Administrator")
-    async def reports_view(self, ctx, member:Member=None):
+    async def reports_view(self, ctx, member: discord.Member=None):
         if member is None:
             await ctx.sendEmbed(
                 title="Serverreports",
