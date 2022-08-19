@@ -1,9 +1,7 @@
 from discord.ext import commands
-from discord import Game, Streaming, Activity, ActivityType, Status, Member, User, TextChannel, VoiceChannel, Role, Invite, Game, Emoji, PartialEmoji, Colour
+import discord
 
-from discordbot.config import EXTENSIONS, EXTENSIONFOLDER
-
-import typing
+from discordbot import config
 
 
 class Owneronly(commands.Cog):
@@ -16,33 +14,34 @@ class Owneronly(commands.Cog):
     )
     @commands.is_owner()
     async def reload(self, ctx, extension: str = None):
-        msg = await ctx.sendEmbed(title="Reload", fields=[("Status", "Reloading")])
-        EMBED = ctx.getEmbed(title="Reload", fields=[])
-        if extension in EXTENSIONS:
+        emb = ctx.getEmbed(title="Reload", fields=[("Status", "Reloading")])
+        msg = await ctx.message.author.send(embed=emb)
+        emb = ctx.getEmbed(title="Reload", fields=[])
+        if extension in config.EXTENSIONS:
             print("[Bot] - Reloading '"+extension+"' extension...")
             try:
-                await self.bot.unload_extension(EXTENSIONFOLDER+"."+extension)
+                await self.bot.unload_extension(config.EXTENSIONFOLDER+"."+extension)
             except commands.errors.ExtensionNotLoaded:
                 pass
             try:
-                await self.bot.load_extension(EXTENSIONFOLDER+"."+extension)
+                await self.bot.load_extension(config.EXTENSIONFOLDER+"."+extension)
             except commands.errors.ExtensionAlreadyLoaded:
                 pass
-            EMBED.add_field(
+            emb.add_field(
                 name="Status", value="Reloaded category "+extension.upper()+"!")
         else:
             print("[Bot] - Reloading all extensions...")
-            for extension in EXTENSIONS:
+            for ext in config.EXTENSIONS:
                 try:
-                    await self.bot.unload_extension(EXTENSIONFOLDER+"."+extension)
+                    await self.bot.unload_extension(config.EXTENSIONFOLDER+"."+ext)
                 except commands.errors.ExtensionNotLoaded:
                     pass
                 try:
-                    await self.bot.load_extension(EXTENSIONFOLDER+"."+extension)
+                    await self.bot.load_extension(config.EXTENSIONFOLDER+"."+ext)
                 except commands.errors.ExtensionAlreadyLoaded:
                     pass
-            EMBED.add_field(name="Status", value="Reloaded all categories!")
-        await msg.edit(embed=EMBED)
+            emb.add_field(name="Status", value="Reloaded all categories!")
+        await msg.edit(embed=emb)
         print("[Bot] - Reload completed!")
         await self.bot.tree.sync()
 
@@ -59,28 +58,28 @@ class Owneronly(commands.Cog):
         usage="<Status> [Aktivität [Argumente(e)]]",
     )
     @commands.is_owner()
-    async def status(self, ctx, STATUS: str = "", ACTIVITY: str = "", arg1: str = "", *args):
+    async def status(self, ctx, new_state: str = "", new_activity: str = "", arg1: str = "", *args):
         arg2 = " ".join(args)
         status = None
         activity = None
-        if STATUS.lower() in ["on", "online", "green"]:
-            status = Status.online
-        elif STATUS.lower() in ["off", "offline", "invisible", "grey"]:
-            status = Status.invisible
-        elif STATUS.lower() in ["dnd", "donotdisturb", "do_not_disturb", "bittenichtstören", "red"]:
-            status = Status.dnd
-        elif STATUS.lower() in ["idle", "abwesend", "orange", "yellow"]:
-            status = Status.idle
+        if new_state.lower() in ["on", "online", "green"]:
+            status = discord.Status.online
+        elif new_state.lower() in ["off", "offline", "invisible", "grey"]:
+            status = discord.Status.invisible
+        elif new_state.lower() in ["dnd", "donotdisturb", "do_not_disturb", "bittenichtstören", "red"]:
+            status = discord.Status.dnd
+        elif new_state.lower() in ["idle", "abwesend", "orange", "yellow"]:
+            status = discord.Status.idle
 
-        if ACTIVITY.lower() in ["playing", "spielt", "game", "play"]:
-            activity = Game(name=arg1+" "+arg2)
-        elif ACTIVITY.lower() in ["streaming", "streamt", "stream", "live", "twitch"]:
-            activity = Streaming(url="https://twitch.tv/"+arg1, name=arg2)
-        elif ACTIVITY.lower() in ["listening", "listen", "hört", "hören", "song"]:
-            activity = Activity(
-                type=ActivityType.listening, name=arg1+" "+arg2)
-        elif ACTIVITY.lower() in ["watching", "watch", "schaut", "video"]:
-            activity = Activity(type=ActivityType.watching, name=arg1+" "+arg2)
+        if new_activity.lower() in ["playing", "spielt", "game", "play"]:
+            activity = discord.Game(name=arg1+" "+arg2)
+        elif new_activity.lower() in ["streaming", "streamt", "stream", "live", "twitch"]:
+            activity = discord.Streaming(url="https://twitch.tv/"+arg1, name=arg2)
+        elif new_activity.lower() in ["listening", "listen", "hört", "hören", "song"]:
+            activity = discord.Activity(
+                type=discord.ActivityType.listening, name=arg1+" "+arg2)
+        elif new_activity.lower() in ["watching", "watch", "schaut", "video"]:
+            activity = discord.Activity(type=discord.ActivityType.watching, name=arg1+" "+arg2)
 
         if status is not None or activity is not None:
             await ctx.bot.change_presence(status=status, activity=activity)
