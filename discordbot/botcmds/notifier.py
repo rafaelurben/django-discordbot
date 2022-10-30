@@ -22,48 +22,48 @@ class Notifier(commands.Cog):
 
     #
 
-    async def notifier_update(self, frequency:str, initial:bool=False):
-        print("[Notifier] - Fetching Notifier Sources...")
+    async def notifier_update(self, frequency:str):
+        print(f"[Notifier] - Fetching '{frequency}' sources...")
         for source in await DjangoConnection._list(NotifierSource, frequency=frequency):
-            updated, data, targets = await source.fetch_update(initialfetch=initial)
-            if updated:
-                await DjangoConnection._save(source)
+            print(f"[Notifier] - Fetching '{frequency}' source: '{source.url}'...")
 
-                if not initial:
-                    for target in targets:
-                        try:
-                            if target.where_type == "channel":
-                                where = self.bot.get_channel(int(target.where_id)) or await self.bot.fetch_channel(int(target.where_id))
-                            elif target.where_type == "member":
-                                where = self.bot.get_user(int(target.where_id)) or await self.bot.fetch_user(int(target.where_id))
-                            emb = self.bot.getEmbed(
-                                title="Inhalt wurde geändert!",
-                                description=str(data),
-                                authorname=source.name,
-                                authorurl=source.url,
-                                color=self.color,
-                            )
-                            await where.send(embed=emb)
-                        except errors.NotFound:
-                            print(f"[Notifier] Failed to send: {target.where_id} ({target.where_type}) not found!")
+            updated, data, targets = await source.fetch_update()
+            if updated:
+                for target in targets:
+                    try:
+                        if target.where_type == "channel":
+                            where = self.bot.get_channel(int(target.where_id)) or await self.bot.fetch_channel(int(target.where_id))
+                        elif target.where_type == "member":
+                            where = self.bot.get_user(int(target.where_id)) or await self.bot.fetch_user(int(target.where_id))
+                        emb = self.bot.getEmbed(
+                            title="Inhalt wurde geändert!",
+                            description=str(data),
+                            authorname=source.name,
+                            authorurl=source.url,
+                            color=self.color,
+                        )
+                        await where.send(embed=emb)
+                    except errors.NotFound:
+                        print(f"[Notifier] Failed to send: {target.where_id} ({target.where_type}) not found!")
+        print(f"[Notifier] - Fetching '{frequency}' sources done!")
 
     #
 
     @tasks.loop(minutes=1)
     async def notifier_backgroundtasks_minute(self):
-        await self.notifier_update("minute", initial=False)
+        await self.notifier_update("minute")
 
     @notifier_backgroundtasks_minute.before_loop
     async def notifier_backgroundtasks_minute_before(self):
-        await self.notifier_update("minute", initial=True)
+        await self.notifier_update("minute")
 
     @tasks.loop(hours=1)
     async def notifier_backgroundtasks_hour(self):
-        await self.notifier_update("hour", initial=False)
+        await self.notifier_update("hour")
 
     @notifier_backgroundtasks_hour.before_loop
     async def notifier_backgroundtasks_hour_before(self):
-        await self.notifier_update("hour", initial=True)
+        await self.notifier_update("hour")
 
     #
 

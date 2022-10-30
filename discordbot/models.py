@@ -781,21 +781,21 @@ class NotifierSource(models.Model):
     last_hash = models.CharField("Letzter Hash", max_length=32, editable=False)
 
     @sync_to_async
-    def fetch_update(self, initialfetch=False):
-        # Initialfetch being true means that the hash will return a new value
-        # even if there was no change. (after (re)start)
+    def fetch_update(self) -> (bool, str, list):
+        "Fetches the source and returns a tuple of (updated?, data, matched_targets)"
 
-        data = HTMLCleaner.from_url(self.url)
-        thishash = str(hash(data))
-        if thishash != str(self.last_hash):
-            self.last_hash = thishash
+        cleaner = HTMLCleaner.from_url(self.url)
+        new_hash = cleaner.get_hash_str()
+        last_hash = str(self.last_hash)
+        if new_hash != last_hash:
+            self.last_hash = new_hash
+            self.save()
 
-            if initialfetch:
-                return True, True, True
-            else:
+            if last_hash != "": # Don't send on first fetch
+                data = cleaner.get_data()
                 targets = [t for t in self.targets.all() if t.check_regex(data)]
                 return True, data, targets
-        return False, False, False
+        return False, "", []
 
     def __str__(self):
         return self.name
