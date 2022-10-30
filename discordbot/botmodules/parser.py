@@ -76,7 +76,6 @@ class HTMLCleaner(HTMLParserOriginal):
         elif tag in ["a"]:
             data = " "
             href = attrs.get("href", "")
-            print("URL", href, self.options)
             if href.startswith("/") and "base_url" in self.options:
                 href = self.options["base_url"] + href
             self.__link_url = href
