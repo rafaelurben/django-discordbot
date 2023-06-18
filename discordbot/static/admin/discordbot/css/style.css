@@ -1,6 +1,6 @@
 @import "colors-discordbot.css";
 
-:root {
+html[data-theme="light"], html[data-theme="dark"], :root {
     --primary: var(--discordbot-default);
     --secondary: var(--discordbot-darkest);
     --link-fg: var(--discordbot-dark);
