@@ -6,6 +6,6 @@ opuslib==3.0.1
 ffmpeg==1.4
 fuzzywuzzy[speedup]==0.18.0
 youtube-dl==2021.12.17
-rich==13.5.1
+rich==13.5.2
 tqdm==4.65.0
 dnspython==2.4.1
