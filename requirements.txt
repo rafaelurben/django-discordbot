@@ -7,5 +7,5 @@ ffmpeg==1.4
 fuzzywuzzy[speedup]==0.18.0
 youtube-dl==2021.12.17
 rich==13.5.1
-tqdm==4.65.0
+tqdm==4.65.2
 dnspython==2.4.1
