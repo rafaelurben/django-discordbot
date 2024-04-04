@@ -1,4 +1,4 @@
-Django==5.0.3
+Django==5.0.4
 gunicorn==21.2.0
 requests==2.31.0
 discord.py[speed,voice]==2.3.2
