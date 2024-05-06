@@ -44,6 +44,7 @@ class Owneronly(commands.Cog):
         await msg.edit(embed=emb)
         print("[Bot] - Reload completed!")
         await self.bot.tree.sync()
+        print("[Bot] - Tree synced!")
 
     @commands.command(
         brief="Stoppe den Bot",
@@ -51,7 +52,7 @@ class Owneronly(commands.Cog):
     @commands.is_owner()
     async def stopbot(self, ctx):
         await ctx.sendEmbed(title="Stop", fields=[("Status", "Gestoppt")])
-        await self.bot.logout()
+        await self.bot.close()
 
     @commands.command(
         brief="Ändere den Status des Bots",
