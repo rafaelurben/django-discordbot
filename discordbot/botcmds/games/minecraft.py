@@ -1,60 +1,72 @@
 # pylint: disable=no-member
 
 import base64
-import datetime
+
+import discord
+import json
 import requests
+from discord import app_commands
 from discord.ext import commands
 
+from discordbot import utils
 from discordbot.errors import ErrorMessage
 
 
 class MinecraftAPI:
     @classmethod
-    def getProfile(cls, NAME: str):
+    def get_uuid(cls, name: str):
         r = requests.get(
-            'https://api.mojang.com/users/profiles/minecraft/' + NAME)
-        if not r.status_code == 204:
-            return r.json()
-        else:
+            'https://api.mojang.com/users/profiles/minecraft/' + name)
+
+        if r.status_code == 204 or r.status_code == 404:
             raise ErrorMessage(message="Spieler wurde nicht gefunden!")
+        if r.status_code == 400:
+            raise ErrorMessage(message="Ungültiger Spielername!")
+        if r.status_code == 429:
+            raise ErrorMessage(message="Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
+
+        return r.json()["id"]
 
     @classmethod
-    def getProfiles(cls, UUID: str):
+    def get_name(cls, uuid: str):
         r = requests.get(
-            'https://api.mojang.com/user/profiles/' + str(UUID) + '/names')
-        if not r.status_code == 204:
-            data = r.json()
-            for i in data:
-                if "changedToAt" in i:
-                    i["changedToAt"] = datetime.datetime.fromtimestamp(
-                        int(i["changedToAt"]) / 1000)
-            return data
-        else:
-            raise ErrorMessage(message="UUID wurde nicht gefunden!")
+            'https://api.mojang.com/user/profile/' + uuid)
+
+        if r.status_code == 204 or r.status_code == 404:
+            raise ErrorMessage(message="Spieler wurde nicht gefunden!")
+        if r.status_code == 400:
+            raise ErrorMessage(message="Ungültige UUID!")
+        if r.status_code == 429:
+            raise ErrorMessage(message="Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
+
+        return r.json()["name"]
 
     @classmethod
-    def getSkin(cls, UUID: str):
+    def get_profile(cls, uuid: str):
         r = requests.get(
-            'https://sessionserver.mojang.com/session/minecraft/profile/' + str(UUID))
-        if not r.status_code == 204:
-            data = r.json()
-            if not "error" in data:
-                ppty = data["properties"][0]
-                base64_message = ppty["value"]
-                base64_bytes = base64_message.encode('ascii')
-                message_bytes = base64.b64decode(base64_bytes)
-                message = message_bytes.decode('ascii')
-                dictmessage = eval(message)
-                if not dictmessage["textures"] == {}:
-                    skinurl = dictmessage["textures"]["SKIN"]["url"]
-                    data["skin"] = skinurl
-                else:
-                    data["skin"] = None
-                data.pop("properties")
-                return data
+            'https://sessionserver.mojang.com/session/minecraft/profile/' + str(uuid))
+
+        if r.status_code == 204 or r.status_code == 404:
+            raise ErrorMessage(message="Spieler wurde nicht gefunden!")
+        if r.status_code == 400:
+            raise ErrorMessage(message="Ungültige UUID!")
+        if r.status_code == 429:
+            raise ErrorMessage(message="Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
+
+        data = r.json()
+        if "error" in data:
             raise ErrorMessage(
                 message="Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!")
-        raise ErrorMessage(message="UUID wurde nicht gefunden!")
+
+        ppty = data["properties"][0]
+        base64_message = ppty["value"]
+        base64_bytes = base64_message.encode('ascii')
+        message_bytes = base64.b64decode(base64_bytes)
+        message_string = message_bytes.decode('ascii')
+        message_dict = json.loads(message_string)
+
+        data["textures"] = message_dict.get("textures", None)
+        return data
 
 
 class MinecraftCog(commands.Cog, name="Minecraft"):
@@ -62,95 +74,74 @@ class MinecraftCog(commands.Cog, name="Minecraft"):
         self.bot = bot
         self.color = 0x1f871e
 
-    # Minecraft
+    group = app_commands.Group(name="minecraft", description="Erhalte Infos über Minecraft-Spieler")
 
-    @commands.group(
-        brief="Hauptcommand für alle Minecraft Befehle",
-        description='Erhalte Infos über Minecraft-Spieler',
-        aliases=['mc'],
-        usage="<Unterbefehl> <Argument>"
-    )
-    async def minecraft(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help()
-
-    @minecraft.command(
+    @group.command(
         name="uuid",
-        brief="Erhalte die UUID eines Spielers",
-        aliases=['id'],
-        usage="<Spielername>",
+        description="Erhalte die UUID eines Minecraft-Spielers",
     )
-    async def minecraft_uuid(self, ctx, name):
-        JSON = MinecraftAPI.getProfile(name)
-        EMBED = ctx.getEmbed(title="Minecraft UUID",
-                             fields=[("UUID", JSON["id"], False), ("Aktueller Name", JSON["name"], False)])
-        if "legacy" in JSON:
-            EMBED.add_field(name="Account", value="Alter Account")
-        if "demo" in JSON:
-            EMBED.add_field(name="Account", value="Demo Account")
-        await ctx.send(embed=EMBED)
+    @app_commands.describe(name="Name des Spielers")
+    async def cmd_uuid(self, interaction: discord.Interaction, name: str):
+        await interaction.response.defer()
 
-    @minecraft.command(
-        name="names",
-        brief="Erhalte alte Namen eines Spielers",
-        aliases=['namen', 'name'],
-        usage="<UUID>",
+        uuid = MinecraftAPI.get_uuid(name)
+        embed = utils.getEmbed(title="Minecraft Spieler",
+                               fields=[("Name", name, False), ("UUID", uuid, False)])
+        await interaction.followup.send(embed=embed)
+
+    @group.command(
+        name="name",
+        description="Erhalte den Namen eines Minecraft-Spielers mithilfe seiner UUID",
     )
-    async def minecraft_names(self, ctx, uuid):
-        if len(uuid) != 32:
-            raise ErrorMessage("Eine UUID ist genau 32 Zeichen lang!")
+    @app_commands.describe(uuid="UUID des Spielers")
+    async def cmd_uuid(self, interaction: discord.Interaction, uuid: str):
+        await interaction.response.defer()
 
-        JSON = MinecraftAPI.getProfiles(uuid)
-        EMBED = ctx.getEmbed(title="Minecraft Namen", description="Sortierung: Von neu bis alt.")
-        for i in JSON[::-1]:
-            if "changedToAt" in i:
-                EMBED.add_field(name="Name seit " + str(i["changedToAt"]), value=i["name"], inline=False)
-            else:
-                EMBED.add_field(name="Ursprünglicher Name", value=i["name"], inline=False)
-        await ctx.send(embed=EMBED)
+        name = MinecraftAPI.get_name(uuid)
+        embed = utils.getEmbed(title="Minecraft Spieler",
+                               fields=[("Name", name, False), ("UUID", uuid, False)])
+        await interaction.followup.send(embed=embed)
 
-    @minecraft.command(
-        name="skin",
-        brief="Erhalte den Skin eines Spielers",
-        aliases=[],
-        usage="<UUID>",
+    @group.command(
+        name="playerinfo",
+        description="Erhalte alle Infos über einen Minecraft-Spieler",
     )
-    async def minecraft_skin(self, ctx, uuid):
-        if len(uuid) != 32:
-            raise ErrorMessage("Eine UUID ist genau 32 Zeichen lang!")
+    @app_commands.describe(name_or_uuid="Name oder UUID des Spielers")
+    @app_commands.rename(name_or_uuid="player")
+    async def cmd_playerinfo(self, interaction: discord.Interaction, name_or_uuid: str):
+        await interaction.response.defer()
 
-        JSON = MinecraftAPI.getSkin(uuid)
-        EMBED = ctx.getEmbed(title="Minecraft Skin", fields=[("Aktueller Name", JSON["name"]), ("UUID", JSON["id"])])
-        if JSON["skin"] is not None:
-            EMBED.set_thumbnail(url=JSON["skin"])
+        if len(name_or_uuid) == 32:  # uuid
+            uuid = name_or_uuid
+        elif 1 <= len(name_or_uuid) <= 25:  # player name
+            uuid = MinecraftAPI.get_uuid(name_or_uuid)
         else:
-            EMBED.add_field(name="Skin", value="Wurde nicht gefunden. (Steve/Alex)", inline=False)
-        await ctx.send(embed=EMBED)
+            raise ErrorMessage("Ungültiger Name oder UUID!")
 
-    @minecraft.command(
-        name="player",
-        brief="Erhalte alle Infos über einen Spieler",
-        description="Dies ist eine Zusammenfassung von UUID, Namen und Skin",
-        aliases=['spieler'],
-        usage="<Spielername>",
-    )
-    async def minecraft_player(self, ctx, name):
-        JSON = MinecraftAPI.getProfile(name)
-        UUID = JSON["id"]
-        EMBED = ctx.getEmbed(title="Minecraft Spieler", fields=[("UUID", UUID)], inline=False)
-        if "legacy" in JSON:
-            EMBED.add_field(name="Account", value="Alter Account")
-        if "demo" in JSON:
-            EMBED.add_field(name="Account", value="Demo Account")
-        JSON2 = MinecraftAPI.getProfiles(UUID)
-        for i in JSON2[::-1]:
-            if "changedToAt" in i:
-                EMBED.add_field(name="Name seit " + str(i["changedToAt"]), value=i["name"], inline=False)
-            else:
-                EMBED.add_field(name="Ursprünglicher Name", value=i["name"], inline=False)
-        JSON3 = MinecraftAPI.getSkin(UUID)
-        if JSON3["skin"] is not None:
-            EMBED.set_thumbnail(url=JSON3["skin"])
-        else:
-            EMBED.add_field(name="Skin", value="Wurde nicht gefunden. (Steve/Alex)", inline=False)
-        await ctx.send(embed=EMBED)
+        embed = utils.getEmbed(title="Minecraft Spieler")
+
+        data = MinecraftAPI.get_profile(uuid)
+        embed.add_field(name="Name", value=data["name"], inline=False)
+        embed.add_field(name="UUID", value=data["id"], inline=False)
+        if "legacy" in data:
+            embed.add_field(name="Account-Typ", value="Legacy Account (2010-2012)")
+        if "demo" in data:
+            embed.add_field(name="Account-Typ", value="Demo Account")
+
+        textures = data["textures"]
+        if "SKIN" in textures:
+            if "metadata" in textures["SKIN"] and "model" in textures["SKIN"]["metadata"]:
+                if textures["SKIN"]["metadata"]["model"] == "slim":
+                    embed.add_field(name="Skin-Typ", value="Alex (schlank)", inline=False)
+                else:
+                    embed.add_field(name="Skin-Typ", value="Steve (klassisch)", inline=False)
+
+            if "url" in textures["SKIN"]:
+                data["skin_url"] = textures["SKIN"]["url"]
+                embed.add_field(name="Skin", value=f"[Skin]({textures['SKIN']['url']})", inline=False)
+                embed.set_thumbnail(url=textures['SKIN']['url'])
+
+        if "CAPE" in textures:
+            embed.add_field(name="Skin", value=f"[Cape]({textures['CAPE']['url']})", inline=False)
+
+        await interaction.followup.send(embed=embed)
