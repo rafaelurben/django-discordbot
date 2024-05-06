@@ -1,18 +1,14 @@
 # pylint: disable=no-member
 
-from discord.ext import commands, tasks
-from discord import Embed, utils, PermissionOverwrite, Color, NotFound, User, Member, ChannelType, DiscordException
-
-from django.utils import timezone
-
-from datetime import timedelta
-
-from discordbot.models import VierGewinntGame, VIERGEWINNT_NUMBER_EMOJIS
-from discordbot.botmodules.serverdata import DjangoConnection
-from discordbot.botmodules import apis
-from discordbot.errors import ErrorMessage, SuccessMessage
-
 import typing
+
+from discord import PermissionOverwrite, NotFound, User, Member, DiscordException
+from discord.ext import commands
+
+from discordbot.botmodules import apis
+from discordbot.botmodules.serverdata import DjangoConnection
+from discordbot.errors import ErrorMessage, SuccessMessage
+from discordbot.models import VierGewinntGame, VIERGEWINNT_NUMBER_EMOJIS
 
 #####
 
@@ -88,89 +84,6 @@ class Games(commands.Cog):
                         if game.finished:
                             for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
                                 await message.remove_reaction(emoji, self.bot.user)
-
-
-    # Fortnite
-
-    @commands.group(
-        brief="Hauptcommand für alle Fortnite Befehle",
-        description='Erhalte aktuelle Fortnite-Infos',
-        aliases=['fn'],
-        usage="<Unterbefehl> [Argument(e)]"
-    )
-    async def fortnite(self, ctx):  
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help()
-
-    @fortnite.command(
-        name="store",
-        brief="Erhalte den aktuellen Fortnite Store",
-        aliases=['shop']
-    )
-    async def fortnite_store(self, ctx):
-        JSON = apis.Fortnite.getStore()
-
-        if ctx.channel.type == ChannelType.private or ctx.channel.permissions_for(ctx.author).manage_messages:
-            receiver = ctx.channel
-        else:
-            receiver = ctx.author
-            await ctx.sendEmbed(
-                title="Fortnite Item Shop",
-                description="Please check your direct messages.",
-                color=0x1f871e
-            )
-
-        emb = ctx.getEmbed(
-            title="Fortnite Item Shop",
-            authorurl="http://fortnitetracker.com/",
-            authorname="Powered by Fortnitetracker"
-        )
-        await receiver.send(embed=emb)
-        for i in range(len(JSON)):
-            emb = ctx.getEmbed(
-                title=str(JSON[i]["name"]),
-                description=("Rarity: %s \n vBucks: %s" % (JSON[i]["rarity"],JSON[i]["vBucks"])),
-                thumbnailurl=str(JSON[i]["imageUrl"]),
-                footertext="",
-                footerurl="",
-            )
-            await receiver.send(embed=emb)
-
-    @fortnite.command(
-        name="challenges",
-        brief="Erhalte die aktuellen Challenges",
-        aliases=[]
-    )
-    async def fortnite_challenges(self, ctx):
-        JSON = apis.Fortnite.getChallenges()
-        await ctx.sendEmbed(
-            title="Fortnite Challenges",
-            fields=[((JSON[i]["metadata"][1]["value"]+" ("+JSON[i]["metadata"][3]["value"]+")"),(JSON[i]["metadata"][5]["value"]+" Battlepassstars")) for i in range(len(JSON))],
-            thumbnailurl=str(JSON[0]["metadata"][4]["value"]),
-            authorurl="http://fortnitetracker.com/",
-            authorname="Powered by Fortnitetracker",
-            inline=False
-        )
-
-    @fortnite.command(
-        name="stats",
-        brief="Erhalte die Stats eines Spielers",
-        aliases=[],
-        help="Mögliche Plattformen: [kbm, gamepad, mouse]",
-        usage="<Plattform> <Spielername>",
-    )
-    async def fortnite_stats(self, ctx, platform:str, playername:str):
-        JSON = apis.Fortnite.getStats(platform, playername)
-        try:
-            await ctx.sendEmbed(
-                title="Fortnite Stats von "+JSON["epicUserHandle"]+" auf "+JSON["platformNameLong"],
-                description=("Account Id: "+JSON["accountId"]),
-                fields=[(JSON["lifeTimeStats"][i]["key"], JSON["lifeTimeStats"][i]["value"]) for i in range(len(JSON["lifeTimeStats"]))],
-                authorurl="http://fortnitetracker.com/",
-                authorname="Powered by Fortnitetracker"
-            )
-        except KeyError:
-            raise ErrorMessage(message="Spieler wurde auf der angegebenen Platform nicht gefunden!")
 
 
     # Minecraft

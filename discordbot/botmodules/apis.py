@@ -3,7 +3,6 @@
 import datetime
 import requests
 import base64
-import os
 
 from discordbot.errors import ErrorMessage
 
@@ -56,36 +55,3 @@ class Minecraft():
                 message="Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!")
         raise ErrorMessage(message="UUID wurde nicht gefunden!")
 
-
-class Fortnite():
-    @classmethod
-    def __get_headers(cls):
-        key = os.environ.get("TRNAPIKEY", None)
-        if key is None:
-            raise ErrorMessage(
-                message="Der Fortnite-Befehl ist leider deaktiviert (nicht konfiguriert)!")
-        return {'TRN-Api-Key': key}
-
-    @classmethod
-    def __get_json(cls, url, **kwargs):
-        try:
-            r = requests.get(url, headers=cls.__get_headers())
-            j = r.json(**kwargs)
-            return j
-        except (KeyError, ValueError) as e:
-            print("[Fortnite API] - Error:", e)
-
-    @classmethod
-    def getStore(cls):
-        return cls.__get_json('https://api.fortnitetracker.com/v1/store')
-
-    @classmethod
-    def getChallenges(cls):
-        return cls.__get_json('https://api.fortnitetracker.com/v1/challenges')["items"]
-
-    @classmethod
-    def getStats(cls, platform: str, playername: str):
-        if platform.lower() in ["kbm", "gamepad", "touch"]:
-            return cls.__get_json(("https://api.fortnitetracker.com/v1/profile/%s/%s" % (platform.lower(), playername)))
-        raise ErrorMessage("Die Plattform '"+platform +
-                           "' existiert nicht! Benutze kbm, gamepad oder touch!")
