@@ -2,37 +2,21 @@
 
 import typing
 
-from discord import PermissionOverwrite, NotFound, User, Member, DiscordException
+from discord import NotFound, User, Member, DiscordException
 from discord.ext import commands
 
-from discordbot.botmodules import apis
 from discordbot.botmodules.serverdata import DjangoConnection
 from discordbot.errors import ErrorMessage, SuccessMessage
 from discordbot.models import VierGewinntGame, VIERGEWINNT_NUMBER_EMOJIS
 
-#####
-
-OVERRIDE_MUTED = PermissionOverwrite(
-    read_messages=True, connect=True, speak=False, use_voice_activation=True)
-OVERRIDE_TALK = PermissionOverwrite(
-    read_messages=True, connect=True, speak=True, use_voice_activation=True)
-
-
-ALIVE = '❤'
-DEAD = '💀'
 UNKNOWN = '❓'
-
 YES = '✅'
 NO = '❌'
 
-DELETE = '❌'
-
 RUNNING = '⏰'
 
-#####
 
-
-class Games(commands.Cog):
+class Connect4Cog(commands.Cog, name="Vier gewinnt"):
     def __init__(self, bot):
         self.bot = bot
         self.color = 0x1f871e
@@ -48,7 +32,8 @@ class Games(commands.Cog):
 
                 ### VierGewinnt
 
-                if (emoji in VIERGEWINNT_NUMBER_EMOJIS) and await DjangoConnection._has(VierGewinntGame, message_id=payload.message_id):
+                if (emoji in VIERGEWINNT_NUMBER_EMOJIS) and await DjangoConnection._has(VierGewinntGame,
+                                                                                        message_id=payload.message_id):
                     try:
                         await message.remove_reaction(emoji, payload.member)
                     except (AttributeError, DiscordException):
@@ -85,109 +70,6 @@ class Games(commands.Cog):
                             for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
                                 await message.remove_reaction(emoji, self.bot.user)
 
-
-    # Minecraft
-
-    @commands.group(
-        brief="Hauptcommand für alle Minecraft Befehle",
-        description='Erhalte Infos über Minecraft-Spieler',
-        aliases=['mc'],
-        usage="<Unterbefehl> <Argument>"
-    )
-    async def minecraft(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help()
-
-    @minecraft.command(
-        name="uuid",
-        brief="Erhalte die UUID eines Spielers",
-        aliases=['id'],
-        usage="<Spielername>",
-    )
-    async def minecraft_uuid(self, ctx, name):
-        api = apis.Minecraft
-
-        JSON = api.getProfile(name)
-        EMBED = ctx.getEmbed(title="Minecraft UUID", fields=[("UUID", JSON["id"], False),("Aktueller Name", JSON["name"], False)])
-        if "legacy" in JSON:
-            EMBED.add_field(name="Account",value="Alter Account")
-        if "demo" in JSON:
-            EMBED.add_field(name="Account",value="Demo Account")
-        await ctx.send(embed=EMBED)
-
-    @minecraft.command(
-        name="names",
-        brief="Erhalte alte Namen eines Spielers",
-        aliases=['namen', 'name'],
-        usage="<UUID>",
-    )
-    async def minecraft_names(self, ctx, uuid):
-        api = apis.Minecraft
-
-        if len(uuid) != 32:
-            raise ErrorMessage("Eine UUID ist genau 32 Zeichen lang!")
-
-        JSON = api.getProfiles(uuid)
-        EMBED = ctx.getEmbed(title="Minecraft Namen", description="Sortierung: Von neu bis alt.")
-        for i in JSON[::-1]:
-            if "changedToAt" in i:
-                EMBED.add_field(name="Name seit "+str(i["changedToAt"]),value=i["name"], inline=False)
-            else:
-                EMBED.add_field(name="Ursprünglicher Name",value=i["name"], inline=False)
-        await ctx.send(embed=EMBED)
-
-    @minecraft.command(
-        name="skin",
-        brief="Erhalte den Skin eines Spielers",
-        aliases=[],
-        usage="<UUID>",
-    )
-    async def minecraft_skin(self, ctx, uuid):
-        api = apis.Minecraft
-
-        if len(uuid) != 32:
-            raise ErrorMessage("Eine UUID ist genau 32 Zeichen lang!")
-
-        JSON = api.getSkin(uuid)
-        EMBED = ctx.getEmbed(title="Minecraft Skin", fields=[("Aktueller Name", JSON["name"]), ("UUID", JSON["id"])])
-        if JSON["skin"] is not None:
-            EMBED.set_thumbnail(url=JSON["skin"])
-        else:
-            EMBED.add_field(name="Skin",value="Wurde nicht gefunden. (Steve/Alex)", inline=False)
-        await ctx.send(embed=EMBED)
-
-    @minecraft.command(
-        name="player",
-        brief="Erhalte alle Infos über einen Spieler",
-        description="Dies ist eine Zusammenfassung von UUID, Namen und Skin",
-        aliases=['spieler'],
-        usage="<Spielername>",
-    )
-    async def minecraft_player(self, ctx, name):
-        api = apis.Minecraft
-        
-        JSON = api.getProfile(name)
-        UUID = JSON["id"]
-        EMBED = ctx.getEmbed(title="Minecraft Spieler", fields=[("UUID", UUID)], inline=False)
-        if "legacy" in JSON:
-            EMBED.add_field(name="Account",value="Alter Account")
-        if "demo" in JSON:
-            EMBED.add_field(name="Account",value="Demo Account")
-        JSON2 = api.getProfiles(UUID)
-        for i in JSON2[::-1]:
-            if "changedToAt" in i:
-                EMBED.add_field(name="Name seit "+str(i["changedToAt"]),value=i["name"], inline=False)
-            else:
-                EMBED.add_field(name="Ursprünglicher Name",value=i["name"], inline=False)
-        JSON3 = api.getSkin(UUID)
-        if JSON3["skin"] is not None:
-            EMBED.set_thumbnail(url=JSON3["skin"])
-        else:
-            EMBED.add_field(name="Skin",value="Wurde nicht gefunden. (Steve/Alex)", inline=False)
-        await ctx.send(embed=EMBED)
-
-    # VierGewinnt
-
     @commands.group(
         brief="Hauptcommand für alle VierGewinnt Befehle",
         description='Spiele Vier Gewinnt direkt in Discord.',
@@ -214,7 +96,9 @@ class Games(commands.Cog):
                 description=f"Duell gegen {user.mention} wird erstellt..."
             )
 
-            game = await VierGewinntGame.creategame(width=width, height=height, channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=str(user.id))
+            game = await VierGewinntGame.creategame(width=width, height=height, channel_id=str(ctx.channel.id),
+                                                    message_id=str(msg.id), player_1_id=str(ctx.author.id),
+                                                    player_2_id=str(user.id))
 
             embed = ctx.bot.getEmbed(
                 title=f"Vier Gewinnt (#{game.pk})",
@@ -227,7 +111,8 @@ class Games(commands.Cog):
             for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
                 await msg.add_reaction(emoji)
         else:
-            raise ErrorMessage("Du kannst nicht gegen dich selbst oder Bots spielen... Wenn du einen Bot herausfordern möchtest, benutze bitte `/viergewinnt challenge`!")
+            raise ErrorMessage(
+                "Du kannst nicht gegen dich selbst oder Bots spielen... Wenn du einen Bot herausfordern möchtest, benutze bitte `/viergewinnt challenge`!")
 
     @viergewinnt.command(
         name="challenge",
@@ -242,7 +127,9 @@ class Games(commands.Cog):
             description=f"Challenge gegen einen Bot wird erstellt..."
         )
 
-        game = await VierGewinntGame.creategame(width=width, height=height, channel_id=str(ctx.channel.id), message_id=str(msg.id), player_1_id=str(ctx.author.id), player_2_id=None)
+        game = await VierGewinntGame.creategame(width=width, height=height, channel_id=str(ctx.channel.id),
+                                                message_id=str(msg.id), player_1_id=str(ctx.author.id),
+                                                player_2_id=None)
 
         embed = ctx.bot.getEmbed(
             title=f"Vier Gewinnt (#{game.pk})",
@@ -263,31 +150,37 @@ class Games(commands.Cog):
     )
     async def viergewinnt_games(self, ctx, user: typing.Union[User, Member] = None):
         user = user or ctx.author
-        challenges = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",), player_1_id=str(user.id), player_2_id__isnull=True)
-        duels_created = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",), player_1_id=str(user.id), player_2_id__isnull=False)
-        duels_invited = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",), player_2_id=str(user.id))
+        challenges = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",), player_1_id=str(user.id),
+                                              player_2_id__isnull=True)
+        duels_created = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",),
+                                                 player_1_id=str(user.id), player_2_id__isnull=False)
+        duels_invited = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",),
+                                                 player_2_id=str(user.id))
         challengetext = "" if challenges else "Noch keine Challenges erstellt."
         for g in challenges:
             challengetext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
-                              if g.finished else RUNNING) + f" ({ g.id }) BOT " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
+                              if g.finished else RUNNING) + f" ({g.id}) BOT " + g.time_created.strftime(
+                "%Y/%m/%d - %H:%M %Z") + "\n"
         duelscreatedtext = "" if duels_created else "Noch keine Duelle erstellt."
         for g in duels_created:
-            duelscreatedtext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO) 
-                                 if g.finished else RUNNING) + f" ({ g.id }) <@{ g.player_2_id }> " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
+            duelscreatedtext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
+                                 if g.finished else RUNNING) + f" ({g.id}) <@{g.player_2_id}> " + g.time_created.strftime(
+                "%Y/%m/%d - %H:%M %Z") + "\n"
         duelsinvitedtext = "" if duels_invited else "Noch zu keinem Duell eingeladen."
         for g in duels_invited:
             duelsinvitedtext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
-                                 if g.finished else RUNNING) + f" ({ g.id }) <@{ g.player_1_id }> " + g.time_created.strftime("%Y/%m/%d - %H:%M %Z") + "\n"
+                                 if g.finished else RUNNING) + f" ({g.id}) <@{g.player_1_id}> " + g.time_created.strftime(
+                "%Y/%m/%d - %H:%M %Z") + "\n"
 
         await ctx.sendEmbed(
             title="VierGewinnt Spiele",
-            description="Vier Gewinnt Spiele von "+user.mention,
+            description="Vier Gewinnt Spiele von " + user.mention,
             color=0x0078D7,
             inline=False,
             fields=[
-                ("Challenges", challengetext+"\u200b"), 
-                ("Erstellte Spiele", duelscreatedtext+"\u200b"), 
-                ("Eingeladene Spiele", duelsinvitedtext+"\u200b")
+                ("Challenges", challengetext + "\u200b"),
+                ("Erstellte Spiele", duelscreatedtext + "\u200b"),
+                ("Eingeladene Spiele", duelsinvitedtext + "\u200b")
             ]
         )
 
@@ -301,7 +194,7 @@ class Games(commands.Cog):
     async def viergewinnt_reset(self, ctx, user: typing.Union[User, Member] = None):
         user = ctx.author if user is None else user if await self.bot.is_owner(user) else ctx.author
         await ctx.database._listdelete(VierGewinntGame, player_1_id=str(user.id))
-        raise SuccessMessage(f"Die VierGewinnt Spiele von { user.mention } wurden erfolgreich gelöscht!")
+        raise SuccessMessage(f"Die VierGewinnt Spiele von {user.mention} wurden erfolgreich gelöscht!")
 
     @viergewinnt.command(
         name="resume",
@@ -341,7 +234,7 @@ class Games(commands.Cog):
                         await message.edit(embed=self.bot.getEmbed(
                             title=f"Vier Gewinnt (#{game.pk})",
                             color=0x0078D7,
-                            description="Dieses Spiel wurde in einer neuen Nachricht weitergeführt!\n\n"+game.get_description()
+                            description="Dieses Spiel wurde in einer neuen Nachricht weitergeführt!\n\n" + game.get_description()
                         ))
 
                         for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
@@ -356,6 +249,3 @@ class Games(commands.Cog):
                 )
         else:
             raise ErrorMessage("Ein Spiel mit dieser ID konnte nicht gefunden werden! Möglicherweise gelöscht?")
-
-async def setup(bot):
-    await bot.add_cog(Games(bot))
