@@ -22,8 +22,6 @@ DEBUG_NO_RAISE_FOR = (
     commands.CheckFailure,
 )
 
-DOMAIN = _s("DOMAIN", None)
-
 # Discordbot Config
 
 ALLOW_BOTS = _s("ALLOW_BOTS", False)
@@ -95,7 +93,8 @@ REGELN = {
         ],
     "4) NSFW":
         [
-            "Anstössige Inhalte ausserhalb NSFW-Kanälen werden sofort gelöscht und der Autor mit einem Bann/Mute bestraft!",
+            "Anstössige Inhalte ausserhalb NSFW-Kanälen werden sofort gelöscht und der Autor mit einem Bann/Mute "
+            "bestraft!",
         ],
     "5) Sicherheit":
         [

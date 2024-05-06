@@ -1,7 +1,5 @@
 # pylint: disable=no-member
 
-from asgiref.sync import sync_to_async
-
 from discord.ext import commands, tasks
 from discord import Embed, utils, PermissionOverwrite, Color, NotFound, User, Member, ChannelType, DiscordException
 
@@ -9,14 +7,11 @@ from django.utils import timezone
 
 from datetime import timedelta
 
-from discordbot.models import AmongUsGame, AMONGUS_PLAYER_COLORS, AMONGUS_EMOJI_COLORS, VierGewinntGame, VIERGEWINNT_NUMBER_EMOJIS
+from discordbot.models import VierGewinntGame, VIERGEWINNT_NUMBER_EMOJIS
 from discordbot.botmodules.serverdata import DjangoConnection
 from discordbot.botmodules import apis
 from discordbot.errors import ErrorMessage, SuccessMessage
 
-import requests
-import os
-import asyncio
 import typing
 
 #####
@@ -38,34 +33,13 @@ DELETE = '❌'
 
 RUNNING = '⏰'
 
-AMONGUS_TRACKER_INSTALL = """Konfiguriere den Tracker mit folgenden Daten:
-                
-Der Tracker kann [hier](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot-extras/amongus/tracker.py) heruntergeladen werden. Er funktioniert vorerst nur für Windows uns ist (noch) buggy!
-Bisher ist er auch auf die Bildschirmgrösse 1920x1080p beschränkt. Getestet wurde mit LDPlayer im Vollbildmodus.
-Benötigt werden Python, pip und alle [requirements](https://raw.githubusercontent.com/rafaelurben/django-discordbot/master/discordbot-extras/amongus/requirements.txt)."""
-
-amongus_last_update = timezone.now()-timedelta(days=1)
-
 #####
-
-async def getAmongUsCategory(guild):
-    category = utils.get(guild.categories, name="AmongUs")
-    if not category:
-        categoryoverwrites = {guild.default_role: PermissionOverwrite(read_messages=True, send_messages=False, connect=True, speak=True, use_voice_activation=True)}
-        category = await guild.create_category_channel(name="AmongUs", overwrites=categoryoverwrites, reason="Bereite AmongUs-Kanäle vor...")
-    return category
 
 
 class Games(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.color = 0x1f871e
-
-        self.amongus_backgroundtasks.start() 
-
-    def cog_unload(self):
-        print("[AmongUs Background Tasks] - Stopped!")
-        self.amongus_backgroundtasks.cancel()
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
@@ -75,22 +49,6 @@ class Games(commands.Cog):
             message = await channel.fetch_message(payload.message_id)
 
             if message.author.id == self.bot.user.id:
-
-                ### AmongUs
-
-                if (emoji in AMONGUS_EMOJI_COLORS or emoji == DELETE) and await DjangoConnection._has(AmongUsGame, text_message_id=payload.message_id):
-                    try:
-                        await message.remove_reaction(emoji, payload.member)
-                    except (DiscordException, AttributeError):
-                        ...
-
-                    game = await DjangoConnection._getAmongUsGame(text_message_id=payload.message_id)
-
-                    if emoji == DELETE:
-                        await game.remove_user(userid=payload.user_id)
-                    else:
-                        c = AMONGUS_EMOJI_COLORS[payload.emoji.name]
-                        await game.set_user(userid=payload.user_id, color=c)
 
                 ### VierGewinnt
 
@@ -314,306 +272,6 @@ class Games(commands.Cog):
         else:
             EMBED.add_field(name="Skin",value="Wurde nicht gefunden. (Steve/Alex)", inline=False)
         await ctx.send(embed=EMBED)
-
-
-
-    # AmongUs
-    ## AmongUs Tasks
-
-    @tasks.loop(seconds=0.5)
-    async def amongus_backgroundtasks(self):
-        def log(*args):
-            print('[AmongUs Background Tasks] -', *args)
-
-        global amongus_last_update
-        games = await DjangoConnection._list(AmongUsGame, last_edited__gt=amongus_last_update)
-        amongus_last_update = timezone.now()
-
-        for game in games:
-            try:
-                log(f'Updating AmongUs #{ game.pk }...')
-
-                # Get channels / Create channels
-
-                textchannel = self.bot.get_channel(int(game.text_channel_id))
-                voicechannel = self.bot.get_channel(int(game.voice_channel_id))
-
-                if voicechannel is None:
-                    log(f"- Deleted AmongUs #{ game.pk } because voicechannel was not found!")
-                    await DjangoConnection._delete(game)
-                    if textchannel is not None:
-                        await textchannel.delete()
-                    continue
-                elif textchannel is None:
-                    log(f"- Created new textchannel for AmongUs #{ game.pk }!")
-                    category = await getAmongUsCategory(voicechannel.guild)
-                    textchannel = await category.create_text_channel(name=f"amongus-{ game.pk }", reason="Textkanal war nicht mehr vorhanden!", topic=f"AmongUs Spiel - ID: { game.pk }")
-                
-                    game.text_channel_id = str(textchannel.id)
-                    await DjangoConnection._save(game)
-
-                try:
-                    msg = await textchannel.fetch_message(int(game.text_message_id))
-                except:
-                    log(f"- Created new message for AmongUs #{ game.pk }!")
-                    embed = self.bot.getEmbed(
-                        title=f"AmongUs Game { game.pk }",
-                        color=0xFEDE29,
-                        footerurl=None
-                    )
-                    msg = await textchannel.send(embed=embed)
-
-                    game.text_message_id = str(msg.id)
-                    await DjangoConnection._save(game)
-
-                    for emoji in AMONGUS_EMOJI_COLORS:
-                        await msg.add_reaction(emoji)
-                    await msg.add_reaction(DELETE)
-
-                guild = textchannel.guild
-
-                # Mute / Unmute
-
-                vss = voicechannel.voice_states
-
-                if game.state_ingame:
-                    if game.state_meeting:
-                        # Unmute alive players
-                        for c in AMONGUS_PLAYER_COLORS:
-                            if getattr(game, f"p_{c}_exists") and getattr(game, f"p_{c}_alive"):
-                                m_id = getattr(game, f"p_{c}_userid")
-                                if m_id and (int(m_id) in vss):
-                                    vs = vss[int(m_id)]
-                                    if vs.mute:
-                                        m = vs.channel.guild.get_member(int(m_id))
-                                        if m is None:
-                                            m = await vs.channel.guild.fetch_member(int(m_id))
-                                        await m.edit(mute=False)
-                    else:
-                        # Mute all players
-                        for m_id in vss:
-                            vs = vss[m_id]
-                            if not vs.mute:
-                                m = vs.channel.guild.get_member(m_id)
-                                if m is None:
-                                    m = await vs.channel.guild.fetch_member(m_id)
-                                if not m.bot:
-                                    await m.edit(mute=True)
-
-                    # Don't allow new players to speak
-                    overwrites = {
-                        guild.default_role: OVERRIDE_MUTED
-                    }
-                    await voicechannel.edit(overwrites=overwrites)
-                else:
-                    # Unmute all players
-                    for m_id in vss:
-                        vs = vss[m_id]
-                        if vs.mute:
-                            m = vs.channel.guild.get_member(m_id)
-                            if m is None:
-                                m = await vs.channel.guild.fetch_member(m_id)
-                            await m.edit(mute=False)
-
-                    # Allow new players to speak
-                    await voicechannel.edit(sync_permissions=True)
-
-                # Message
-
-                d = game.get_data()
-
-                id = d["id"]
-                last_tracking_data = str(d["last_tracking_data"].strftime("%Y/%m/%d - %H:%M:%S %Z") if d["last_tracking_data"] is not None else NO)
-                last_edited = d["last_edited"].strftime("%Y/%m/%d - %H:%M:%S %Z")
-                code = (d["code"] or "unbekannt")
-                ingame = (YES if d["state"]["ingame"] else NO)
-                inmeeting = (YES if d["state"]["meeting"] else NO)
-
-                p_alive = []
-                p_dead = []
-                p_unknown = []
-
-                for c, i in d["players"].items():
-                    if i["userid"]:
-                        try:
-                            member = self.bot.get_user(int(i["userid"])) or await self.bot.fetch_user(int(i["userid"]))
-                            mention = member.mention
-                        except NotFound:
-                            mention = None
-                    else:
-                        mention = None
-
-                    description = AMONGUS_PLAYER_COLORS[c][2] + " " + c.upper() + " "
-                    description += ("- " + (mention if mention else "") + (" ('"+i["name"]+"')" if i["name"] else "")) if mention or i["name"] else ""
-
-                    if i["exists"]:
-                        if i["alive"]:
-                            p_alive.append("- "+description)
-                        else:
-                            p_dead.append("- "+description)
-                    else:
-                        p_unknown.append("- "+description)
-
-                t_alive = "\n".join(p_alive)
-                t_dead = "\n".join(p_dead)
-                t_unknown = "\n".join(p_unknown)
-
-                embed = self.bot.getEmbed(
-                    title=f"AmongUs Spiel (ID: { id })",
-                    description=(f"""Infos über dieses Spiel
-
-                        Letzte Trackerdaten - { last_tracking_data }  
-                        Letzte Aktualisierung - { last_edited }
-
-                        Code - { code }                  
-
-                        In game - { ingame }          
-                        In meeting - { inmeeting }
-
-                        Spieler:
-                    \u200b"""),
-                    color=0xFEDE29,
-                    inline=False,
-                    fields=[
-                        (f"{ALIVE} Lebend",      
-                         '\u200b\n'+t_alive+'\n\u200b'),
-                        (f"{DEAD} Tot",
-                         '\u200b\n'+t_dead+'\n\u200b'),
-                        (f"{UNKNOWN} Unbekannt",  
-                         '\u200b\n'+t_unknown+'\n\u200b'),
-                    ]
-                )
-                await msg.edit(embed=embed)
-            except Exception as e:
-                log('Error:', e)
-
-    @amongus_backgroundtasks.before_loop
-    async def amongus_backgroundtasks_before(self):
-        print('[AmongUs Background Tasks] - Waiting for bot to be ready...')
-        await self.bot.wait_until_ready()
-        print('[AmongUs Background Tasks] - Started!')
-
-    ## AmongUs Commands
-
-    @commands.group(
-        brief="Hauptcommand für alle AmongUs Befehle",
-        description='Mute und entmute dich und deine Freunde automatisch während eines AmongUs-Spiels.',
-        aliases=['au'],
-        usage="<Unterbefehl> [Argumente]"
-    )
-    @commands.guild_only()
-    async def amongus(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help()
-
-    @amongus.command(
-        name="create",
-        brief="Erstelle ein AmongUs Spiel",
-        aliases=['open', 'add', '+'],
-    )
-    @commands.guild_only()
-    async def amongus_create(self, ctx):
-        if await ctx.database.hasAmongUsGame():
-            game = await ctx.database.getAmongUsGame()
-            textchannel = ctx.guild.get_channel(int(game.text_channel_id))
-            voicechannel = ctx.guild.get_channel(int(game.voice_channel_id))
-            if textchannel and voicechannel:
-                raise ErrorMessage(message=f"Du hast bereits ein AmongUs-Spiel auf diesem Server! (ID { game.pk } - { textchannel.mention })")
-            elif textchannel:
-                raise ErrorMessage(message=f"Du hast bereits ein AmongUs-Spiel auf diesem Server, jedoch konnte der Sprachkanal nicht mehr gefunden werden! Versuche dein Game mit `/au delete` zu löschen. (ID { game.pk } - { textchannel.mention })")
-            else:
-                raise ErrorMessage(message=f"Du hast bereits ein AmongUs-Spiel auf diesem Server, jedoch konnte der Textkanal nicht mehr gefunden werden! (ID { game.pk })")
-        else:
-            category = await getAmongUsCategory(ctx.guild)
-            textchannel = await category.create_text_channel(name=f"au-{ctx.author.name}#{ctx.author.discriminator}", reason="Benutzer hat AmongUs-Spiel erstellt.", topic=f"AmongUs Spiel von {ctx.author.name}#{ctx.author.discriminator}")
-            voicechannel = await category.create_voice_channel(name=f"[AU] - {ctx.author.name}#{ctx.author.discriminator}", reason="Benutzer hat AmongUs-Spiel erstellt.")
-            game = await ctx.database.createAmongUsGame(text_channel_id=str(textchannel.id), voice_channel_id=str(voicechannel.id))
-
-            embed = ctx.getEmbed(
-                title=f"AmongUs Spiel erstellt", 
-                description=AMONGUS_TRACKER_INSTALL,
-                color=0xFEDE29,
-                fields=[
-                    ("Url", str(game.get_tracker_url())),
-                    ("ID", str(game.pk)),
-                    ("API-Key", str(game.api_key)),
-                    ("Kanal", str(textchannel.mention))
-                ]
-            )
-            await ctx.author.send(embed=embed)
-
-    @amongus.command(
-        name="close",
-        brief="Lösche dein AmongUs Spiel",
-        aliases=['delete', 'del', '-'],
-    )
-    @commands.guild_only()
-    async def amongus_close(self, ctx):
-        if await ctx.database.hasAmongUsGame():
-            game = await ctx.database.getAmongUsGame()
-            textchannel = ctx.guild.get_channel(int(game.text_channel_id))
-            voicechannel = ctx.guild.get_channel(int(game.voice_channel_id))
-            if textchannel is not None:
-                await textchannel.delete(reason="AmongUs Spiel wurde gelöscht!")
-            if voicechannel is not None:
-                await voicechannel.delete(reason="AmongUs Spiel wurde gelöscht!")
-
-            id = str(game.pk)
-            await ctx.database._delete(game)
-
-            embed = ctx.getEmbed(
-                title=f"AmongUs Spiel gelöscht! ({ id })",
-                description="Dein AmongUs Spiel wurde erfolgreich gelöscht!",
-                color=0xFEDE29,
-            )
-            await ctx.author.send(embed=embed)
-        else:
-            raise ErrorMessage(message="Du hast kein AmongUs-Spiel auf diesem Server!")
-
-    @amongus.command(
-        name="reset",
-        brief="Setze dein AmongUs Spiel zurück",
-        aliases=[],
-    )
-    @commands.guild_only()
-    async def amongus_reset(self, ctx):
-        if await ctx.database.hasAmongUsGame():
-            game = await ctx.database.getAmongUsGame()
-            voicechannel = ctx.guild.get_channel(int(game.voice_channel_id))
-
-            if voicechannel is None:
-                raise ErrorMessage(message="Der Sprachkanal zu deinem Spiel wurde nicht gefunden. Versuche dein Spiel mit `/amongus close` zu löschen")
-
-            game.reset()
-            await ctx.database._save(game)
-            await voicechannel.edit(sync_permissions=True)
-            raise SuccessMessage("Dein AmongUs Spiel wurde erfolgreich zurückgesetzt!")
-        raise ErrorMessage(message="Du hast kein AmongUs-Spiel auf diesem Server!")
-
-    @amongus.command(
-        name="apikey",
-        brief="Erhalte nochmals die Konfigurationsdaten für den Tracker",
-        aliases=['resend', 'config', 'tracker', 'key'],
-    )
-    @commands.guild_only()
-    async def amongus_apikey(self, ctx):
-        if await ctx.database.hasAmongUsGame():
-            game = await ctx.database.getAmongUsGame()
-
-            embed = ctx.getEmbed(
-                title=f"AmongUs Tracker Konfiguration",
-                description=AMONGUS_TRACKER_INSTALL,
-                color=0xFEDE29,
-                fields=[
-                    ("Url", str(game.get_tracker_url())),
-                    ("ID", str(game.pk)),
-                    ("API-Key", str(game.api_key)),
-                ]
-            )
-            await ctx.author.send(embed=embed)
-        else:
-            raise ErrorMessage("Du hast kein AmongUs Spiel!")
-
 
     # VierGewinnt
 

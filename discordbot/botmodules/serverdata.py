@@ -229,20 +229,3 @@ class DjangoConnection():
     async def deleteReport(self, repid: int):
         server = await self.get_server()
         return await self._getdel(DB_Report, server=server, id=repid)
-
-    # AmongUs
-
-    async def getAmongUsGame(self, **kwargs) -> AmongUsGame:
-        user = await self.get_user()
-        server = await self.get_server()
-        return await self._get(AmongUsGame, creator=user, guild=server, **kwargs)
-
-    async def hasAmongUsGame(self, **kwargs) -> bool:
-        user = await self.get_user()
-        server = await self.get_server()
-        return await self._has(AmongUsGame, creator=user, guild=server, **kwargs)
-
-    async def createAmongUsGame(self, **kwargs) -> AmongUsGame:
-        user = await self.get_user()
-        server = await self.get_server()
-        return await self._create(AmongUsGame, creator=user, guild=server, **kwargs)

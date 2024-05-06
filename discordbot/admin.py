@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Server, User, Report, Member, AmongUsGame, AMONGUS_PLAYER_COLORS, VierGewinntGame, NotifierSource, NotifierTarget
+from .models import Server, User, Report, Member, VierGewinntGame, NotifierSource, NotifierTarget
 
 # General
 
@@ -97,28 +97,6 @@ class UserAdmin(admin.ModelAdmin):
         return False
 
 # Games
-
-
-@admin.register(AmongUsGame)
-class AmongUsGameAdmin(admin.ModelAdmin):
-    list_display = ('id', 'code', 'state_ingame', 'state_meeting', 'creator')
-    ordering = ('code', )
-
-    readonly_fields = ("last_tracking_data", "last_edited",)
-
-    fieldsets = [
-        ('Info', {'fields': ('code', )}),
-        ('Times', {'fields': ('last_tracking_data', 'last_edited')}),
-        ('State', {'fields': ('state_ingame', 'state_meeting', )}),
-        ('Players', {'fields':
-                     tuple((f'p_{c}_name', f'p_{c}_alive', f'p_{c}_exists', f'p_{c}_userid')
-                           for c in AMONGUS_PLAYER_COLORS)
-                     }),
-    ]
-
-    def has_add_permission(self, request):
-        return False
-
 
 @admin.register(VierGewinntGame)
 class VierGewinntAdmin(admin.ModelAdmin):

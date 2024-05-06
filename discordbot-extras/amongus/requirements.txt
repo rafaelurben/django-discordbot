@@ -1,4 +1,0 @@
-requests==2.31.0
-PyAutoGUI==0.9.52
-win10toast==0.9
-rich==10.2.2

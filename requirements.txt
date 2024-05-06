@@ -1,4 +1,4 @@
-Django==5.0.4
+Django==5.0.5
 requests==2.31.0
 discord.py[speed,voice]==2.3.2
 opuslib==3.0.1
@@ -6,5 +6,5 @@ ffmpeg==1.4
 fuzzywuzzy[speedup]==0.18.0
 youtube-dl==2021.12.17
 rich==13.7.1
-tqdm==4.66.2
+tqdm==4.66.4
 dnspython==2.6.1
