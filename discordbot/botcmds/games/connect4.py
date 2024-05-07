@@ -1,10 +1,14 @@
 # pylint: disable=no-member
 
 import typing
+import functools
 
+import discord
 from discord import NotFound, User, Member, DiscordException
+from discord import app_commands
 from discord.ext import commands
 
+from discordbot import utils
 from discordbot.botmodules.serverdata import DjangoConnection
 from discordbot.errors import ErrorMessage, SuccessMessage
 from discordbot.models import VierGewinntGame, VIERGEWINNT_NUMBER_EMOJIS
@@ -16,236 +20,247 @@ NO = '❌'
 RUNNING = '⏰'
 
 
+class Connect4View(discord.ui.View):
+    def __init__(self, game: VierGewinntGame):
+        super().__init__()
+        self.game = game
+
+        for i in range(self.game.width):
+            btn = discord.ui.Button(emoji=VIERGEWINNT_NUMBER_EMOJIS[i])
+            btn.callback = functools.partial(self.btn_callback, col=i)
+            self.add_item(btn)
+
+    def get_game_embed(self):
+        return utils.getEmbed(
+            title=f"Vier Gewinnt (#{self.game.pk})",
+            color=0x0078D7,
+            description=self.game.get_description()
+        )
+
+    async def btn_callback(self, interaction: discord.Interaction, col: int = None):
+        await self.game.arefresh_from_db()
+
+        if not self.game.is_players_turn(str(interaction.user.id)):
+            return await interaction.response.send_message(embed=utils.getEmbed(
+                title="Halt, stopp!",
+                color=0xff0000,
+                description="Du bist nicht an der Reihe!"
+            ), ephemeral=True, delete_after=3)
+
+        if self.game.process(col, interaction.user.id):
+            await self.game.asave()
+            await interaction.response.send_message(YES + " Spielzug erfolgreich!", ephemeral=True, delete_after=3)
+        else:
+            await interaction.response.send_message(NO + " Spielzug fehlgeschlagen!", ephemeral=True, delete_after=3)
+
+        await interaction.message.edit(embed=self.get_game_embed())
+
+        if self.game.is_bots_turn():
+            self.game.process_bot()
+            await self.game.asave()
+            await interaction.message.edit(embed=self.get_game_embed())
+
+        if self.game.finished:
+            await interaction.message.edit(view=None)
+
+
 class Connect4Cog(commands.Cog, name="Vier gewinnt"):
     def __init__(self, bot):
         self.bot = bot
         self.color = 0x1f871e
 
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
-        if not payload.user_id == self.bot.user.id:
-            emoji = payload.emoji.name
-            channel = await self.bot.fetch_channel(payload.channel_id)
-            message = await channel.fetch_message(payload.message_id)
+    group = app_commands.Group(name="connect4", description="Vier gewinnt in Discord")
 
-            if message.author.id == self.bot.user.id:
-
-                ### VierGewinnt
-
-                if (emoji in VIERGEWINNT_NUMBER_EMOJIS) and await DjangoConnection._has(VierGewinntGame,
-                                                                                        message_id=payload.message_id):
-                    try:
-                        await message.remove_reaction(emoji, payload.member)
-                    except (AttributeError, DiscordException):
-                        ...
-
-                    game = await DjangoConnection._get(VierGewinntGame, message_id=payload.message_id)
-
-                    if not game.finished:
-                        n = VIERGEWINNT_NUMBER_EMOJIS.index(emoji)
-
-                        if game.process(n, payload.user_id):
-                            await DjangoConnection._save(game)
-
-                            embed = self.bot.getEmbed(
-                                title=f"Vier Gewinnt (#{game.pk})",
-                                color=0x0078D7,
-                                description=game.get_description()
-                            )
-
-                            await message.edit(embed=embed)
-
-                        if game.process_bot():
-                            await DjangoConnection._save(game)
-
-                            embed = self.bot.getEmbed(
-                                title=f"Vier Gewinnt (#{game.pk})",
-                                color=0x0078D7,
-                                description=game.get_description()
-                            )
-
-                            await message.edit(embed=embed)
-
-                        if game.finished:
-                            for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
-                                await message.remove_reaction(emoji, self.bot.user)
-
-    @commands.group(
-        brief="Hauptcommand für alle VierGewinnt Befehle",
-        description='Spiele Vier Gewinnt direkt in Discord.',
-        aliases=['fourinarow', '4gewinnt', '4inarow', '4row', '4win'],
-        help="Um eine Liste aller VierGewinnt-Befehle zu erhalten, gib den Command ohne Argumente ein.",
-        usage="<Unterbefehl> [Argumente]"
+    @group.command(
+        name="duel",
+        description="Duelliere einen anderen Spieler in Vier Gewinnt",
     )
-    async def viergewinnt(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help()
+    @app_commands.describe(opponent="Gegner",
+                           width="Breite des Spielfeldes (4-10, Standard=7)",
+                           height="Höhe des Spielfeldes (4-10, Standard=6)")
+    async def cmd_duel(self, interaction: discord.Interaction, opponent: Member,
+                       width: app_commands.Range[int, 4, 10] = 7, height: app_commands.Range[int, 4, 10] = 6):
+        await interaction.response.defer()
 
-    @viergewinnt.command(
-        name="duell",
-        brief="Duelliere einen anderen Spieler",
-        aliases=['battle', 'duel'],
-        usage="<Mitglied> [Breite (4-10)] [Höhe (4-14)]",
-    )
-    @commands.guild_only()
-    async def viergewinnt_duell(self, ctx, user: typing.Union[User, Member], width: int = 7, height: int = 6):
-        if not (user == ctx.author or user.bot):
-            msg = await ctx.sendEmbed(
-                title="Vier Gewinnt",
-                color=0x0078D7,
-                description=f"Duell gegen {user.mention} wird erstellt..."
-            )
-
-            game = await VierGewinntGame.creategame(width=width, height=height, channel_id=str(ctx.channel.id),
-                                                    message_id=str(msg.id), player_1_id=str(ctx.author.id),
-                                                    player_2_id=str(user.id))
-
-            embed = ctx.bot.getEmbed(
-                title=f"Vier Gewinnt (#{game.pk})",
-                color=0x0078D7,
-                description=game.get_description()
-            )
-
-            await msg.edit(embed=embed)
-
-            for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
-                await msg.add_reaction(emoji)
-        else:
+        if opponent == interaction.user or opponent.bot:
             raise ErrorMessage(
-                "Du kannst nicht gegen dich selbst oder Bots spielen... Wenn du einen Bot herausfordern möchtest, benutze bitte `/viergewinnt challenge`!")
+                "Du kannst nicht gegen dich selbst oder Bots spielen... Wenn du einen Bot herausfordern möchtest, "
+                "benutze bitte `/connect4 challenge`!")
+        if interaction.guild_id is None:
+            raise ErrorMessage(
+                "Ohne Zuschauer spielen ist nicht lustig. Bitte verwendet den Befehl auf einem Server!"
+            )
 
-    @viergewinnt.command(
-        name="challenge",
-        brief="Duelliere einen Bot",
-        aliases=['bot', 'botduel', 'botduell'],
-        usage="[Breite (4-10)] [Höhe (4-14)]",
-    )
-    async def viergewinnt_challenge(self, ctx, width: int = 7, height: int = 6):
-        msg = await ctx.sendEmbed(
+        emb = utils.getEmbed(
             title="Vier Gewinnt",
             color=0x0078D7,
-            description=f"Challenge gegen einen Bot wird erstellt..."
+            description=f"Duell gegen {opponent.mention} wird erstellt..."
         )
+        msg = await interaction.followup.send(embed=emb, wait=True)
+        msg_ref: discord.MessageReference = msg.to_reference()
 
-        game = await VierGewinntGame.creategame(width=width, height=height, channel_id=str(ctx.channel.id),
-                                                message_id=str(msg.id), player_1_id=str(ctx.author.id),
-                                                player_2_id=None)
+        game = await VierGewinntGame.creategame(width=width, height=height,
+                                                channel_id=str(msg_ref.channel_id),
+                                                message_id=str(msg_ref.message_id),
+                                                player_1_id=str(interaction.user.id),
+                                                player_2_id=str(opponent.id))
 
-        embed = ctx.bot.getEmbed(
+        emb2 = utils.getEmbed(
             title=f"Vier Gewinnt (#{game.pk})",
             color=0x0078D7,
             description=game.get_description()
         )
 
-        await msg.edit(embed=embed)
+        await msg.edit(embed=emb2, view=Connect4View(game))
 
-        for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
-            await msg.add_reaction(emoji)
-
-    @viergewinnt.command(
-        name="games",
-        brief="Liste alle deine Spiele auf",
-        aliases=["list"],
-        usage="[User]",
+    @group.command(
+        name="challenge",
+        description="Duelliere einen Bot in Vier Gewinnt",
     )
-    async def viergewinnt_games(self, ctx, user: typing.Union[User, Member] = None):
-        user = user or ctx.author
-        challenges = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",), player_1_id=str(user.id),
-                                              player_2_id__isnull=True)
-        duels_created = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",),
-                                                 player_1_id=str(user.id), player_2_id__isnull=False)
-        duels_invited = await ctx.database._list(VierGewinntGame, _order_by=("-time_created",),
-                                                 player_2_id=str(user.id))
-        challengetext = "" if challenges else "Noch keine Challenges erstellt."
-        for g in challenges:
-            challengetext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
-                              if g.finished else RUNNING) + f" ({g.id}) BOT " + g.time_created.strftime(
+    @app_commands.describe(width="Breite des Spielfeldes (4-10, Standard=7)",
+                           height="Höhe des Spielfeldes (4-10, Standard=6)")
+    async def cmd_challenge(self, interaction: discord.Interaction,
+                            width: app_commands.Range[int, 4, 10] = 7, height: app_commands.Range[int, 4, 10] = 6):
+        await interaction.response.defer()
+
+        emb = utils.getEmbed(
+            title="Vier Gewinnt",
+            color=0x0078D7,
+            description=f"Challenge gegen einen Bot wird erstellt..."
+        )
+        msg = await interaction.followup.send(embed=emb, wait=True)
+        msg_ref: discord.MessageReference = msg.to_reference()
+
+        game = await VierGewinntGame.creategame(width=width, height=height,
+                                                channel_id=str(msg_ref.channel_id),
+                                                message_id=str(msg_ref.message_id),
+                                                player_1_id=str(interaction.user.id),
+                                                player_2_id=None)
+
+        emb2 = utils.getEmbed(
+            title=f"Vier Gewinnt (#{game.pk})",
+            color=0x0078D7,
+            description=game.get_description()
+        )
+
+        await msg.edit(embed=emb2, view=Connect4View(game))
+
+    @group.command(
+        name="games",
+        description="Liste alle Vier Gewinnt Spiele von dir oder einem anderen Benutzer auf",
+    )
+    async def cmd_games(self, interaction: discord.Interaction, user: typing.Union[User, Member] = None):
+        await interaction.response.defer()
+        user = user or interaction.user
+
+        challenges = VierGewinntGame.objects.filter(player_1_id=str(user.id),
+                                                    player_2_id__isnull=True).order_by("-time_created")
+        duels_created = VierGewinntGame.objects.filter(player_1_id=str(user.id),
+                                                       player_2_id__isnull=False).order_by("-time_created")
+        duels_invited = VierGewinntGame.objects.filter(player_2_id=str(user.id)).order_by("-time_created")
+
+        text_challenge = "" if await challenges.aexists() else "Noch keine Challenges erstellt."
+        async for g in challenges:
+            text_challenge += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
+                               if g.finished else RUNNING) + f" ({g.id}) BOT " + g.time_created.strftime(
                 "%Y/%m/%d - %H:%M %Z") + "\n"
-        duelscreatedtext = "" if duels_created else "Noch keine Duelle erstellt."
-        for g in duels_created:
-            duelscreatedtext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
-                                 if g.finished else RUNNING) + f" ({g.id}) <@{g.player_2_id}> " + g.time_created.strftime(
+        text_duels_created = "" if await duels_created.aexists() else "Noch keine Duelle erstellt."
+        async for g in duels_created:
+            text_duels_created += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
+                                   if g.finished else RUNNING) + f" ({g.id}) <@{g.player_2_id}> " + g.time_created.strftime(
                 "%Y/%m/%d - %H:%M %Z") + "\n"
-        duelsinvitedtext = "" if duels_invited else "Noch zu keinem Duell eingeladen."
-        for g in duels_invited:
-            duelsinvitedtext += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
-                                 if g.finished else RUNNING) + f" ({g.id}) <@{g.player_1_id}> " + g.time_created.strftime(
+        text_duels_invited = "" if await duels_invited.aexists() else "Noch zu keinem Duell eingeladen."
+        async for g in duels_invited:
+            text_duels_invited += ((UNKNOWN if g.winner_id is None else YES if g.winner_id == str(user.id) else NO)
+                                   if g.finished else RUNNING) + f" ({g.id}) <@{g.player_1_id}> " + g.time_created.strftime(
                 "%Y/%m/%d - %H:%M %Z") + "\n"
 
-        await ctx.sendEmbed(
+        emb = utils.getEmbed(
             title="VierGewinnt Spiele",
             description="Vier Gewinnt Spiele von " + user.mention,
             color=0x0078D7,
             inline=False,
             fields=[
-                ("Challenges", challengetext + "\u200b"),
-                ("Erstellte Spiele", duelscreatedtext + "\u200b"),
-                ("Eingeladene Spiele", duelsinvitedtext + "\u200b")
+                ("Challenges", text_challenge + "\u200b"),
+                ("Erstellte Spiele", text_duels_created + "\u200b"),
+                ("Eingeladene Spiele", text_duels_invited + "\u200b")
             ]
         )
+        await interaction.followup.send(embed=emb)
 
-    @viergewinnt.command(
+    @group.command(
         name="reset",
-        brief="Lösche alle deine Challenges und Duelle",
-        description="Hinweis: Dies beinhaltet nicht Duelle, welche ein anderer Spieler gestartet hat!",
-        aliases=[],
-        usage="[NUR BESITZER: Spieler]"
+        description="Lösche alle deine Challenges und Duelle",
     )
-    async def viergewinnt_reset(self, ctx, user: typing.Union[User, Member] = None):
-        user = ctx.author if user is None else user if await self.bot.is_owner(user) else ctx.author
-        await ctx.database._listdelete(VierGewinntGame, player_1_id=str(user.id))
+    async def cmd_reset(self, interaction: discord.Interaction, user: typing.Union[User, Member] = None):
+        await interaction.response.defer(ephemeral=True)
+
+        if user is not None and user.id != interaction.user.id and not await self.bot.is_owner(interaction.user):
+            raise ErrorMessage("Nur der Bot-Besitzer darf Spiele von anderen Spielern löschen!")
+
+        user = user or interaction.user
+        await VierGewinntGame.objects.filter(player_1_id=str(user.id)).adelete()
+
         raise SuccessMessage(f"Die VierGewinnt Spiele von {user.mention} wurden erfolgreich gelöscht!")
 
-    @viergewinnt.command(
+    @group.command(
         name="resume",
-        brief="Fahre ein Duell oder eine Challenge fort",
-        description="Wenn du die Nachricht eines Duells oder einer Challenge nicht mehr finden kannst, kannst du sie mit diesem Befehl noch einmal senden lassen. Hiermit können auch Spiele von anderen Spielern angesehen werden.",
-        aliases=["continue", "wiederaufnehmen", "resend", "view"],
-        usage="<ID>",
-        help="Um die ID herauszufinden, benutze `/viergewinnt games`",
+        description="Fahre ein Duell oder eine Challenge fort",
     )
-    async def viergewinnt_resume(self, ctx, id: int):
-        if await ctx.database._has(VierGewinntGame, id=id):
-            game = await ctx.database._get(VierGewinntGame, id=id)
+    @app_commands.describe(game_id="ID des Spieles")
+    async def cmd_resume(self, interaction: discord.Interaction, game_id: int):
+        await interaction.response.defer()
 
-            if str(ctx.author.id) in [game.player_1_id, game.player_2_id]:
-                msg = await ctx.sendEmbed(
+        if not await VierGewinntGame.objects.filter(id=game_id).aexists():
+            raise ErrorMessage("Ein Spiel mit dieser ID konnte nicht gefunden werden! Möglicherweise gelöscht?")
+
+        game = await VierGewinntGame.objects.aget(id=game_id)
+
+        if not game.finished and str(interaction.user.id) in [game.player_1_id, game.player_2_id]:
+            msg = await interaction.followup.send(embed=utils.getEmbed(
+                title=f"Vier Gewinnt (#{game.pk})",
+                color=0x0078D7,
+                description=game.get_description()
+            ), view=Connect4View(game), wait=True)
+            msg_ref: discord.MessageReference = msg.to_reference()
+
+            old_channel_id = int(game.channel_id)
+            old_message_id = int(game.message_id)
+
+            game.channel_id = msg_ref.channel_id
+            game.message_id = msg_ref.message_id
+            await game.asave()
+
+            try:
+                channel = self.bot.get_channel(old_channel_id) or await self.bot.fetch_channel(old_channel_id)
+                message = await channel.fetch_message(old_message_id)
+
+                description = f"Dieses Spiel wurde in einer [neuen Nachricht]({msg_ref.jump_url}) weitergeführt!\n\n" \
+                              + game.get_description()
+
+                await message.edit(embed=utils.getEmbed(
                     title=f"Vier Gewinnt (#{game.pk})",
                     color=0x0078D7,
-                    description=game.get_description()
-                )
-
-                oldchannelid = int(game.channel_id)
-                oldmessageid = int(game.message_id)
-
-                game.channel_id = msg.channel.id
-                game.message_id = msg.id
-
-                await ctx.database._save(game)
-
-                if not game.finished:
-                    for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
-                        await msg.add_reaction(emoji)
-
-                    try:
-                        channel = self.bot.get_channel(oldchannelid) or await self.bot.fetch_channel(oldchannelid)
-                        message = await channel.fetch_message(oldmessageid)
-
-                        await message.edit(embed=self.bot.getEmbed(
-                            title=f"Vier Gewinnt (#{game.pk})",
-                            color=0x0078D7,
-                            description="Dieses Spiel wurde in einer neuen Nachricht weitergeführt!\n\n" + game.get_description()
-                        ))
-
-                        for emoji in VIERGEWINNT_NUMBER_EMOJIS[:game.width]:
-                            await message.remove_reaction(emoji, self.bot.user)
-                    except NotFound as e:
-                        print(e)
-            else:
-                msg = await ctx.sendEmbed(
-                    title=f"Vier Gewinnt (#{game.pk} - Readonly)",
-                    color=0x0078D7,
-                    description=game.get_description()
-                )
+                    description=description
+                ), view=None)
+            except discord.NotFound:
+                ...
         else:
-            raise ErrorMessage("Ein Spiel mit dieser ID konnte nicht gefunden werden! Möglicherweise gelöscht?")
+            await interaction.followup.send(embed=utils.getEmbed(
+                title=f"Vier Gewinnt (#{game.pk} - Readonly)",
+                color=0x0078D7,
+                description=game.get_description()
+            ))
+
+    @cmd_resume.autocomplete('game_id')
+    async def cmd_resume__game_id_autocomplete(self,
+                                               interaction: discord.Interaction,
+                                               current: str,
+                                               ) -> typing.List[app_commands.Choice[str]]:
+        result = []
+        async for game in VierGewinntGame.objects.filter(id__contains=f"{current}",
+                                                         player_1_id=str(interaction.user.id)):
+            name = f"(#{game.id}) Gestartet " + game.time_created.strftime("%Y/%m/%d - %H:%M %Z")
+
+            result.append(app_commands.Choice(name=name, value=game.id))
+        return result

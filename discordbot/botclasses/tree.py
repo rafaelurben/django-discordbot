@@ -29,7 +29,6 @@ class CommandTree(app_commands.CommandTree):
                 color=0xff0000,
                 description="Beim Ausführen deines Befehls ist leider ein Fehler aufgetreten!"
             )
+            print(error)
 
         await interaction.followup.send(embed=emb, ephemeral=True)
-
-        print("An error occurred in the following command:", interaction.command, "error:", str(error))

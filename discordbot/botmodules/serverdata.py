@@ -1,15 +1,13 @@
 "Module used to manage database connections in the Discord bot"
 
-from django.db.models import Model as DjangoModel
-
 from asgiref.sync import sync_to_async
-
 from discordbot.botmodules.audio import YouTubePlayer
 from discordbot.errors import ErrorMessage
+from django.db.models import Model as DjangoModel
 
 #####
 
-class MusicQueue():
+class MusicQueue:
     def __init__(self, server):
         self.server = server
 
@@ -48,7 +46,7 @@ class MusicQueue():
 
 
 
-class Server():
+class Server:
     _all = {}
 
     def __init__(self,id):
@@ -67,10 +65,15 @@ class Server():
 
 ### NEW
 
-from discordbot.models import Server as DB_Server, User as DB_User, Report as DB_Report, Member as DB_Member, AudioSource, AmongUsGame
+from discordbot.models import Member as DB_Member
+from discordbot.models import Report as DB_Report
+from discordbot.models import Server as DB_Server
+from discordbot.models import User as DB_User
+from discordbot.models import AudioSource
 from django.db import connection, connections
 
-class DjangoConnection():
+
+class DjangoConnection:
     def __init__(self, dc_user, dc_guild):
         self.dc_user = dc_user
         self.dc_guild = dc_guild
@@ -101,18 +104,16 @@ class DjangoConnection():
         obj.delete()
 
     @classmethod
-    @sync_to_async
-    def _create(cls, model: DjangoModel, **kwargs) -> DjangoModel:
+    async def _create(cls, model: DjangoModel, **kwargs) -> DjangoModel:
         "Creates a new object and returns it"
         cls.ensure_connection()
-        return model.objects.create(**kwargs)
+        return model.objects.acreate(**kwargs)
 
     @classmethod
-    @sync_to_async
-    def _exists(cls, model: DjangoModel, **filters) -> bool:
+    async def _exists(cls, model: DjangoModel, **filters) -> bool:
         "Checks if an object exists"
         cls.ensure_connection()
-        return model.objects.filter(**filters).exists()
+        return model.objects.filter(**filters).aexists()
 
     @classmethod
     async def _has(cls, model: DjangoModel, **filters) -> bool:

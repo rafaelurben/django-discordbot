@@ -506,11 +506,17 @@ class VierGewinntGame(models.Model):
                         return l[i]
         return 0
 
+    def is_players_turn(self, player_id):
+        return getattr(self, "player_" + str(self.current_player) + "_id", None) == str(player_id)
+
+    def is_bots_turn(self):
+        return getattr(self, "player_" + str(self.current_player) + "_id", None) is None
+
     # Process Input
 
     def process(self, col: int, playerid):
         if not (self.finished or self.winner_id):
-            if getattr(self, "player_"+str(self.current_player)+"_id", None) == str(playerid):
+            if self.is_players_turn(playerid):
                 if self._add_to_column(col):
                     w = self._get_winner()
                     if w:
@@ -523,7 +529,7 @@ class VierGewinntGame(models.Model):
         return False
 
     def process_bot(self):
-        if not self.finished and getattr(self, f"player_{self.current_player}_id") is None:
+        if not self.finished and self.is_bots_turn():
             if self._add_to_column(VierGewinntBot.get_best_move(board=self.game, botnr=self.current_player, maxdepth=4)):
                 w = self._get_winner()
                 if w:
