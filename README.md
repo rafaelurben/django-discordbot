@@ -1,8 +1,10 @@
 # django-discordbot
 
-**⚠️ IMPORTANT INFORMATION ⚠️**
+> [!NOTE]
+> After the [death of discord.py](https://github.com/rafaelurben/django-discordbot/discussions/139) and the [rebirth of discord.py](https://github.com/rafaelurben/django-discordbot/discussions/161), discord.py V2 has been released! That means it's time for v2 of django-discordbot! 🎉
 
-**After the [death of discord.py](https://github.com/rafaelurben/django-discordbot/discussions/139) and the [rebirth of discord.py](https://github.com/rafaelurben/django-discordbot/discussions/161), version 2 of discord.py has been released! That means it's time for v2 of django-discordbot! 🎉 See you soon ;)**
+> [!WARNING]
+> This bot is currently in a phase of transitioning from the old commands to the new app commands (slash commands).
 
 ------
 
@@ -26,7 +28,7 @@ Feel free to open an issue or start a pull request. ;)
 
 ## Requirements
 
-Basic Python and Django knowledge.
+Python, django and discord.py knowledge.
 
 ## Documentation
 
