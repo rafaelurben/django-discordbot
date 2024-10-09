@@ -1,4 +1,4 @@
-django==5.1.1
+django==5.1.2
 requests==2.32.3
 discord.py[speed,voice]==2.4.0
 opuslib==3.0.1
