@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-discordbot"
+description = "Ein Discordbot für Django"
+readme = "README.md"
+authors = [{ name = "Rafael Urben", email = "github@rafaelurben.ch" }]
+maintainers = [{ name = "Rafael Urben", email = "github@rafaelurben.ch" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
+requires-python = ">= 3.10"
+dependencies = [
+    "Django>=4.1",
+    "gunicorn>=20.0.4",
+    "requests>=2.24.0",
+    "discord.py>=2.0.0",
+    "opuslib>=3.0.1",
+    "ffmpeg>=1.4",
+    "fuzzywuzzy[speedup]>=0.18.0",
+    "youtube-dl>=2020.9.6",
+    "rich>=9.0.1",
+    "tqdm>=4.43.0",
+    "dnspython>=2.0.0",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/rafaelurben/django-discordbot/"
+GitHub = "https://github.com/rafaelurben/django-discordbot"
+Issues = "https://github.com/rafaelurben/django-discordbot/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages]
+find = { namespaces = false }
+
+[tool.setuptools.dynamic]
+version = { file = ["_version.txt"] }
