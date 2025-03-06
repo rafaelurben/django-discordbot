@@ -1,6 +1,6 @@
 django==5.1.6
 requests==2.32.3
-discord.py[speed,voice]==2.5.0
+discord.py[speed,voice]==2.5.2
 opuslib==3.0.1
 ffmpeg==1.4
 fuzzywuzzy[speedup]==0.18.0
