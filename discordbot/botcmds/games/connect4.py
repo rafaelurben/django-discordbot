@@ -1,5 +1,5 @@
 # pylint: disable=no-member
-
+import asyncio
 import functools
 import typing
 
@@ -56,7 +56,9 @@ class Connect4View(discord.ui.View):
         await interaction.message.edit(embed=self.get_game_embed())
 
         if self.game.is_bots_turn():
-            self.game.process_bot()
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, self.game.process_bot)
+
             await self.game.asave()
             await interaction.message.edit(embed=self.get_game_embed())
 
