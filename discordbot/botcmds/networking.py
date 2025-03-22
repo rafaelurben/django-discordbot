@@ -1,4 +1,5 @@
 import socket
+import typing
 
 import discord
 import dns.rdataclass
@@ -10,6 +11,8 @@ from discord.ext import commands
 
 from discordbot import utils
 from discordbot.errors import ErrorMessage
+
+ALL_RDATA_TYPES: list[str] = [t.name for t in dns.rdatatype.RdataType]
 
 
 class Networking(commands.Cog):
@@ -84,6 +87,18 @@ class Networking(commands.Cog):
                 f"Für die Domain '{domain}' konnten keine DNS-Einträge des Typs '{typ}' gefunden werden!")
         except dns.rdatatype.UnknownRdatatype:
             raise ErrorMessage(f"Unbekannter DNS-Record Typ: {typ}")
+
+    @cmd_dns.autocomplete('typ')
+    async def cmd_dns__typ_autocomplete(self,
+                                        interaction: discord.Interaction,
+                                        current: str,
+                                        ) -> typing.List[app_commands.Choice[str]]:
+
+        result = []
+        for value in ALL_RDATA_TYPES:
+            if current.lower() in value.lower():
+                result.append(app_commands.Choice(name=value, value=value))
+        return result[:25]
 
 
 async def setup(bot):
