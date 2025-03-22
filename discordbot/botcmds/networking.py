@@ -1,12 +1,16 @@
 import socket
-import dns.rdatatype
-import dns.resolver
 
+import discord
+import dns.rdataclass
+import dns.rdatatype
+import dns.rdtypes
+import dns.resolver
 from discord import app_commands
 from discord.ext import commands
-import discord
 
 from discordbot import utils
+from discordbot.errors import ErrorMessage
+
 
 class Networking(commands.Cog):
     def __init__(self, bot):
@@ -23,9 +27,13 @@ class Networking(commands.Cog):
     async def cmd_ip(self, interaction: discord.Interaction, domain: str):
         try:
             ip = socket.gethostbyname(domain)
-            await interaction.response.send_message(f"Die IP-Adresse von {domain} ist {ip}.")
+            emb = utils.getEmbed(
+                title=utils.CHECK + "IP-Info",
+                description=f"Die IP-Adresse von [{domain}](https://{domain}) ist [{ip}](http://{ip})."
+            )
+            await interaction.response.send_message(embed=emb)
         except socket.gaierror:
-            await interaction.response.send_message(f"Die Domain '{domain}' konnte nicht gefunden werden!", ephemeral=True)
+            raise ErrorMessage(f"Die Domain '{domain}' konnte nicht gefunden werden!")
 
     @group.command(
         name='dns',
@@ -35,42 +43,48 @@ class Networking(commands.Cog):
         domain="Domain, welche abgefragt werden soll.",
         typ="Typ des DNS-Eintrags, welcher abgefragt werden soll. (z.B. A, CNAME, MX, etc.)",
     )
-    async def cmd_dns(self, interaction: discord.Interaction, domain: str, typ: str="A"):
+    async def cmd_dns(self, interaction: discord.Interaction, domain: str, typ: str = "A"):
         typ = typ.upper()
         try:
-            result = dns.resolver.resolve(domain, typ)
+            result: dns.resolver.Answer = dns.resolver.resolve(domain, typ, raise_on_no_answer=True)
+            fields = []
             if typ == "A":
-                fields=[
-                    ("IP", ipval.to_text()) for ipval in result
-                ]
+                val_a: dns.rdtypes.IN.A.A
+                for val_a in result.rrset:
+                    ip_addr = val_a.to_text()
+                    fields.append(("IPv4", f"[{ip_addr}](http://{ip_addr})"))
+            elif typ == "AAAA":
+                val_aaaa: dns.rdtypes.IN.AAAAA.AAAAA
+                for val_aaaa in result.rrset:
+                    ip_addr = val_aaaa.to_text()
+                    fields.append(("IPv6", f"[{ip_addr}](http://[{ip_addr}])"))
             elif typ == "CNAME":
-                fields=[
-                    ("CNAME Target", cnameval.target) for cnameval in result
-                ]
+                val_cname: dns.rdtypes.ANY.CNAME.CNAME
+                for val_cname in result.rrset:
+                    target = val_cname.to_text()
+                    fields.append(("CNAME Target", f"[{target}](https://{target})"))
             elif typ == "MX":
-                fields=[
-                    ("MX Record", mxdata.exchange) for mxdata in result
-                ]
+                val_mx: dns.rdtypes.ANY.MX.MX
+                for val_mx in result.rrset:
+                    fields.append(("MX Record", f"{val_mx.exchange} (Priorität {val_mx.preference})"))
             else:
-                fields=[
-                    ("Eintrag", str(data)) for data in result
-                ]
+                for val in result.rrset:
+                    fields.append((f"{typ}-Eintrag", str(val)))
             emb = utils.getEmbed(
-                title=utils.CHECK+"DNS-Info",
-                description=f"DNS-Einträge des Typs '{typ}' für '{domain}'!",
+                title=utils.CHECK + "DNS-Info",
+                description=f"DNS-Einträge des Typs {typ} für [{domain}](https://{domain}):\n\n" + result.rrset.to_text() + "\n\nGeparst:",
                 inline=False,
                 fields=fields
             )
             await interaction.response.send_message(embed=emb)
         except dns.resolver.NXDOMAIN:
-            await interaction.response.send_message(
-                f"Die Domain '{domain}' konnte nicht gefunden werden!", ephemeral=True)
+            raise ErrorMessage(f"Die Domain '{domain}' konnte nicht gefunden werden!")
         except dns.resolver.NoAnswer:
-            await interaction.response.send_message(
-                f"Für die Domain '{domain}' konnten keine DNS-Einträge des Typs '{typ}' gefunden werden!", ephemeral=True)
+            raise ErrorMessage(
+                f"Für die Domain '{domain}' konnten keine DNS-Einträge des Typs '{typ}' gefunden werden!")
         except dns.rdatatype.UnknownRdatatype:
-            await interaction.response.send_message(
-                f"Unbekannter DNS-Record Typ: {typ}", ephemeral=True)
+            raise ErrorMessage(f"Unbekannter DNS-Record Typ: {typ}")
+
 
 async def setup(bot):
     await bot.add_cog(Networking(bot))
