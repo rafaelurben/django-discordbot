@@ -12,13 +12,13 @@ class CommandTree(app_commands.CommandTree):
     ):
         if isinstance(error, ErrorMessage):
             emb = getEmbed(
-                title="Fehler",
+                title="❌ Fehler",
                 color=0xff0000,
                 description=str(error),
             )
         elif isinstance(error, SuccessMessage):
             emb = getEmbed(
-                title="Aktion erfolgreich",
+                title="✅ Aktion erfolgreich",
                 color=0x00ff00,
                 description=error.description,
                 **error.embedoptions,
@@ -31,4 +31,7 @@ class CommandTree(app_commands.CommandTree):
             )
             print(error)
 
-        await interaction.followup.send(embed=emb, ephemeral=True)
+        if not interaction.response.is_done():
+            await interaction.response.send_message(embed=emb, ephemeral=True)
+        else:
+            await interaction.followup.send(embed=emb, ephemeral=True)
