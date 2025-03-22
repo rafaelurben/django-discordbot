@@ -1,15 +1,15 @@
 # pylint: disable=no-member
 
-import typing
 import functools
+import typing
 
 import discord
-from discord import NotFound, User, Member, DiscordException
+from discord import User, Member
 from discord import app_commands
 from discord.ext import commands
+from django.db.models import Q
 
 from discordbot import utils
-from discordbot.botmodules.serverdata import DjangoConnection
 from discordbot.errors import ErrorMessage, SuccessMessage
 from discordbot.models import VierGewinntGame, VIERGEWINNT_NUMBER_EMOJIS
 
@@ -258,9 +258,12 @@ class Connect4Cog(commands.Cog, name="Vier gewinnt"):
                                                current: str,
                                                ) -> typing.List[app_commands.Choice[str]]:
         result = []
-        async for game in VierGewinntGame.objects.filter(id__contains=f"{current}",
-                                                         player_1_id=str(interaction.user.id)):
+        async for game in VierGewinntGame.objects.filter(
+                (Q(player_1_id=str(interaction.user.id)) | Q(player_2_id=str(interaction.user.id))),
+                id__contains=f"{current}").order_by('finished')[:25]:
             name = f"(#{game.id}) Gestartet " + game.time_created.strftime("%Y/%m/%d - %H:%M %Z")
+            if not game.finished:
+                name += " " + RUNNING
 
             result.append(app_commands.Choice(name=name, value=game.id))
         return result
