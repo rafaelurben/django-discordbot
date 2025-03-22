@@ -10,6 +10,7 @@ from asgiref.sync import sync_to_async
 
 import re
 
+
 # Basic
 
 
@@ -65,7 +66,7 @@ class Server(models.Model):
     def getPlaylist(self):
         if self.playlist is None:
             self.playlist = Playlist.objects.create(
-                server=self, title="Playlist in "+self.name)
+                server=self, title="Playlist in " + self.name)
             self.save()
         return self.playlist
 
@@ -149,7 +150,7 @@ class User(models.Model):
 
     @property
     def mention(self):
-        return "<@"+str(self.id)+">"
+        return "<@" + str(self.id) + ">"
 
     @admin.display(description="User")
     def __str__(self):
@@ -160,6 +161,7 @@ class User(models.Model):
         verbose_name_plural = "Benutzer"
 
     objects = models.Manager()
+
 
 # Music
 
@@ -222,8 +224,8 @@ class AudioSource(models.Model):
 
     @property
     def duration_calc(self):
-        h = str(self.duration//3600)
-        m = str(self.duration % 3600//60)
+        h = str(self.duration // 3600)
+        m = str(self.duration % 3600 // 60)
         s = str(self.duration % 3600 % 60)
         return f"{h}:{m}:{s}" if h != "0" else f"{m}:{s}"
 
@@ -261,7 +263,7 @@ class Playlist(models.Model):
 
     @sync_to_async
     def addSource(self, source):
-        pos = self.sources.count()+1
+        pos = self.sources.count() + 1
         self.sources.add(source, through_defaults={"position": pos})
         return pos
 
@@ -330,13 +332,14 @@ class Report(models.Model):
 
     @admin.display(description="Report")
     def __str__(self):
-        return "Report #"+str(self.pk)
+        return "Report #" + str(self.pk)
 
     class Meta():
         verbose_name = "Report"
         verbose_name_plural = "Reports"
 
     objects = models.Manager()
+
 
 # Games
 
@@ -393,20 +396,20 @@ class VierGewinntGame(models.Model):
         P = VIERGEWINNT_PLAYER_EMOJIS
         N = VIERGEWINNT_NUMBER_EMOJIS
 
-        numberline = (W+"".join(N[:int(self.width)])+W+"\n")
-        gamelines = "\n".join([(W+"".join([P[p] for p in row])+W)
-                               for row in self.rows])+"\n"
+        numberline = (W + "".join(N[:int(self.width)]) + W + "\n")
+        gamelines = "\n".join([(W + "".join([P[p] for p in row]) + W)
+                               for row in self.rows]) + "\n"
 
         return numberline + gamelines + numberline
 
     def _get_players(self):
         pl = []
-        for i in range(1, 2+1):
-            pid = getattr(self, f"player_{ i }_id")
+        for i in range(1, 2 + 1):
+            pid = getattr(self, f"player_{i}_id")
             if pid is None:
-                pl.append(VIERGEWINNT_PLAYER_EMOJIS[i]+" BOT")
+                pl.append(VIERGEWINNT_PLAYER_EMOJIS[i] + " BOT")
             else:
-                pl.append(VIERGEWINNT_PLAYER_EMOJIS[i]+" <@"+pid+">")
+                pl.append(VIERGEWINNT_PLAYER_EMOJIS[i] + " <@" + pid + ">")
         return "\n".join(pl)
 
     def _get_game_info(self):
@@ -417,13 +420,14 @@ class VierGewinntGame(models.Model):
                 return f"Das Spiel ist beendet! Gewonnen hat <@{self.winner_id}>!"
             return "Das Spiel ist beendet! Unentschieden!"
 
-        p = getattr(self, f"player_{ self.current_player }_id")
+        p = getattr(self, f"player_{self.current_player}_id")
         if p is None:
-            return f"{ VIERGEWINNT_PLAYER_EMOJIS[self.current_player] } Ich bin an der Reihe! (Berechne einen guten Zug...)"
-        return f"{ VIERGEWINNT_PLAYER_EMOJIS[self.current_player] } <@{ p }> ist an der Reihe!"
+            return f"{VIERGEWINNT_PLAYER_EMOJIS[self.current_player]} Ich bin an der Reihe! (Berechne einen guten Zug...)"
+        return f"{VIERGEWINNT_PLAYER_EMOJIS[self.current_player]} <@{p}> ist an der Reihe!"
 
     def get_description(self):
-        return self._get_game_info()+"\n\n"+self._get_players()+"\n\n"+self._get_gameboard()
+        return self._get_game_info() + "\n\n" + self._get_players() + "\n\n" + self._get_gameboard()
+
     get_description.short_description = "Game"
 
     # Get
@@ -440,7 +444,7 @@ class VierGewinntGame(models.Model):
     def dias(self):
         dias = []
         w = 0
-        h = self.height-1
+        h = self.height - 1
         while w < self.width:
             dia = []
             _w, _h = w, h
@@ -467,7 +471,7 @@ class VierGewinntGame(models.Model):
                 _h -= 1
 
             dias.append(dia)
-            if h < self.height-1:
+            if h < self.height - 1:
                 h += 1
             else:
                 w += 1
@@ -486,7 +490,7 @@ class VierGewinntGame(models.Model):
 
     def _add_to_column(self, n: int):
         if self._can_add_to_column(n):
-            for h in range(self.height-1, -1, -1):
+            for h in range(self.height - 1, -1, -1):
                 if not self.game[h][n]:
                     self.rows[h][n] = self.current_player
                     self._next_player()
@@ -501,8 +505,8 @@ class VierGewinntGame(models.Model):
     def _get_winner(self):
         for ls in [self.rows, self.cols, self.dias]:
             for l in ls:
-                for i in range(len(l)-3):
-                    if (not l[i] == 0) and (l[i] == l[i+1]) and (l[i+1] == l[i+2]) and (l[i+2] == l[i+3]):
+                for i in range(len(l) - 3):
+                    if (not l[i] == 0) and (l[i] == l[i + 1]) and (l[i + 1] == l[i + 2]) and (l[i + 2] == l[i + 3]):
                         return l[i]
         return 0
 
@@ -521,7 +525,7 @@ class VierGewinntGame(models.Model):
                     w = self._get_winner()
                     if w:
                         self.winner_id = getattr(
-                            self, "player_"+str(w)+"_id", None)
+                            self, "player_" + str(w) + "_id", None)
                         self.finished = True
                     elif self._is_full():
                         self.finished = True
@@ -530,7 +534,8 @@ class VierGewinntGame(models.Model):
 
     def process_bot(self):
         if not self.finished and self.is_bots_turn():
-            if self._add_to_column(VierGewinntBot.get_best_move(board=self.game, botnr=self.current_player, maxdepth=4)):
+            if self._add_to_column(
+                    VierGewinntBot.get_best_move(board=self.game, botnr=self.current_player, maxdepth=4)):
                 w = self._get_winner()
                 if w:
                     self.winner_id = "BOT"
@@ -585,7 +590,7 @@ class NotifierSource(models.Model):
             self.last_hash = new_hash
             self.save()
 
-            if last_hash != "": # Don't send on first fetch
+            if last_hash != "":  # Don't send on first fetch
                 data = cleaner.get_data()
                 targets = [t for t in self.targets.all() if t.check_regex(data)]
                 return True, data, targets
@@ -593,6 +598,7 @@ class NotifierSource(models.Model):
 
     def __str__(self):
         return self.name
+
     __str__.short_description = "NotifierSource"
 
     class Meta:
