@@ -39,27 +39,6 @@ class Basic(commands.Cog):
         await ctx.send(txt)
 
     @commands.command(
-        brief="Spamt einen Benutzer oder Textkanal voll",
-        description="Schickt jemandem 'ein paar' Nachrichten",
-        aliases=["troll"],
-        help="Benutze /spam <Kanal/Benutzer> und der Bot spamt den User voll",
-        usage="<Kanal/Benutzer> [Text]"
-    )
-    async def spam(self, ctx):
-        await ctx.invoke(ctx.bot.get_command("regeln"))
-        await ctx.sendEmbed(
-            title="Spam verboten",
-            description="Schon vergessen, dass Spam laut Regeln verboten ist? "
-                        "Hast du wirklich gedacht, ich breche meine eigenen Regeln? "
-                        "Scheinbar magst du Trolls, [das](https://www.youtube.com/watch?v=dQw4w9WgXcQ) "
-                        "sollte dir also gefallen."
-        )
-        if ctx.guild is not None:
-            report = await ctx.database.createReport(dc_user=ctx.author, reason="Tried to use /spam", reportedby_dc_user=ctx.guild.me)
-            cog = ctx.bot.get_cog("Support")
-            await cog.send_report(ctx, report)
-
-    @commands.command(
         brief="Zeigt die Regeln",
         description="Schickt die Regeln in den Chat",
         aliases=["rules"],
