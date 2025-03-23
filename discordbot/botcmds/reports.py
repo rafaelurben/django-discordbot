@@ -79,7 +79,8 @@ class ReportsCog(commands.Cog, name="Reports"):
 
     @app_commands.command(
         name="report",
-        description="Melde ein Mitglied"
+        description="Melde ein Mitglied",
+        extras={'help': "Verwende diesen Befehl, um Servermitglieder zu melden, welche sich falsch verhalten."}
     )
     @app_commands.describe(member="Zu meldendes Mitglied", reason="Begründung")
     @app_commands.guild_only
@@ -90,10 +91,12 @@ class ReportsCog(commands.Cog, name="Reports"):
     async def report_create_contextmenu(self, interaction: discord.Interaction, member: Member):
         await interaction.response.send_modal(ReportModal(member))
 
-    group = app_commands.Group(name="reports", description="Verwalte Reports von Spielern", guild_only=True,
-                               default_permissions=discord.Permissions(kick_members=True))
+    report_mgmt_group = app_commands.Group(name="reports", description="Verwalte Reports von Mitgliedern",
+                                           guild_only=True,
+                                           default_permissions=discord.Permissions(kick_members=True),
+                                           extras={'help': "Verwende Befehle diese Gruppe, um Reports zu verwalten."})
 
-    @group.command(
+    @report_mgmt_group.command(
         name="view",
         description="Sieh Reports eines Mitglieds oder aller Mitglieder an"
     )
@@ -118,7 +121,7 @@ class ReportsCog(commands.Cog, name="Reports"):
                 fields=await dj.getReports(dc_user=member),
             )
 
-    @group.command(
+    @report_mgmt_group.command(
         name="delete",
         description="Lösche einen Report"
     )
@@ -145,7 +148,7 @@ class ReportsCog(commands.Cog, name="Reports"):
             result.append(app_commands.Choice(name=name, value=report.id))
         return result
 
-    @group.command(
+    @report_mgmt_group.command(
         name="clear",
         description="Lösche alle Reports zu einem Mitglied"
     )
