@@ -107,13 +107,13 @@ class DjangoConnection:
     async def _create(cls, model: DjangoModel, **kwargs) -> DjangoModel:
         "Creates a new object and returns it"
         cls.ensure_connection()
-        return model.objects.acreate(**kwargs)
+        return await model.objects.acreate(**kwargs)
 
     @classmethod
     async def _exists(cls, model: DjangoModel, **filters) -> bool:
         "Checks if an object exists"
         cls.ensure_connection()
-        return model.objects.filter(**filters).aexists()
+        return await model.objects.filter(**filters).aexists()
 
     @classmethod
     async def _has(cls, model: DjangoModel, **filters) -> bool:

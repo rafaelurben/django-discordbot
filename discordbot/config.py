@@ -2,12 +2,14 @@ import os
 from django.conf import settings
 from discord.ext import commands
 
+
 # Discordbot Configuration
 # Helper function
 
 
 def _s(name: str, default=None, prefix: str = "DISCORDBOT_"):
-    return getattr(settings, prefix+name, os.getenv(prefix+name, default))
+    return getattr(settings, prefix + name, os.getenv(prefix + name, default))
+
 
 # Config
 
@@ -31,8 +33,9 @@ ALL_PREFIXES = _s("ALL_PREFIXES", ["/", "!", "$", ".", "-", ">", "?"])
 MAIN_PREFIXES = _s("MAIN_PREFIXES", ["/"])
 
 EXTENSIONFOLDER = "discordbot.botcmds"
-EXTENSIONS = _s("EXTENSIONS", ['basic', 'support', 'moderation', 'games', 'help', 'channels', 'userinfo',
-                               'music', 'owneronly', 'converters', 'embedgenerator', 'notifier', 'polls', 'networking'])
+EXTENSIONS = _s("EXTENSIONS", ['basic', 'support', 'reports', 'moderation', 'games', 'help', 'channels',
+                               'userinfo', 'music', 'owneronly', 'converters', 'embedgenerator', 'notifier', 'polls',
+                               'networking'])
 
 # Basic
 
@@ -65,9 +68,9 @@ FFMPEG_OPTIONS_STREAM = {
 
 RADIOS = {
     "swisspop": "http://www.radioswisspop.ch/live/mp3.m3u",
-    "nrjbern":  "https://energybern.ice.infomaniak.ch/energybern-high.mp3",
-    "rockit":   "https://rockitradio.ice.infomaniak.ch/rockitradio-high.mp3",
-    "vintage":  "https://vintageradio.ice.infomaniak.ch/vintageradio-high.mp3",
+    "nrjbern": "https://energybern.ice.infomaniak.ch/energybern-high.mp3",
+    "rockit": "https://rockitradio.ice.infomaniak.ch/rockitradio-high.mp3",
+    "vintage": "https://vintageradio.ice.infomaniak.ch/vintageradio-high.mp3",
 }
 
 # Moderation
