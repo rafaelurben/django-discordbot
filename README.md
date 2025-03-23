@@ -22,7 +22,7 @@
 
 A Discord bot running in a django environment. The current version of the bot itself is German, but I might consider adding translations in the future.
 
-Planned features can be found in the [project board](https://github.com/rafaelurben/django-discordbot/projects/1?fullscreen=true).
+Planned features can be found in the [project board](https://github.com/users/rafaelurben/projects/7).
 
 Feel free to open an issue or start a pull request. ;)
 
