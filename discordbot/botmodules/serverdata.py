@@ -3,10 +3,16 @@ from typing import Type
 
 import discord
 from asgiref.sync import sync_to_async
-from django.db.models import Model as DjangoModel
+from django.db import connection, connections
+from django.db.models import Model as DjangoModel, Count
 
 from discordbot.botmodules.audio import YouTubePlayer
 from discordbot.errors import ErrorMessage
+from discordbot.models import AudioSource
+from discordbot.models import Member as DB_Member
+from discordbot.models import Report as DB_Report
+from discordbot.models import Server as DB_Server
+from discordbot.models import User as DB_User
 
 
 #####
@@ -64,14 +70,7 @@ class Server:
         return self._all[serverid]
 
 
-### NEW
-
-from discordbot.models import Member as DB_Member
-from discordbot.models import Report as DB_Report
-from discordbot.models import Server as DB_Server
-from discordbot.models import User as DB_User
-from discordbot.models import AudioSource
-from django.db import connection, connections
+# NEW
 
 
 class DjangoConnection:
@@ -215,27 +214,41 @@ class DjangoConnection:
 
     # Reports
 
-    async def createReport(self, dc_user, reason: str = "", reportedby_dc_user=None):
+    async def create_report(self, dc_user, reason: str = ""):
         server = await self.get_server()
-        user = (await self.get_user()) if reportedby_dc_user is None else (await self.fetch_user(reportedby_dc_user))
+        user = await self.get_user()
         await user.joinServer(server)
-        reporteduser = await self.fetch_user(dc_user)
-        await reporteduser.joinServer(server)
-        return await self._create(DB_Report, server=server, user=reporteduser, reported_by=user, reason=reason)
+        reported_user = await self.fetch_user(dc_user)
+        await reported_user.joinServer(server)
+        return await self._create(DB_Report, server=server, user=reported_user, reported_by=user, reason=reason)
 
-    async def getReports(self, dc_user=None):
+    async def get_all_reports(self):
+        description = ""
+        async for member in DB_User.objects.prefetch_related('reports').filter(
+                reports__server_id=self.dc_guild.id).annotate(
+            reports_count=Count('reports')).order_by('-reports_count'):
+            count = member.reports_count
+            if count == 1:
+                description += f"- 1 Report: {member.mention}\n"
+            elif count > 1:
+                description += f"- {count} Reports: {member.mention}\n"
+        return description
+
+    async def get_all_reports_for_member(self, dc_member: discord.Member):
+        fields = []
+        async for report in (DB_Report.objects.filter(server_id=self.dc_guild.id, user_id=dc_member.id).select_related(
+                'reported_by').order_by("-timestamp")):
+            fields.append((
+                f"{report.timestamp.strftime('%Y/%m/%d %H:%M:%S')} ({report.pk})",
+                f"{report.reported_by.mention} - {report.reason}",
+                False
+            ))
+        return fields
+
+    async def delete_report(self, report_id: int):
         server = await self.get_server()
-        if dc_user is None:
-            reports = await server.getReports()
-            return reports
-        user = await self.fetch_user(dc_user)
-        reports = await server.getReports(user=user)
-        return reports
+        return await self._getdel(DB_Report, server=server, id=report_id)
 
-    async def deleteReport(self, repid: int):
-        server = await self.get_server()
-        return await self._getdel(DB_Report, server=server, id=repid)
-
-    async def clearReports(self, userid: int):
+    async def clear_reports(self, userid: int):
         server = await self.get_server()
         return await DB_Report.objects.filter(server=server, user_id=userid).adelete()

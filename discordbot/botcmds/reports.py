@@ -42,8 +42,7 @@ async def send_report_to_reports_channel(interaction: Interaction, report: Repor
 
 
 class ReportModal(ui.Modal):
-    reason = ui.TextInput(label='Begründung', style=discord.TextStyle.paragraph, required=True, min_length=20,
-                          max_length=250)
+    reason = ui.TextInput(label='Begründung', style=discord.TextStyle.paragraph, required=True, max_length=250)
 
     def __init__(self, member: Member, reason: str = ""):
         self.title = f"@{member.name} melden"
@@ -54,7 +53,7 @@ class ReportModal(ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         dj = DjangoConnection.from_interaction(interaction)
-        report = await dj.createReport(self._member, self.reason.value)
+        report = await dj.create_report(self._member, self.reason.value)
         await interaction.followup.send(
             ephemeral=True,
             embed=utils.getEmbed(title="Benutzer erfolgreich gemeldet!", inline=False, fields=[
@@ -110,7 +109,7 @@ class ReportsCog(commands.Cog, name="Reports"):
                 title="Serverreports",
                 description=(
                         f"Reports auf {interaction.guild.name}\n\n" +
-                        await dj.getReports()
+                        await dj.get_all_reports()
                 )
             )
         else:
@@ -118,7 +117,7 @@ class ReportsCog(commands.Cog, name="Reports"):
                 interaction.followup,
                 title="Mitgliederreports",
                 description=("Mitglied: " + member.mention),
-                fields=await dj.getReports(dc_user=member),
+                fields=await dj.get_all_reports_for_member(dc_member=member),
             )
 
     @report_mgmt_group.command(
@@ -128,7 +127,7 @@ class ReportsCog(commands.Cog, name="Reports"):
     @app_commands.describe(report_id="ID des Reports")
     async def reports_delete(self, interaction: discord.Interaction, report_id: int):
         dj = DjangoConnection.from_interaction(interaction)
-        if await dj.deleteReport(repid=report_id):
+        if await dj.delete_report(report_id=report_id):
             raise SuccessMessage(f"Report mit folgender ID gelöscht: {report_id}")
         else:
             raise ErrorMessage(f"Report mit der ID {report_id} wurde nicht gefunden!")
@@ -156,7 +155,7 @@ class ReportsCog(commands.Cog, name="Reports"):
     async def reports_clear(self, interaction: discord.Interaction, member: Member):
         await interaction.response.defer(ephemeral=True)
         dj = DjangoConnection.from_interaction(interaction)
-        await dj.clearReports(member.id)
+        await dj.clear_reports(member.id)
         raise SuccessMessage(f"Reports für {member.mention} gelöscht!")
 
 

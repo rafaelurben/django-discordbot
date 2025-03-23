@@ -76,19 +76,6 @@ class Server(models.Model):
     def reportCount(self):
         return self.reports.count()
 
-    @sync_to_async
-    def getReports(self, user=None):
-        if user is None:
-            description = ""
-            for member in self.members.all():
-                count = int(member.reportCount(server=self))
-                if count == 1:
-                    description += f"{member.mention} (Ein Report)\n"
-                elif count > 1:
-                    description += f"{member.mention} ({count} Reports)\n"
-            return description
-        return user.getReports(server=self)
-
     # Others
 
     @admin.display(description="Mitglieder")
@@ -129,12 +116,6 @@ class User(models.Model):
     @admin.display(description="Created reports")
     def createdReportCount(self, **filters):
         return self.created_reports.filter(**filters).count()
-
-    def getReports(self, **filters):
-        reports = self.reports.filter(**filters)
-        return [
-            report.getEmbedField() for report in reports
-        ]
 
     # Servers
 
@@ -322,13 +303,6 @@ class Report(models.Model):
 
     reason = models.CharField("Grund", default="", blank=True, max_length=250)
     timestamp = models.DateTimeField("Zeitpunkt", auto_now_add=True)
-
-    def getEmbedField(self):
-        return (
-            f"{self.timestamp.strftime('%Y/%m/%d %H:%M:%S')} ({self.pk})",
-            f"{self.reported_by.mention} - {self.reason}",
-            False
-        )
 
     @admin.display(description="Report")
     def __str__(self):
