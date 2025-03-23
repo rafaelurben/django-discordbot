@@ -1,9 +1,13 @@
-"Module used to manage database connections in the Discord bot"
+"""Module used to manage database connections in the Discord bot"""
+from typing import Type
 
+import discord
 from asgiref.sync import sync_to_async
+from django.db.models import Model as DjangoModel
+
 from discordbot.botmodules.audio import YouTubePlayer
 from discordbot.errors import ErrorMessage
-from django.db.models import Model as DjangoModel
+
 
 #####
 
@@ -45,22 +49,19 @@ class MusicQueue:
         return await YouTubePlayer.from_url(search, queue=self, loop=loop, stream=stream)
 
 
-
 class Server:
     _all = {}
 
-    def __init__(self,id):
+    def __init__(self, id):
         self.id = id
         self.musicqueue = MusicQueue(server=self)
-        #self.polls = {}
+        # self.polls = {}
 
     @classmethod
-    def getServer(self, serverid:int):
+    def getServer(self, serverid: int):
         if not serverid in self._all:
             self._all[serverid] = Server(serverid)
         return self._all[serverid]
-
-
 
 
 ### NEW
@@ -74,7 +75,7 @@ from django.db import connection, connections
 
 
 class DjangoConnection:
-    def __init__(self, dc_user, dc_guild):
+    def __init__(self, dc_user: discord.User, dc_guild: discord.Guild):
         self.dc_user = dc_user
         self.dc_guild = dc_guild
         self._db_user = None
@@ -86,6 +87,10 @@ class DjangoConnection:
     def ensure_connection(self):
         if connection.connection and not connection.is_usable():
             del connections._connections.default
+
+    @classmethod
+    def from_interaction(cls, interaction: discord.Interaction):
+        return cls(interaction.user, interaction.guild)
 
     # Basic Methods
 
@@ -104,45 +109,45 @@ class DjangoConnection:
         obj.delete()
 
     @classmethod
-    async def _create(cls, model: DjangoModel, **kwargs) -> DjangoModel:
+    async def _create(cls, model: Type[DjangoModel], **kwargs) -> DjangoModel:
         "Creates a new object and returns it"
         cls.ensure_connection()
         return await model.objects.acreate(**kwargs)
 
     @classmethod
-    async def _exists(cls, model: DjangoModel, **filters) -> bool:
+    async def _exists(cls, model: Type[DjangoModel], **filters) -> bool:
         "Checks if an object exists"
         cls.ensure_connection()
         return await model.objects.filter(**filters).aexists()
 
     @classmethod
-    async def _has(cls, model: DjangoModel, **filters) -> bool:
+    async def _has(cls, model: Type[DjangoModel], **filters) -> bool:
         "Synonym for ._exists"
         return await cls._exists(model, **filters)
 
     @classmethod
     @sync_to_async
-    def _get(cls, model: DjangoModel, **filters) -> DjangoModel:
+    def _get(cls, model: Type[DjangoModel], **filters) -> DjangoModel:
         "Gets an object from the database"
         cls.ensure_connection()
         return model.objects.get(**filters)
 
     @classmethod
     @sync_to_async
-    def _list(cls, model: DjangoModel, _order_by: tuple = ("pk",), **filters) -> list:
+    def _list(cls, model: Type[DjangoModel], _order_by: tuple = ("pk",), **filters) -> list:
         "Gets a list of objects matching the given filters from the database"
         cls.ensure_connection()
         return list(model.objects.filter(**filters).order_by(*_order_by))
 
     @classmethod
     @sync_to_async
-    def _listdelete(cls, model: DjangoModel, **filters) -> None:
+    def _listdelete(cls, model: Type[DjangoModel], **filters) -> None:
         "Finds and deletes a Django queryset with given filters."
         cls.ensure_connection()
         model.objects.filter(**filters).delete()
 
     @classmethod
-    async def _getdel(cls, model: DjangoModel, **filters) -> bool:
+    async def _getdel(cls, model: Type[DjangoModel], **filters) -> bool:
         "Deletes an object with given filters if it exists and returns True, False otherwise"
         if await cls._has(model, **filters):
             obj = await cls._get(DB_Report, **filters)
@@ -155,11 +160,11 @@ class DjangoConnection:
     @classmethod
     async def fetch_user(cls, dc_user) -> DB_User:
         if not await cls._has(DB_User, id=str(dc_user.id)):
-            user = await cls._create(DB_User, id=str(dc_user.id), name=dc_user.name+"#"+dc_user.discriminator)
+            user = await cls._create(DB_User, id=str(dc_user.id), name=dc_user.name)
         else:
             user = await cls._get(DB_User, id=str(dc_user.id))
-            if not user.name == (dc_user.name+"#"+dc_user.discriminator):
-                user.name = (dc_user.name+"#"+dc_user.discriminator)
+            if not user.name == dc_user.name:
+                user.name = dc_user.name
                 await cls._save(user)
         return user
 
@@ -210,7 +215,7 @@ class DjangoConnection:
 
     # Reports
 
-    async def createReport(self, dc_user, reason: str="", reportedby_dc_user=None):
+    async def createReport(self, dc_user, reason: str = "", reportedby_dc_user=None):
         server = await self.get_server()
         user = (await self.get_user()) if reportedby_dc_user is None else (await self.fetch_user(reportedby_dc_user))
         await user.joinServer(server)
@@ -230,3 +235,7 @@ class DjangoConnection:
     async def deleteReport(self, repid: int):
         server = await self.get_server()
         return await self._getdel(DB_Report, server=server, id=repid)
+
+    async def clearReports(self, userid: int):
+        server = await self.get_server()
+        return await DB_Report.objects.filter(server=server, user_id=userid).adelete()
