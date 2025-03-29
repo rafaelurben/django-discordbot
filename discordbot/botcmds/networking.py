@@ -10,7 +10,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from discordbot import utils
-from discordbot.errors import ErrorMessage
+from discordbot.errors import ErrorMessage, SuccessMessage
 
 ALL_RDATA_TYPES: list[str] = [t.name for t in dns.rdatatype.RdataType]
 
@@ -27,14 +27,13 @@ class Networking(commands.Cog):
         description="Frage die IP-Adresse ab, welche hinter einer Domain steckt.",
     )
     @app_commands.describe(domain="Domain, welche abgefragt werden soll.")
+    @app_commands.checks.cooldown(5, 60)
     async def cmd_ip(self, interaction: discord.Interaction, domain: str):
+        await interaction.response.defer()
         try:
             ip = socket.gethostbyname(domain)
-            emb = utils.getEmbed(
-                title=utils.CHECK + "IP-Info",
-                description=f"Die IP-Adresse von [{domain}](https://{domain}) ist [{ip}](http://{ip})."
-            )
-            await interaction.response.send_message(embed=emb)
+            raise SuccessMessage(f"Die IP-Adresse von [{domain}](https://{domain}) ist [{ip}](http://{ip}).",
+                                 title=utils.CHECK + "IP-Info")
         except socket.gaierror:
             raise ErrorMessage(f"Die Domain '{domain}' konnte nicht gefunden werden!")
 
@@ -46,7 +45,9 @@ class Networking(commands.Cog):
         domain="Domain, welche abgefragt werden soll.",
         typ="Typ des DNS-Eintrags, welcher abgefragt werden soll. (z.B. A, CNAME, MX, etc.)",
     )
+    @app_commands.checks.cooldown(3, 60)
     async def cmd_dns(self, interaction: discord.Interaction, domain: str, typ: str = "A"):
+        await interaction.response.defer()
         typ = typ.upper()
         try:
             result: dns.resolver.Answer = dns.resolver.resolve(domain, typ, raise_on_no_answer=True)
@@ -73,13 +74,13 @@ class Networking(commands.Cog):
             else:
                 for val in result.rrset:
                     fields.append((f"{typ}-Eintrag", str(val)))
-            emb = utils.getEmbed(
+
+            raise SuccessMessage(
+                f"DNS-Einträge des Typs {typ} für [{domain}](https://{domain}):\n\n" + result.rrset.to_text() + "\n\nGeparst:",
                 title=utils.CHECK + "DNS-Info",
-                description=f"DNS-Einträge des Typs {typ} für [{domain}](https://{domain}):\n\n" + result.rrset.to_text() + "\n\nGeparst:",
                 inline=False,
                 fields=fields
             )
-            await interaction.response.send_message(embed=emb)
         except dns.resolver.NXDOMAIN:
             raise ErrorMessage(f"Die Domain '{domain}' konnte nicht gefunden werden!")
         except dns.resolver.NoAnswer:
