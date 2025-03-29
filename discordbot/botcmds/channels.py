@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from discordbot.botmodules.serverdata import DjangoConnection
 from discordbot.errors import ErrorMessage, SuccessMessage
+from discordbot.models import Member as DB_Member
 
 SETTING_SERVER_CAT_ID = "CHANNELS_CATEGORY_ID"
 SETTING_SERVER_TXT_ID = "CHANNELS_TEXT_ID"
@@ -61,21 +62,20 @@ async def get_category(dc_guild: discord.Guild, dj: DjangoConnection, raise_erro
     return dc_guild.get_channel(category_id)
 
 
-async def get_voice_channel(dc_member: discord.Member, dj: DjangoConnection):
+async def get_voice_channel(dc_guild: discord.Guild, dj: DjangoConnection):
     db_member = await dj.get_member()
     channel_id = db_member.getSetting(SETTING_MEMBER_VOI_ID)
     if channel_id is None:
         return None
-    return dc_member.guild.get_channel(channel_id)
+    return dc_guild.get_channel(channel_id)
 
 
-async def get_text_channel(dc_member: discord.Member, dj: DjangoConnection = None):
-    dj = dj or DjangoConnection(dc_member, dc_member.guild)
+async def get_text_channel(dc_guild: discord.Guild, dj: DjangoConnection):
     db_member = await dj.get_member()
     channel_id = db_member.getSetting(SETTING_MEMBER_TXT_ID)
     if channel_id is None:
         return None
-    return dc_member.guild.get_channel(channel_id)
+    return dc_guild.get_channel(channel_id)
 
 
 class ChannelsCog(commands.Cog, name="Channels"):
@@ -90,6 +90,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
                                     after: discord.VoiceState):
         dj = DjangoConnection(member, member.guild)
         db_server = await dj.get_server()
+
         category_id = db_server.getSetting(SETTING_SERVER_CAT_ID)
         public_id = db_server.getSetting(SETTING_SERVER_PUB_ID)
         private_id = db_server.getSetting(SETTING_SERVER_PRI_ID)
@@ -98,9 +99,16 @@ class ChannelsCog(commands.Cog, name="Channels"):
         if before.channel and before.channel.category and before.channel.members == [] and before.channel.category.id == category_id and before.channel.id not in [
             private_id, public_id
         ]:
-            # TODO: Find member and delete channel id from db
+            try:
+                db_member = await DB_Member.objects.filter(server_id=member.guild.id, **{
+                    f'settings__{SETTING_MEMBER_VOI_ID}': before.channel.id}).aget()
+                db_member.setSetting(SETTING_MEMBER_VOI_ID, None)
+                await db_member.asave()
 
-            await before.channel.delete(reason="Benutzerkanal war leer")
+                await before.channel.delete(reason="Benutzerkanal war leer")
+            except DB_Member.DoesNotExist:
+                # Do not delete channel if it is not stored in any member
+                ...
 
         # Create new temp channel
         if after.channel and after.channel.category and after.channel.category.id == category_id and after.channel.id in [
@@ -109,7 +117,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
             category = after.channel.category
 
             # Check if already exists
-            channel = await get_voice_channel(member, dj)
+            channel = await get_voice_channel(member.guild, dj)
             if channel:
                 await member.edit(voice_channel=channel,
                                   reason="Benutzer wollte einen Kanal erstellen, besass aber bereits einen Kanal")
@@ -126,7 +134,9 @@ class ChannelsCog(commands.Cog, name="Channels"):
                                                                   reason="Benutzer hat den Sprachkanal erstellt")
                 await member.edit(voice_channel=new_channel, reason="Benutzer hat den Sprachkanal erstellt")
 
-                # TODO: Store in db
+                db_member = await dj.get_member()
+                db_member.setSetting(SETTING_MEMBER_VOI_ID, new_channel.id)
+                await db_member.asave()
 
         # Join random channel
         if after.channel and after.channel.category and (
@@ -149,17 +159,17 @@ class ChannelsCog(commands.Cog, name="Channels"):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.describe(permission_type="Berechtigungstyp")
     @app_commands.choices(permission_type=[
-        Choice(name='Öffentlich (Standard)', value="public"),
+        Choice(name='Öffentlich', value="public"),
         Choice(name='Privat', value="private"),
     ])
-    async def text_channel_create(self, interaction: discord.Interaction, permission_type: Choice[str] = "public"):
+    async def text_channel_create(self, interaction: discord.Interaction, permission_type: Choice[str]):
         await interaction.response.defer(ephemeral=True)
 
         user = interaction.user
         guild = interaction.guild
         dj = DjangoConnection.from_interaction(interaction)
 
-        channel = await get_text_channel(user, dj)
+        channel = await get_text_channel(guild, dj)
         if channel:
             raise ErrorMessage("Du hast bereits einen Textkanal!", fields=[("Kanal", channel.mention)])
 
@@ -190,7 +200,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
         await interaction.response.defer(ephemeral=True)
 
         dj = DjangoConnection.from_interaction(interaction)
-        channel = await get_text_channel(interaction.user, dj)
+        channel = await get_text_channel(interaction.guild, dj)
 
         if not channel:
             raise ErrorMessage("Du hattest gar keinen Textkanal!")
@@ -218,7 +228,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
         await interaction.response.defer(ephemeral=True)
 
         dj = DjangoConnection.from_interaction(interaction)
-        channel = await get_text_channel(interaction.user, dj)
+        channel = await get_text_channel(interaction.guild, dj)
 
         if not channel:
             raise ErrorMessage("Du hast noch keinen Textkanal!")
@@ -253,17 +263,17 @@ class ChannelsCog(commands.Cog, name="Channels"):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.describe(permission_type="Berechtigungstyp")
     @app_commands.choices(permission_type=[
-        Choice(name='Öffentlich (Standard)', value="public"),
+        Choice(name='Öffentlich', value="public"),
         Choice(name='Privat', value="private"),
     ])
-    async def voice_channel_create(self, interaction: discord.Interaction, permission_type: Choice[str] = "public"):
+    async def voice_channel_create(self, interaction: discord.Interaction, permission_type: Choice[str]):
         await interaction.response.defer(ephemeral=True)
 
         user = interaction.user
         guild = interaction.guild
         dj = DjangoConnection.from_interaction(interaction)
 
-        channel = await get_voice_channel(user, dj)
+        channel = await get_voice_channel(guild, dj)
         if channel:
             if user.voice:
                 await user.edit(voice_channel=channel,
@@ -299,7 +309,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
         await interaction.response.defer(ephemeral=True)
 
         dj = DjangoConnection.from_interaction(interaction)
-        channel = await get_voice_channel(interaction.user, dj)
+        channel = await get_voice_channel(interaction.guild, dj)
 
         if not channel:
             raise ErrorMessage("Du hattest gar keinen Sprachkanal!")
@@ -327,7 +337,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
         await interaction.response.defer(ephemeral=True)
 
         dj = DjangoConnection.from_interaction(interaction)
-        channel = await get_voice_channel(interaction.user, dj)
+        channel = await get_voice_channel(interaction.guild, dj)
 
         if not channel:
             raise ErrorMessage("Du hast noch keinen Sprachkanal!")
@@ -364,7 +374,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
         Choice(name='Einrichten (alle Kanäle erstellen)', value="activate"),
         Choice(name='Deaktivieren (alle Kanäle löschen)', value="deactivate"),
     ])
-    async def channel_setup(self, interaction: discord.Interaction, action: Choice[str]):
+    async def channels_config(self, interaction: discord.Interaction, action: Choice[str]):
         await interaction.response.defer()
 
         dj = DjangoConnection.from_interaction(interaction)
@@ -421,7 +431,20 @@ class ChannelsCog(commands.Cog, name="Channels"):
 
             await db_server.asave()
 
-            # TODO: Delete member channels and update member db
+            # Clear existing channels
+            for var_name in [SETTING_MEMBER_VOI_ID, SETTING_MEMBER_TXT_ID]:
+                async for member in DB_Member.objects.filter(
+                        server_id=interaction.guild.id,
+                        settings__has_key=var_name,
+                        **{f'settings__{var_name}__isnull': False}
+                ):
+                    channel_id = member.getSetting(var_name)
+                    member.setSetting(var_name, None)
+                    await member.asave()
+
+                    channel = interaction.guild.get_channel(channel_id)
+                    if channel:
+                        await channel.delete()
 
             raise SuccessMessage("Kanäle erfolgreich gelöscht!")
         else:
