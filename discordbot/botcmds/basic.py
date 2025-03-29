@@ -1,87 +1,117 @@
-from discord.ext import commands
-from discord import User, TextChannel, utils, DiscordException
-import discord
 from datetime import datetime
 
-from discordbot.config import INVITE_OWNER, INVITE_BOT, REGELN
-#from discordbot.errors import ErrorMessage
+import discord
+from discord import utils, DiscordException, app_commands
+from discord.ext import commands
+
+from discordbot.config import INVITE_OWNER, INVITE_BOT, RULES
+from discordbot.errors import SuccessMessage
+from discordbot.utils import getEmbed
 
 
 class Basic(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.color = 0xffffff
 
-    @commands.command(
-        brief="Zeigt den Ping des Bots an",
-        description='Gibt den aktuellen Ping zurück',
-        aliases=['p'],
-        help="Gib einfach /ping ein und warte ab.",
-        usage=""
+    @app_commands.command(
+        name="ping",
+        description='Gibt den aktuellen Ping des Bots zurück',
     )
-    async def ping(self, ctx):
+    async def ping(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        emb = getEmbed(
+            title="Aktueller Ping",
+            inline=False,
+            fields=[
+                ("Websocket-Latency", f"{int(self.bot.latency * 1000)}ms"),
+            ]
+        )
+
         start = datetime.timestamp(discord.utils.utcnow())
-        msg = await ctx.sendEmbed(title="Aktueller Ping", fields=[("Ping", "Berechnen...")])
-        embed = ctx.getEmbed(title="Aktueller Ping", fields=[("Ping", str(
-            int((datetime.timestamp(discord.utils.utcnow()) - start) * 1000))+"ms")])
-        await msg.edit(embed=embed)
+        msg = await interaction.followup.send(embed=emb)
+        end = datetime.timestamp(discord.utils.utcnow())
 
-    @commands.command(
-        brief="Schreibt dir nach",
-        description="Gibt den angegebenen Text zurück",
-        aliases=["copy"],
-        help="Benutze /say <Text> und der Bot schickt dir den Text zurück",
-        usage="<Text>"
-    )
-    @commands.has_permissions(manage_messages=True)
-    async def say(self, ctx, text: str, *args):
-        txt = " ".join((text,)+args)
-        await ctx.send(txt)
+        emb.add_field(name="Ping", value=f"{str(int((end - start) * 1000))}ms", inline=False)
 
-    @commands.command(
-        brief="Zeigt die Regeln",
+        await msg.edit(embed=emb)
+
+    @app_commands.command(
+        name="rules",
         description="Schickt die Regeln in den Chat",
-        aliases=["rules"],
-        help="Benutze /regeln um dich oder jemand anderes daran zu erinnern!",
-        usage="<Kanal/Benutzer> [Anzahl<100] [Text]"
     )
-    async def regeln(self, ctx):
-        EMBED = self.bot.getEmbed(
-            title="Regeln", description="Das Nichtbeachten der Regeln kann mit einem Ban, Kick oder Mute bestraft werden!")
-        owner = self.bot.get_user(self.bot.owner_id)
-        if owner:
-            EMBED.set_footer(
-                text=f'Besitzer dieses Bots ist {owner.name}#{owner.discriminator}', icon_url=owner.avatar)
-        for kategorie in REGELN:
-            EMBED.add_field(name=kategorie, value="```nimrod\n- " + (
-                "\n- ".join(regel for regel in REGELN[kategorie])) + "```", inline=False)
-        await ctx.send(embed=EMBED)
+    @app_commands.guild_only
+    async def rules(self, interaction: discord.Interaction):
+        description = "Das Nichtbeachten der Regeln kann und wird bestraft werden!\n"
 
-    @commands.command(
-        brief="Erhalte eine Einladung",
-        description="Schickt dir eine Einladung zum Server und Bot",
-        aliases=["invitelink"],
-        help="Benutze /invite und erhalte eine Einladung zu diesem Server, dem Bot-Server und einen Link, um den Bot zum eigenen Server hinzuzufügen",
-        usage=""
+        for category in RULES:
+            description += f"\n### {category}\n\n"
+
+            for rule in RULES[category]:
+                description += f"- {rule}\n"
+
+        await interaction.response.send_message(embed=getEmbed(
+            title="Regeln",
+            description=description))
+
+    @app_commands.command(
+        name="about",
+        description="Erhalte Infos über diesen Bot"
     )
-    async def invite(self, ctx):
-        invite = None
-        if ctx.guild:
+    async def about(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        embed = getEmbed(
+            title="Über mich",
+            description="Ich bin ein Discord-Bot basierend auf [django-discordbot](https://github.com/rafaelurben/django-discordbot) von [Rafael Urben](https://github.com/rafaelurben).",
+        )
+
+        def mention(user):
+            return f"{user.mention} (@{user.name})"
+
+        app_info = await self.bot.application_info()
+        if app_info.team:
+            if app_info.team.owner:
+                embed.add_field(name="Team-Besitzer", value=mention(app_info.team.owner), inline=False)
+            team_member_mentions = ", ".join([mention(member) for member in app_info.team.members])
+            embed.add_field(name="Team-Mitglieder", value=team_member_mentions, inline=False)
+        elif app_info.owner:
+            embed.add_field(name="Bot-Besitzer", value=mention(app_info.owner), inline=False)
+
+        await interaction.followup.send(embed=embed)
+
+    @app_commands.command(
+        name="invite",
+        description="Erhalte Einladungen zu diesem Server, zum Server des Besitzers und für diesen Bot."
+    )
+    @app_commands.guild_only
+    async def invite(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        server_invite: discord.Invite | None = None
+        if interaction.guild:
             try:
-                invite = await ctx.guild.vanity_invite()
+                server_invite = await interaction.guild.vanity_invite()
             except DiscordException:
                 try:
-                    invite = utils.get(list(await ctx.guild.invites()), max_age=0, max_uses=0)
-                    if not invite:
-                        invite = await (ctx.guild.system_channel or ctx.channel).create_invite()
+                    server_invite = utils.get(list(await interaction.guild.invites()), max_age=0, max_uses=0)
+                    if not server_invite:
+                        server_invite = await (interaction.guild.system_channel or interaction.channel).create_invite()
                 except DiscordException:
-                    invite = None
+                    ...
 
-        gc = len(ctx.bot.guilds)
-        desc = f"Ich bin bereits auf {gc} Guild(s)! Du möchtest, dass diese Zahl steigt? Kein Problem! Du möchtest Leute auf diesen Server einladen? Auch kein Problem!"
+        app_info = await self.bot.application_info()
+        bot_invite_url = app_info.custom_install_url or INVITE_BOT
 
-        inviteurl = invite.url if invite and invite.url else None
-        await ctx.sendEmbed(title="Einladungen", description=desc, fields=[("Dieser Server", f"[Beitreten]({inviteurl})" if inviteurl else "Unbekannt"), ("Bot Owner Server", f"[Beitreten]({INVITE_OWNER})"), ("Bot", f"[Beitreten]({INVITE_BOT})")])
+        raise SuccessMessage(
+            f"Ich bin bereits auf {app_info.approximate_guild_count} Guild(s)!",
+            title="Einladungen",
+            inline=False,
+            fields=[("Dieser Server", f"[Beitreten]({server_invite.url})" if server_invite else "Unbekannt"),
+                    ("Bot Owner Server", f"[Beitreten]({INVITE_OWNER})"),
+                    ("Dieser Bot", f"[Einladen]({bot_invite_url})" if app_info.bot_public else "Bot ist privat :)")]
+        )
 
 
 async def setup(bot):

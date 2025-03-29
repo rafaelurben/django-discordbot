@@ -75,7 +75,7 @@ RADIOS = {
 
 # Moderation
 
-REGELN = {
+RULES = {
     "1) Verhalten":
         [
             "Sei nett zu anderen Leuten und behandle sie so, wie auch du behandelt werden möchtest!",
