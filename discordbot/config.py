@@ -34,7 +34,7 @@ MAIN_PREFIXES = _s("MAIN_PREFIXES", ["/"])
 
 EXTENSIONFOLDER = "discordbot.botcmds"
 EXTENSIONS = _s("EXTENSIONS", ['basic', 'reports', 'moderation', 'games', 'help', 'channels',
-                               'userinfo', 'music', 'owneronly', 'converters', 'embedgenerator', 'notifier', 'polls',
+                               'userinfo', 'music', 'owneronly', 'converters', 'embedgenerator', 'notifier',
                                'networking'])
 
 # Basic
