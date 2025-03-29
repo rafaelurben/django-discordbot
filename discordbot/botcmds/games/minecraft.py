@@ -19,11 +19,11 @@ class MinecraftAPI:
             'https://api.mojang.com/users/profiles/minecraft/' + name)
 
         if r.status_code == 204 or r.status_code == 404:
-            raise ErrorMessage(message="Spieler wurde nicht gefunden!")
+            raise ErrorMessage("Spieler wurde nicht gefunden!")
         if r.status_code == 400:
-            raise ErrorMessage(message="Ungültiger Spielername!")
+            raise ErrorMessage("Ungültiger Spielername!")
         if r.status_code == 429:
-            raise ErrorMessage(message="Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
+            raise ErrorMessage("Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
 
         return r.json()["id"]
 
@@ -33,11 +33,11 @@ class MinecraftAPI:
             'https://api.mojang.com/user/profile/' + uuid)
 
         if r.status_code == 204 or r.status_code == 404:
-            raise ErrorMessage(message="Spieler wurde nicht gefunden!")
+            raise ErrorMessage("Spieler wurde nicht gefunden!")
         if r.status_code == 400:
-            raise ErrorMessage(message="Ungültige UUID!")
+            raise ErrorMessage("Ungültige UUID!")
         if r.status_code == 429:
-            raise ErrorMessage(message="Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
+            raise ErrorMessage("Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
 
         return r.json()["name"]
 
@@ -47,16 +47,15 @@ class MinecraftAPI:
             'https://sessionserver.mojang.com/session/minecraft/profile/' + str(uuid))
 
         if r.status_code == 204 or r.status_code == 404:
-            raise ErrorMessage(message="Spieler wurde nicht gefunden!")
+            raise ErrorMessage("Spieler wurde nicht gefunden!")
         if r.status_code == 400:
-            raise ErrorMessage(message="Ungültige UUID!")
+            raise ErrorMessage("Ungültige UUID!")
         if r.status_code == 429:
-            raise ErrorMessage(message="Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
+            raise ErrorMessage("Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
 
         data = r.json()
         if "error" in data:
-            raise ErrorMessage(
-                message="Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!")
+            raise ErrorMessage("Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!")
 
         ppty = data["properties"][0]
         base64_message = ppty["value"]

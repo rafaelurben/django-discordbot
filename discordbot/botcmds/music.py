@@ -103,8 +103,7 @@ class Music(commands.Cog):
                         '[Music] - Fehler: %s' % e) if e else None)
                     await ctx.sendEmbed(title="Memetime!", fields=[("Meme", str(filename).split(".")[0])])
                 else:
-                    raise ErrorMessage(
-                        message="Es wurden keine mit '{}' übereinstimmende Audiodatei gefunden.".format(search))
+                    raise ErrorMessage("Es wurden keine mit '{}' übereinstimmende Audiodatei gefunden.".format(search))
 
         @commands.command(
             brief='Spiele Musik',

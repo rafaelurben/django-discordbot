@@ -1,6 +1,6 @@
 from discord import app_commands, Interaction
 
-from discordbot.errors import ErrorMessage, SuccessMessage
+from discordbot.errors import EmbedException
 from discordbot.utils import getEmbed
 
 
@@ -10,22 +10,13 @@ class CommandTree(app_commands.CommandTree):
             interaction: Interaction,
             error: app_commands.AppCommandError
     ):
-        if isinstance(error, ErrorMessage):
+        if isinstance(error, EmbedException):
             emb = getEmbed(
-                title="❌ Fehler",
-                color=0xff0000,
-                description=str(error),
-            )
-        elif isinstance(error, SuccessMessage):
-            emb = getEmbed(
-                title="✅ Aktion erfolgreich",
-                color=0x00ff00,
-                description=error.description,
-                **error.embedoptions,
+                **error.embed_options
             )
         else:
             emb = getEmbed(
-                title="Oh nein!",
+                title="🐞 Oh nein!",
                 color=0xff0000,
                 description="Beim Ausführen deines Befehls ist leider ein Fehler aufgetreten!"
             )

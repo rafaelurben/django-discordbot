@@ -3,7 +3,8 @@ from discord.ext import commands
 
 from discordbot import config, botclasses
 from discordbot.botmodules.serverdata import DjangoConnection
-from discordbot.errors import ErrorMessage, SuccessMessage
+from discordbot.errors import EmbedException
+
 
 class Bot(commands.Bot):
     def __init__(self, **kwargs):
@@ -82,19 +83,9 @@ class Bot(commands.Bot):
         await DjangoConnection.fetch_server(guild)
 
     async def on_command_error(self, ctx, error):
-        if isinstance(error, ErrorMessage):
+        if isinstance(error, EmbedException):
             await ctx.sendEmbed(
-                title="Fehler",
-                color=0xff0000,
-                description=str(error),
-                fields=[("Nachricht", ctx.message.content)],
-            )
-        elif isinstance(error, SuccessMessage):
-            await ctx.sendEmbed(
-                title="Aktion erfolgreich",
-                color=0x00ff00,
-                description=error.description,
-                **error.embedoptions,
+                **error.embed_options,
             )
         else:
             emb = ctx.getEmbed(title="Fehler", color=0xff0000)

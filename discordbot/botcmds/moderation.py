@@ -190,8 +190,7 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     async def kick(self, ctx, member: Member, *args):
         if not ctx.author.roles[-1] > member.roles[-1]:
-            raise ErrorMessage(
-                message="Deine Rolle ist nicht höher als die des Benutzers, den du kicken wolltest!")
+            raise ErrorMessage("Deine Rolle ist nicht höher als die des Benutzers, den du kicken wolltest!")
         Grund = " ".join(args)
         if Grund.rstrip() == "":
             Grund = "Leer"
@@ -211,8 +210,7 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     async def ban(self, ctx, member: Member, *args):
         if not ctx.author.roles[-1] > member.roles[-1]:
-            raise ErrorMessage(
-                message="Deine Rolle ist nicht höher als die des Benutzers, den du bannen wolltest!")
+            raise ErrorMessage("Deine Rolle ist nicht höher als die des Benutzers, den du bannen wolltest!")
         Grund = " ".join(args)
         if Grund.rstrip() == "":
             Grund = "Leer"
@@ -236,13 +234,13 @@ class Moderation(commands.Cog):
             Grund = "Leer"
         user = self.bot.get_user(userid)
         if user is None:
-            raise ErrorMessage(message="Benutzer wurde nicht gefunden!")
+            raise ErrorMessage("Benutzer wurde nicht gefunden!")
         try:
             await ctx.guild.unban(user, reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
             raise SuccessMessage("Benutzer Entbannt", fields=[
                                  ("Betroffener", user.mention), ("Grund", Grund)])
         except DiscordException:
-            raise ErrorMessage(message="Benutzer wurde nicht gefunden!")
+            raise ErrorMessage("Benutzer wurde nicht gefunden!")
 
     @commands.command(
         brief="Tötet einen Spieler",
@@ -264,12 +262,10 @@ class Moderation(commands.Cog):
                         await member.edit(voice_channel=None, reason="Von Moderator "+ctx.author.name+"#"+ctx.author.discriminator+" angefordert: "+Grund)
                         raise SuccessMessage("Benutzer Getötet", fields=[
                                              ("Betroffener", member.mention), ("Grund", Grund)])
-                    raise ErrorMessage(
-                        message="Deine Rolle ist nicht höher als oder gleich wie die des Benutzers, den du töten wolltest!")
+                    raise ErrorMessage("Deine Rolle ist nicht höher als oder gleich wie die des Benutzers, den du töten wolltest!")
                 raise commands.BotMissingPermissions([])
             raise commands.MissingPermissions([])
-        raise ErrorMessage(
-            message="Der Benutzer befindet sich nicht in einem Sprachkanal.")
+        raise ErrorMessage("Der Benutzer befindet sich nicht in einem Sprachkanal.")
 
     @commands.command(
         brief="Bewegt einen Spieler zu dir",
@@ -289,10 +285,8 @@ class Moderation(commands.Cog):
                                              ("Betroffener", member.mention), ("Kanal", ctx.author.voice.channel.name)])
                     raise commands.BotMissingPermissions([])
                 raise commands.MissingPermissions([])
-            raise ErrorMessage(
-                message="Du befindest sich nicht in einem Sprachkanal.")
-        raise ErrorMessage(
-            message="Der Benutzer befindet sich nicht in einem Sprachkanal.")
+            raise ErrorMessage("Du befindest sich nicht in einem Sprachkanal.")
+        raise ErrorMessage("Der Benutzer befindet sich nicht in einem Sprachkanal.")
 
 
 async def setup(bot):
