@@ -14,6 +14,12 @@ class CommandTree(app_commands.CommandTree):
             emb = getEmbed(
                 **error.embed_options
             )
+        elif isinstance(error, app_commands.AppCommandError):
+            emb = getEmbed(
+                title="⚠️ Uups! Befehl nicht erfolgreich!",
+                color=0xf6c54a,
+                description=str(error)
+            )
         else:
             emb = getEmbed(
                 title="🐞 Oh nein!",

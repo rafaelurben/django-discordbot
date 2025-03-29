@@ -10,19 +10,19 @@ class EmbedException(commands.CommandError, app_commands.AppCommandError):
 
 class ErrorMessage(EmbedException):
     def __init__(self, description: str, /, **embed_options):
-        super().__init__(
-            title="❌ Fehler",
-            color=0xff0000,
-            description=description,
+        super().__init__(**{
+            "title": "❌ Fehler",
+            "color": 0xff0000,
+            "description": description,
             **embed_options
-        )
+        })
 
 
 class SuccessMessage(EmbedException):
     def __init__(self, description: str, /, **embed_options):
-        super().__init__(
-            title="✅ Aktion erfolgreich",
-            color=0x00ff00,
-            description=description,
+        super().__init__(**{
+            "title": "✅ Aktion erfolgreich",
+            "color": 0x00ff00,
+            "description": description,
             **embed_options
-        )
+        })
