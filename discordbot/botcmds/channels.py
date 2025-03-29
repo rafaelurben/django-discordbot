@@ -1,340 +1,432 @@
+import random
+import typing
+
+import discord
+from discord import app_commands
+from discord.app_commands import Choice
 from discord.ext import commands
-from discord import Member, utils, PermissionOverwrite, Role, CategoryChannel
-from discordbot.errors import ErrorMessage, SuccessMessage
 
 from discordbot.botmodules.serverdata import DjangoConnection
+from discordbot.errors import ErrorMessage, SuccessMessage
 
-import typing
-import random
+SETTING_SERVER_CAT_ID = "CHANNELS_CATEGORY_ID"
+SETTING_SERVER_TXT_ID = "CHANNELS_TEXT_ID"
+SETTING_SERVER_PUB_ID = "CHANNELS_PUBLIC_ID"
+SETTING_SERVER_PRI_ID = "CHANNELS_PRIVATE_ID"
 
-CHANNEL_NAMES_DEFAULT = ["SPRACHKANAL",
-                         "SPRACHKANAL ERSTELLEN", "NEUER SPRACHKANAL", ]
-CHANNEL_NAMES_PUBLIC = ["SPRACHKANAL [OFFEN]",
-                        "SPRACHKANAL ERSTELLEN [OFFEN]", "NEUER SPRACHKANAL [OFFEN]", ]
-CHANNEL_NAMES_PRIVATE = ["SPRACHKANAL [PRIVAT]",
-                         "SPRACHKANAL ERSTELLEN [PRIVAT]", "NEUER SPRACHKANAL [PRIVAT]", ]
+SETTING_MEMBER_TXT_ID = "CHANNELS_TEXT_ID"
+SETTING_MEMBER_VOI_ID = "CHANNELS_VOICE_ID"
 
+CATEGORY_NAME = "Benutzerkanäle"
 CHANNEL_NAME_TEXT = "benutzerkanäle"
 CHANNEL_NAME_PUBLIC = "Sprachkanal [offen]"
 CHANNEL_NAME_PRIVATE = "Sprachkanal [privat]"
 
-CATEGORY_NAMES = ["BENUTZERKANÄLE", "USERCHANNELS", "USER CHANNELS",
-                  "Benutzerkanäle", "Userchannels", "User channels"]
-CATEGORY_NAME = "Benutzerkanäle"
+PERM_CHANNEL_CATEGORY = discord.PermissionOverwrite(
+    read_messages=False, send_messages=False, connect=False, speak=False, move_members=False,
+    use_voice_activation=True)
+PERM_CHANNEL_COMMANDS = discord.PermissionOverwrite(
+    read_messages=True, send_messages=True, use_application_commands=True)
+PERM_CHANNEL_AUTO_VOICE = discord.PermissionOverwrite(view_channel=True, connect=True, speak=False)
 
-PERM_VOICE_OWNER = PermissionOverwrite(connect=True, speak=True, view_channel=True, move_members=True, mute_members=True,
-                                       deafen_members=True, stream=True, priority_speaker=True, use_voice_activation=True, create_instant_invite=True)
-PERM_VOICE_PRIVATE = PermissionOverwrite(
-    connect=False, speak=True, view_channel=True)
-PERM_VOICE_PUBLIC = PermissionOverwrite(
-    connect=True, speak=True, view_channel=True)
+PERM_VOICE_OWNER = discord.PermissionOverwrite(
+    connect=True, speak=True, view_channel=True, move_members=True, mute_members=True, deafen_members=True, stream=True,
+    priority_speaker=True, use_voice_activation=True)
+PERM_VOICE_GUEST = discord.PermissionOverwrite(connect=True, speak=True, view_channel=True)
+PERM_VOICE_DENIED = discord.PermissionOverwrite(connect=False, speak=True, view_channel=False)
 
-PERM_TEXT_OWNER = PermissionOverwrite(read_messages=True, read_message_history=True, send_messages=True, manage_messages=True, send_tts_messages=True,
-                                      manage_webhooks=True, add_reactions=True, embed_links=True, attach_files=True, create_instant_invite=True, external_emojis=True)
-PERM_TEXT_PRIVATE = PermissionOverwrite(read_messages=False)
+PERM_TEXT_OWNER = discord.PermissionOverwrite(
+    read_messages=True, read_message_history=True, send_messages=True, manage_messages=True, send_tts_messages=True,
+    manage_webhooks=True, add_reactions=True, embed_links=True, attach_files=True, external_emojis=True)
+PERM_TEXT_GUEST = discord.PermissionOverwrite(read_messages=True, send_messages=True, view_channel=True)
+PERM_TEXT_DENIED = discord.PermissionOverwrite(read_messages=False, send_messages=False, view_channel=False)
 
 CHANNEL_NAMES_RANDOM = ["RANDOM CHANNEL",
                         "[RANDOM CHANNEL]", "[HP] SORTING HAT", "SORTING HAT"]
 
-
-async def getUserChannelCategory(guild) -> CategoryChannel:
-    category = None
-    for cname in CATEGORY_NAMES:
-        category = utils.get(guild.categories, name=cname)
-        if category is not None:
-            break
-    return category
+CHANNELS_ACTIVATE_REASON = "Benutzerkanäle-Modul aktiviert."
+CHANNELS_DEACTIVATE_REASON = "Benutzerkanäle-Modul deaktiviert."
 
 
-class Channels(commands.Cog):
+# Helpers
+
+async def get_category(dc_guild: discord.Guild, dj: DjangoConnection, raise_error=False):
+    db_server = await dj.get_server()
+    category_id = db_server.getSetting(SETTING_SERVER_CAT_ID)
+    if category_id is None:
+        if raise_error:
+            raise ErrorMessage(
+                "Dieses Modul wurde nicht aktiviert! Ein Administrator kann dieses Modul mit `/tmp-channels-config` aktivieren.")
+        return None
+    return dc_guild.get_channel(category_id)
+
+
+async def get_voice_channel(dc_member: discord.Member, dj: DjangoConnection):
+    db_member = await dj.get_member()
+    channel_id = db_member.getSetting(SETTING_MEMBER_VOI_ID)
+    if channel_id is None:
+        return None
+    return dc_member.guild.get_channel(channel_id)
+
+
+async def get_text_channel(dc_member: discord.Member, dj: DjangoConnection = None):
+    dj = dj or DjangoConnection(dc_member, dc_member.guild)
+    db_member = await dj.get_member()
+    channel_id = db_member.getSetting(SETTING_MEMBER_TXT_ID)
+    if channel_id is None:
+        return None
+    return dc_member.guild.get_channel(channel_id)
+
+
+class ChannelsCog(commands.Cog, name="Channels"):
     def __init__(self, bot):
         self.bot = bot
         self.color = 0xee00ff
 
-    async def get_voice_channel(self, member, category=None):
-        if not category:
-            category = await getUserChannelCategory(member.guild)
-        channel = utils.get(member.guild.voice_channels, name=(
-            member.name+"#"+member.discriminator))
-        return channel
-
-    async def get_text_channel(self, ctx):
-        member = await ctx.database.get_member()
-        channelid = member.getSetting("CHANNELS_TEXT_ID")
-        if channelid is None:
-            return None
-        return ctx.guild.get_channel(channelid)
+    # Event handlers
 
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member, before, after):
-        # Delete channel if empty
-        if before.channel and before.channel.category and before.channel.category.name.upper() in CATEGORY_NAMES and "#" in before.channel.name and before.channel.members == []:
-            await before.channel.delete(reason="Kanal war leer")
+    async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState,
+                                    after: discord.VoiceState):
+        dj = DjangoConnection(member, member.guild)
+        db_server = await dj.get_server()
+        category_id = db_server.getSetting(SETTING_SERVER_CAT_ID)
+        public_id = db_server.getSetting(SETTING_SERVER_PUB_ID)
+        private_id = db_server.getSetting(SETTING_SERVER_PRI_ID)
 
-        # Create new channel
-        if after.channel and after.channel.category and after.channel.category.name.upper() in CATEGORY_NAMES and after.channel.name.upper() in CHANNEL_NAMES_DEFAULT+CHANNEL_NAMES_PRIVATE+CHANNEL_NAMES_PUBLIC:
+        # Delete temp channel if empty
+        if before.channel and before.channel.category and before.channel.members == [] and before.channel.category.id == category_id and before.channel.id not in [
+            private_id, public_id
+        ]:
+            # TODO: Find member and delete channel id from db
+
+            await before.channel.delete(reason="Benutzerkanal war leer")
+
+        # Create new temp channel
+        if after.channel and after.channel.category and after.channel.category.id == category_id and after.channel.id in [
+            private_id, public_id
+        ]:
             category = after.channel.category
-            if category:
-                channel = await self.get_voice_channel(member, category)
-                if channel:
-                    await member.edit(voice_channel=channel, reason="Benutzer wollte einen Kanal erstellen, besitzte aber bereits einen Kanal")
+
+            # Check if already exists
+            channel = await get_voice_channel(member, dj)
+            if channel:
+                await member.edit(voice_channel=channel,
+                                  reason="Benutzer wollte einen Kanal erstellen, besass aber bereits einen Kanal")
+
+            # Create new
+            else:
+                if after.channel.id == public_id:
+                    overwrites = {member.guild.default_role: PERM_VOICE_GUEST, member: PERM_TEXT_OWNER}
                 else:
-                    if after.channel.name.upper() in CHANNEL_NAMES_PRIVATE:
-                        overwrites = {
-                            member.guild.default_role: PERM_VOICE_PRIVATE, member: PERM_VOICE_OWNER}
-                    else:
-                        overwrites = {
-                            member.guild.default_role: PERM_VOICE_PUBLIC, member: PERM_TEXT_OWNER}
-                    newchannel = await category.create_voice_channel(name=(member.name+"#"+member.discriminator), overwrites=overwrites, reason="Benutzer hat den Sprachkanal erstellt")
-                    await member.edit(voice_channel=newchannel, reason="Benutzer hat den Sprachkanal erstellt")
+                    overwrites = {member.guild.default_role: PERM_VOICE_DENIED, member: PERM_VOICE_OWNER}
+
+                new_channel = await category.create_voice_channel(name="user-" + member.name,
+                                                                  overwrites=overwrites,
+                                                                  reason="Benutzer hat den Sprachkanal erstellt")
+                await member.edit(voice_channel=new_channel, reason="Benutzer hat den Sprachkanal erstellt")
+
+                # TODO: Store in db
 
         # Join random channel
-        if after.channel and after.channel.category and ("[RND]" in after.channel.name.upper() or "[RANDOM]" in after.channel.name.upper() or after.channel.name.upper() in CHANNEL_NAMES_RANDOM):
+        if after.channel and after.channel.category and (
+                "[RND]" in after.channel.name.upper() or "[RANDOM]" in after.channel.name.upper() or after.channel.name.upper() in CHANNEL_NAMES_RANDOM):
             channellist = after.channel.category.voice_channels
             channellist.remove(after.channel)
             channel = random.choice(channellist)
             await member.edit(voice_channel=channel, reason="Random channel")
 
-    # Textchannels
+    # Text-channels
 
-    @commands.group(
-        brief="Hauptcommand für alle Textchannel Befehle",
-        description='Erstelle deinen eigenen Textkanal und lade deine Freunde oder den ganzen Server dazu ein',
-        aliases=['tc'],
-        usage="<Unterbefehl> [Argument(e)]"
-    )
-    @commands.bot_has_permissions(manage_channels=True)
-    @commands.guild_only()
-    async def textchannel(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help()
-        elif await getUserChannelCategory(ctx.guild) is None:
-            raise ErrorMessage(
-                "Dieses Modul wurde nicht aktiviert! Ein Administrator kann dieses Modul mit `/channelsetup` aktivieren.")
+    tc_group = app_commands.Group(name="tmp-text",
+                                  description="Erstelle deinen eigenen Textkanal und lade deine Freunde oder den ganzen Server dazu ein",
+                                  guild_only=True)
 
-    @textchannel.command(
+    @tc_group.command(
         name="create",
-        brief='Erstelle deinen Textkanal',
-        aliases=[],
+        description='Erstelle deinen eigenen Textkanal',
     )
-    async def textchannel_create(self, ctx):
-        category = await getUserChannelCategory(ctx.guild)
-        channel = await self.get_text_channel(ctx)
-        if channel:
-            raise ErrorMessage(
-                message="Du hast bereits einen Textkanal! <#"+str(channel.id)+">")
-        overwrites = {ctx.guild.default_role: PERM_TEXT_PRIVATE,
-                      ctx.author: PERM_TEXT_OWNER}
-        newchannel = await category.create_text_channel(name=(ctx.author.name.lower()+"-"+ctx.author.discriminator), overwrites=overwrites, reason="Benutzer hat den Textkanal erstellt")
-        await ctx.sendEmbed(title="Textkanal erstellt", fields=[("Kanal", newchannel.mention)])
-        
-        member = await ctx.database.get_member()
-        member.setSetting("CHANNELS_TEXT_ID", newchannel.id)
-        await ctx.database._save(member)
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
+    @app_commands.describe(permission_type="Berechtigungstyp")
+    @app_commands.choices(permission_type=[
+        Choice(name='Öffentlich (Standard)', value="public"),
+        Choice(name='Privat', value="private"),
+    ])
+    async def text_channel_create(self, interaction: discord.Interaction, permission_type: Choice[str] = "public"):
+        await interaction.response.defer(ephemeral=True)
 
-    @textchannel.command(
+        user = interaction.user
+        guild = interaction.guild
+        dj = DjangoConnection.from_interaction(interaction)
+
+        channel = await get_text_channel(user, dj)
+        if channel:
+            raise ErrorMessage("Du hast bereits einen Textkanal!", fields=[("Kanal", channel.mention)])
+
+        category = await get_category(guild, dj, raise_error=True)
+
+        created_channel = await category.create_text_channel(
+            name=f"user-{user.name.lower()}",
+            overwrites={
+                guild.default_role: PERM_TEXT_DENIED if permission_type.value == "private" else PERM_TEXT_GUEST,
+                user: PERM_TEXT_OWNER
+            },
+            reason="Benutzer hat den Textkanal erstellt"
+        )
+
+        db_member = await dj.get_member()
+        db_member.setSetting(SETTING_MEMBER_TXT_ID, created_channel.id)
+        await db_member.asave()
+
+        raise SuccessMessage("Textkanal erstellt!", fields=[
+            ("Erstellter Kanal", created_channel.mention)])
+
+    @tc_group.command(
         name="delete",
-        brief='Lösche deinen Textkanal',
-        aliases=['del'],
+        description='Lösche deinen eigenen Textkanal',
     )
-    async def textchannel_delete(self, ctx):
-        channel = await self.get_text_channel(ctx)
-        if channel:
-            await channel.delete(reason="Benutzer hat den Textkanal gelöscht")
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
+    async def text_channel_delete(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
 
-            member = await ctx.database.get_member()
-            member.setSetting("CHANNELS_TEXT_ID", None)
-            await ctx.database._save(member)
+        dj = DjangoConnection.from_interaction(interaction)
+        channel = await get_text_channel(interaction.user, dj)
 
-            if not ctx.channel == channel:
-                raise SuccessMessage("Textkanal gelöscht")
-        else:
-            raise ErrorMessage(message="Du hattest gar keinen Textkanal!")
-
-    @textchannel.command(
-        name="invite",
-        brief='Lade jemanden in deinen Textkanal ein',
-        description='Lade ein Mitglied oder eine Rolle in deinen Textkanal ein',
-        aliases=["add", "+"],
-        usage="<Mitglied/Rolle>",
-    )
-    async def textchannel_invite(self, ctx, wer: typing.Union[Member, Role]):
-        channel = await self.get_text_channel(ctx)
         if not channel:
-            raise ErrorMessage(
-                message="Du hast noch keinen Textkanal!")
-        await channel.set_permissions(wer, reason="Benuter hat Benutzer/Rolle eingeladen", read_messages=True, send_messages=True)
-        if isinstance(wer, Member):
-            #EMBED = ctx.getEmbed(title="Benutzer zu Textkanal eingeladen", fields=[("Server", ctx.guild.name), ("Benutzer", wer.mention)])
-            # await ctx.author.send(embed=EMBED)
-            await channel.send(wer.mention+" wurde zu diesem Textkanal hinzugefügt.")
-            raise SuccessMessage("Benutzer zu Textkanal eingeladen", fields=[
-                                    ("Benutzer", wer.mention)])
-        if isinstance(wer, Role):
-            #EMBED = ctx.getEmbed(title="Rolle zu Textkanal eingeladen", fields=[("Server", ctx.guild.name), ("Rolle", wer.name)])
-            # await ctx.author.send(embed=EMBED)
-            await channel.send("Alle mit der Rolle "+wer.mention+" wurden zu diesem Textkanal hinzugefügt.")
-            raise SuccessMessage("Rolle zu Textkanal eingeladen", fields=[
-                                    ("Rolle", wer.name)])
+            raise ErrorMessage("Du hattest gar keinen Textkanal!")
 
-    @textchannel.command(
-        name="open",
-        brief='Öffne deinen Textkanal für alle Mitglieder dieses Servers',
-        aliases=["publish", "pub"],
+        await channel.delete(reason="Vom Benutzer gelöscht")
+
+        db_member = await dj.get_member()
+        db_member.setSetting(SETTING_MEMBER_TXT_ID, None)
+        await db_member.asave()
+
+        raise SuccessMessage("Sprachkanal gelöscht!")
+
+    @tc_group.command(
+        name="permissions",
+        description='Lade jemanden in deinen Textkanal ein oder aus',
     )
-    async def textchannel_open(self, ctx):
-        channel = await self.get_text_channel(ctx)
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
+    @app_commands.describe(action="Aktion", target="Benutzer/Rolle")
+    @app_commands.choices(action=[
+        Choice(name='Einladen', value="invite"),
+        Choice(name='Entfernen', value="remove"),
+    ])
+    async def text_channel_permissions(self, interaction: discord.Interaction, action: Choice[str],
+                                       target: typing.Union[discord.Member, discord.Role]):
+        await interaction.response.defer(ephemeral=True)
+
+        dj = DjangoConnection.from_interaction(interaction)
+        channel = await get_text_channel(interaction.user, dj)
+
         if not channel:
-            raise ErrorMessage(
-                message="Du hast noch keinen Textkanal!")
-        await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal für alle Geöffnet", read_messages=True, send_messages=True)
-        raise SuccessMessage("Der Kanal ist nun für alle auf diesem Server geöffnet!")
+            raise ErrorMessage("Du hast noch keinen Textkanal!")
 
-    @textchannel.command(
-        name="close",
-        brief='Schliesse deinen Textkanal für alle Mitglieder dieses Servers',
-        aliases=["unpublish", "unpub"],
-    )
-    async def textchannel_close(self, ctx):
-        channel = await self.get_text_channel(ctx)
-        if not channel:
-            raise ErrorMessage(
-                message="Du hast noch keinen Textkanal!")
-        await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal nicht mehr für alle geöffnet!", read_messages=False, send_messages=False)
-        raise SuccessMessage("Der Kanal ist nun nicht mehr für alle auf diesem Server geöffnet!")
+        if action.value == "invite":
+            await channel.set_permissions(target, overwrite=PERM_TEXT_GUEST,
+                                          reason="Benutzer hat Benutzer/Rolle eingeladen")
 
-    # Voicechannels
+            raise SuccessMessage("Zu Textkanal eingeladen", fields=[
+                ("Rolle" if isinstance(target, discord.Role) else "Benutzer", target.mention),
+                ("Kanal", channel.mention)
+            ])
+        elif action.value == "remove":
+            await channel.set_permissions(target, overwrite=PERM_TEXT_DENIED,
+                                          reason="Benutzer hat Benutzer/Rolle entfernt")
 
-    @commands.group(
-        brief="Hauptcommand für alle Voicechannel Befehle",
-        description='Erstelle deinen eigenen Sprachkanal und lade deine Freunde oder den ganzen Server dazu ein',
-        aliases=['vc'],
-        usage="<Unterbefehl> [Argument(e)]"
-    )
-    @commands.bot_has_permissions(manage_channels=True)
-    @commands.guild_only()
-    async def voicechannel(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.send_help()
-        elif await getUserChannelCategory(ctx.guild) is None:
-            raise ErrorMessage(
-                "Dieses Modul wurde nicht aktiviert! Ein Administrator kann dieses Modul mit `/channelsetup` aktivieren.")
+            raise SuccessMessage("Einladung zu Textkanal entzogen", fields=[
+                ("Rolle" if isinstance(target, discord.Role) else "Benutzer", target.mention),
+                ("Kanal", channel.mention)
+            ])
 
-    @voicechannel.command(
+    # Voice-channels
+
+    vc_group = app_commands.Group(name="tmp-voice",
+                                  description="Erstelle deinen eigenen Sprachkanal und lade deine Freunde oder den ganzen Server dazu ein",
+                                  guild_only=True)
+
+    @vc_group.command(
         name="create",
-        brief='Erstelle deinen Sprachkanal',
-        aliases=[],
+        description='Erstelle deinen eigenen Sprachkanal',
     )
-    async def voicechannel_create(self, ctx):
-        category = await getUserChannelCategory(ctx.guild)
-        channel = await self.get_voice_channel(ctx.author, category)
-        if channel:
-            if ctx.author.voice:
-                await ctx.author.edit(voice_channel=channel, reason="Benutzer hat den Kanal erstellt")
-            raise ErrorMessage(message="Du hast bereits einen Sprachkanal!")
-        overwrites = {ctx.guild.default_role: PERM_VOICE_PRIVATE,
-                        ctx.author: PERM_VOICE_OWNER}
-        newchannel = await category.create_voice_channel(name=(ctx.author.name.lower()+"#"+ctx.author.discriminator), overwrites=overwrites, reason="Benutzer hat den Sprachkanal erstellt")
-        if ctx.author.voice:
-            await ctx.author.edit(voice_channel=newchannel, reason="Benutzer hat den Sprachkanal erstellt")
-        raise SuccessMessage("Sprachkanal erstellt!")
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
+    @app_commands.describe(permission_type="Berechtigungstyp")
+    @app_commands.choices(permission_type=[
+        Choice(name='Öffentlich (Standard)', value="public"),
+        Choice(name='Privat', value="private"),
+    ])
+    async def voice_channel_create(self, interaction: discord.Interaction, permission_type: Choice[str] = "public"):
+        await interaction.response.defer(ephemeral=True)
 
-    @voicechannel.command(
+        user = interaction.user
+        guild = interaction.guild
+        dj = DjangoConnection.from_interaction(interaction)
+
+        channel = await get_voice_channel(user, dj)
+        if channel:
+            if user.voice:
+                await user.edit(voice_channel=channel,
+                                reason="Benutzer wollte einen Kanal erstellen, besass aber bereits einen.")
+            raise ErrorMessage("Du hast bereits einen Sprachkanal!", fields=[("Kanal", channel.mention)])
+
+        category = await get_category(guild, dj, raise_error=True)
+
+        created_channel = await category.create_voice_channel(
+            name=f"user-{user.name.lower()}",
+            overwrites={
+                guild.default_role: PERM_VOICE_DENIED if permission_type.value == "private" else PERM_VOICE_GUEST,
+                user: PERM_VOICE_OWNER
+            },
+            reason="Benutzer hat den Sprachkanal erstellt"
+        )
+
+        db_member = await dj.get_member()
+        db_member.setSetting(SETTING_MEMBER_VOI_ID, created_channel.id)
+        await db_member.asave()
+
+        if user.voice:
+            await user.edit(voice_channel=created_channel, reason="Benutzer hat den Sprachkanal erstellt")
+        raise SuccessMessage("Sprachkanal erstellt!", fields=[
+            ("Erstellter Kanal", created_channel.mention)])
+
+    @vc_group.command(
         name="delete",
-        brief='Lösche deinen Sprachkanal',
-        aliases=['del'],
+        description='Lösche deinen eigenen Sprachkanal',
     )
-    async def voicechannel_delete(self, ctx):
-        channel = await self.get_voice_channel(ctx.author)
-        if channel:
-            await channel.delete(reason="Vom Benutzer gelöscht")
-            raise SuccessMessage("Sprachkanal gelöscht!")
-        raise ErrorMessage(message="Du hattest gar keinen Sprachkanal!")
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
+    async def voice_channel_delete(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
 
-    @voicechannel.command(
-        name="invite",
-        brief='Lade jemanden in deinen Sprachkanal ein',
-        description='Lade ein Mitglied oder eine Rolle in deinen Sprachkanal ein',
-        aliases=["add", "+"],
-        usage="<Mitglied/Rolle>",
-    )
-    async def voicechannel_invite(self, ctx, wer: typing.Union[Member, Role]):
-        channel = await self.get_voice_channel(ctx.author)
-        if not channel:
-            raise ErrorMessage(message="Du hast noch keinen Sprachkanal!")
-        await channel.set_permissions(wer, reason="Benuter hat Benutzer/Rolle eingeladen", read_messages=True, connect=True, speak=True)
-        if isinstance(wer, Member):
-            #EMBED = ctx.getEmbed(title="Benutzer zu Sprachkanal eingeladen", fields=[("Server", ctx.guild.name),("Benutzer", wer.mention)])
-            # await ctx.author.send(embed=EMBED)
-            if not wer.bot:
-                EMBED2 = ctx.getEmbed(title="Du wurdest zu einem Sprachkanal eingeladen", fields=[
-                    ("Server", ctx.guild.name), ("Von", ctx.author.mention)])
-                await wer.send(embed=EMBED2)
-            raise SuccessMessage("Benutzer zu Sprachkanal eingeladen", fields=[
-                                 ("Benutzer", wer.mention)])
-        if isinstance(wer, Role):
-            #EMBED = ctx.getEmbed(title="Rolle zu Sprachkanal eingeladen", fields=[("Server", ctx.guild.name),("Rolle", wer.name)])
-            # await ctx.author.send(embed=EMBED)
-            await ctx.send("Alle mit der Rolle "+wer.mention+" wurden von "+ctx.author.mention+" zu seinem/ihrem Sprachkanal eingeladen.")
-            raise SuccessMessage("Rolle zu Sprachkanal eingeladen", fields=[
-                                 ("Rolle", wer.name)])
+        dj = DjangoConnection.from_interaction(interaction)
+        channel = await get_voice_channel(interaction.user, dj)
 
-    @voicechannel.command(
-        name="open",
-        brief='Öffne deinen Sprachkanal für alle Mitglieder dieses Servers',
-        aliases=["publish", "pub"],
-    )
-    async def voicechannel_open(self, ctx):
-        channel = await self.get_voice_channel(ctx.author)
         if not channel:
-            raise ErrorMessage(
-                message="Du hast noch keinen Sprachkanal!")
-        await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal für alle geöffnet", read_messages=True, connect=True, speak=True)
-        raise SuccessMessage(
-            "Der Sprachkanal ist nun für alle auf diesem Server geöffnet!")
+            raise ErrorMessage("Du hattest gar keinen Sprachkanal!")
 
-    @voicechannel.command(
-        name="close",
-        brief='Schliesse deinen Sprachkanal für alle Mitglieder dieses Servers',
-        aliases=["unpublish", "unpub"],
+        await channel.delete(reason="Vom Benutzer gelöscht")
+
+        db_member = await dj.get_member()
+        db_member.setSetting(SETTING_MEMBER_VOI_ID, None)
+        await db_member.asave()
+
+        raise SuccessMessage("Sprachkanal gelöscht!")
+
+    @vc_group.command(
+        name="permissions",
+        description='Lade jemanden in deinen Sprachkanal ein oder aus',
     )
-    async def voicechannel_close(self, ctx):
-        channel = await self.get_voice_channel(ctx.author)
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
+    @app_commands.describe(action="Aktion", target="Benutzer/Rolle")
+    @app_commands.choices(action=[
+        Choice(name='Einladen', value="invite"),
+        Choice(name='Entfernen', value="remove"),
+    ])
+    async def voice_channel_permissions(self, interaction: discord.Interaction, action: Choice[str],
+                                        target: typing.Union[discord.Member, discord.Role]):
+        await interaction.response.defer(ephemeral=True)
+
+        dj = DjangoConnection.from_interaction(interaction)
+        channel = await get_voice_channel(interaction.user, dj)
+
         if not channel:
-            raise ErrorMessage(
-                message="Du hast noch keinen Sprachkanal!")
-        await channel.set_permissions(ctx.guild.default_role, reason="Benuter hat den Kanal nicht mehr für alle geöffnet!", read_messages=True, connect=False, speak=True)
-        raise SuccessMessage(
-            "Der Sprachkanal ist nun nicht mehr für alle auf diesem Server geöffnet!")
+            raise ErrorMessage("Du hast noch keinen Sprachkanal!")
+
+        if action.value == "invite":
+            await channel.set_permissions(target, overwrite=PERM_VOICE_GUEST,
+                                          reason="Benutzer hat Benutzer/Rolle eingeladen")
+
+            raise SuccessMessage("Zu Sprachkanal eingeladen", fields=[
+                ("Rolle" if isinstance(target, discord.Role) else "Benutzer", target.mention),
+                ("Kanal", channel.mention)
+            ])
+        elif action.value == "remove":
+            await channel.set_permissions(target, overwrite=PERM_VOICE_DENIED,
+                                          reason="Benutzer hat Benutzer/Rolle entfernt")
+
+            raise SuccessMessage("Einladung zu Sprachkanal entzogen", fields=[
+                ("Rolle" if isinstance(target, discord.Role) else "Benutzer", target.mention),
+                ("Kanal", channel.mention)
+            ])
 
     # Channels (General)
 
-    @commands.command(
-        name="channelsetup",
-        brief="Aktiviere dieses Modul",
-        help="Erstelle die Standardkanäle und Kategorie für dieses Modul",
-        hidden=True,
+    @app_commands.command(
+        name="tmp-channels-config",
+        description="Konfiguriere das Benutzerkanäle-Modul",
+        extras={'help': "Verwende diesen Befehl, um das Modul 'Benutzerkanäle' zu aktivieren oder deaktivieren."}
     )
-    @commands.bot_has_permissions(manage_channels=True)
-    @commands.has_permissions(manage_channels=True)
-    async def channelsetup(self, ctx):
-        category = await getUserChannelCategory(ctx.guild)
-        if category:
-            raise ErrorMessage(
-                "Kategorie existiert bereits! Lösche sie zuerst um sie neu aufzusetzen!")
-        categoryoverwrites = {ctx.guild.default_role: PermissionOverwrite(
-            read_messages=False, send_messages=False, connect=False, speak=False, move_members=False, use_voice_activation=True)}
-        textchanneloverwrites = {ctx.guild.default_role: PermissionOverwrite(
-            read_messages=True, send_messages=True)}
-        voicechanneloverwrites = {ctx.guild.default_role: PermissionOverwrite(
-            view_channel=True, connect=True, speak=False)}
-        category = await ctx.guild.create_category_channel(name=CATEGORY_NAME, overwrites=categoryoverwrites, reason="Bereite Benutzerkanäle vor...")
-        await category.create_text_channel(name=CHANNEL_NAME_TEXT, overwrites=textchanneloverwrites, reason="Bereite Benutzerkanäle vor...", topic="Hilfe: /help channels")
-        await category.create_voice_channel(name=CHANNEL_NAME_PUBLIC, overwrites=voicechanneloverwrites, reason="Bereite Benutzerkanäle vor...")
-        await category.create_voice_channel(name=CHANNEL_NAME_PRIVATE, overwrites=voicechanneloverwrites, reason="Bereite Benutzerkanäle vor...")
-        raise SuccessMessage(
-            "Die erforderlichen Kanäle wurden erfolgreich erstellt!")
+    @app_commands.guild_only
+    @app_commands.default_permissions(manage_channels=True)
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
+    @app_commands.describe(action="Die auszuführende Aktion")
+    @app_commands.choices(action=[
+        Choice(name='Einrichten (alle Kanäle erstellen)', value="activate"),
+        Choice(name='Deaktivieren (alle Kanäle löschen)', value="deactivate"),
+    ])
+    async def channel_setup(self, interaction: discord.Interaction, action: Choice[str]):
+        await interaction.response.defer()
+
+        dj = DjangoConnection.from_interaction(interaction)
+        db_server = await dj.get_server()
+
+        if action.value == 'activate':
+            if db_server.getSetting(SETTING_SERVER_CAT_ID):
+                raise ErrorMessage(
+                    "Bereits eingerichtet! Falls die erstellen Kanäle aus Versehen gelöscht wurden, muss du das Modul zuerst deaktivieren und anschliessend wieder aktivieren.")
+
+            category = await interaction.guild.create_category_channel(
+                name=CATEGORY_NAME,
+                overwrites={interaction.guild.default_role: PERM_CHANNEL_CATEGORY},
+                reason=CHANNELS_ACTIVATE_REASON)
+            channel_text = await category.create_text_channel(
+                name=CHANNEL_NAME_TEXT,
+                overwrites={interaction.guild.default_role: PERM_CHANNEL_COMMANDS},
+                reason=CHANNELS_ACTIVATE_REASON,
+                topic="Hilfe: /help channels")
+            channel_public = await category.create_voice_channel(
+                name=CHANNEL_NAME_PUBLIC,
+                overwrites={interaction.guild.default_role: PERM_CHANNEL_AUTO_VOICE},
+                reason=CHANNELS_ACTIVATE_REASON)
+            channel_private = await category.create_voice_channel(
+                name=CHANNEL_NAME_PRIVATE,
+                overwrites={interaction.guild.default_role: PERM_CHANNEL_AUTO_VOICE},
+                reason=CHANNELS_ACTIVATE_REASON)
+
+            db_server.setSetting(SETTING_SERVER_CAT_ID, category.id)
+            db_server.setSetting(SETTING_SERVER_TXT_ID, channel_text.id)
+            db_server.setSetting(SETTING_SERVER_PUB_ID, channel_public.id)
+            db_server.setSetting(SETTING_SERVER_PRI_ID, channel_private.id)
+            await db_server.asave()
+
+            raise SuccessMessage(
+                "Die erforderlichen Kanäle wurden erfolgreich erstellt! "
+                "Die Kategorie und Kanäle dürfen nach Belieben umbenannt werden.", fields=[
+                    ("Erstellte Kategorie", category.mention),
+                    ("Erstellter Textkanal für Befehle", channel_text.mention),
+                    ("Erstellter Sprachkanal für automatische öffentliche Kanäle", channel_public.mention),
+                    ("Erstellter Sprachkanal für automatische private Kanäle", channel_private.mention)
+                ], inline=False)
+        elif action.value == 'deactivate':
+            if not db_server.getSetting(SETTING_SERVER_CAT_ID):
+                raise ErrorMessage(
+                    "Nicht eingerichtet! Dieses Modul wurde nicht eingerichtet.")
+
+            for setting_name in [SETTING_SERVER_PRI_ID, SETTING_SERVER_PUB_ID, SETTING_SERVER_TXT_ID,
+                                 SETTING_SERVER_CAT_ID]:
+                category = interaction.guild.get_channel(db_server.getSetting(setting_name))
+                if category:
+                    await category.delete(reason=CHANNELS_DEACTIVATE_REASON)
+                db_server.setSetting(setting_name, None)
+
+            await db_server.asave()
+
+            # TODO: Delete member channels and update member db
+
+            raise SuccessMessage("Kanäle erfolgreich gelöscht!")
+        else:
+            raise ErrorMessage("Unbekannte Aktion: " + action.value)
 
 
 async def setup(bot):
-    await bot.add_cog(Channels(bot))
+    await bot.add_cog(ChannelsCog(bot))

@@ -74,7 +74,7 @@ class Server:
 
 
 class DjangoConnection:
-    def __init__(self, dc_user: discord.User, dc_guild: discord.Guild):
+    def __init__(self, dc_user: discord.User | discord.Member, dc_guild: discord.Guild):
         self.dc_user = dc_user
         self.dc_guild = dc_guild
         self._db_user = None
