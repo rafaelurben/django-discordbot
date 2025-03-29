@@ -23,24 +23,21 @@ CHANNEL_NAME_TEXT = "benutzerkanäle"
 CHANNEL_NAME_PUBLIC = "Sprachkanal [offen]"
 CHANNEL_NAME_PRIVATE = "Sprachkanal [privat]"
 
-PERM_CHANNEL_CATEGORY = discord.PermissionOverwrite(
-    read_messages=False, send_messages=False, connect=False, speak=False, move_members=False,
-    use_voice_activation=True)
+PERM_DEFAULT_NONE = discord.PermissionOverwrite(
+    view_channel=False, read_messages=False, send_messages=False, connect=False)
+PERM_BOT = discord.PermissionOverwrite(
+    view_channel=True, read_messages=True, send_messages=True, connect=True)
+
 PERM_CHANNEL_COMMANDS = discord.PermissionOverwrite(
-    read_messages=True, send_messages=True, use_application_commands=True)
-PERM_CHANNEL_AUTO_VOICE = discord.PermissionOverwrite(view_channel=True, connect=True, speak=False)
+    view_channel=True, read_messages=True, send_messages=True)
+PERM_CHANNEL_AUTO_VOICE = discord.PermissionOverwrite(
+    view_channel=True, send_messages=False, connect=True, speak=False)
 
-PERM_VOICE_OWNER = discord.PermissionOverwrite(
-    connect=True, speak=True, view_channel=True, move_members=True, mute_members=True, deafen_members=True, stream=True,
-    priority_speaker=True, use_voice_activation=True)
+PERM_VOICE_OWNER = discord.PermissionOverwrite(connect=True, speak=True, view_channel=True)
 PERM_VOICE_GUEST = discord.PermissionOverwrite(connect=True, speak=True, view_channel=True)
-PERM_VOICE_DENIED = discord.PermissionOverwrite(connect=False, speak=True, view_channel=False)
 
-PERM_TEXT_OWNER = discord.PermissionOverwrite(
-    read_messages=True, read_message_history=True, send_messages=True, manage_messages=True, send_tts_messages=True,
-    manage_webhooks=True, add_reactions=True, embed_links=True, attach_files=True, external_emojis=True)
+PERM_TEXT_OWNER = discord.PermissionOverwrite(read_messages=True, send_messages=True, view_channel=True)
 PERM_TEXT_GUEST = discord.PermissionOverwrite(read_messages=True, send_messages=True, view_channel=True)
-PERM_TEXT_DENIED = discord.PermissionOverwrite(read_messages=False, send_messages=False, view_channel=False)
 
 CHANNEL_NAMES_RANDOM = ["RANDOM CHANNEL",
                         "[RANDOM CHANNEL]", "[HP] SORTING HAT", "SORTING HAT"]
@@ -124,14 +121,16 @@ class ChannelsCog(commands.Cog, name="Channels"):
 
             # Create new
             else:
-                if after.channel.id == public_id:
-                    overwrites = {member.guild.default_role: PERM_VOICE_GUEST, member: PERM_TEXT_OWNER}
-                else:
-                    overwrites = {member.guild.default_role: PERM_VOICE_DENIED, member: PERM_VOICE_OWNER}
+                is_public = after.channel.id == public_id
+                new_channel = await category.create_voice_channel(
+                    name="user-" + member.name,
+                    overwrites={
+                        member: PERM_VOICE_OWNER,
+                        self.bot.user: PERM_BOT,
+                        member.guild.default_role: PERM_VOICE_GUEST if is_public else PERM_DEFAULT_NONE
+                    },
+                    reason="Benutzer hat den Sprachkanal erstellt")
 
-                new_channel = await category.create_voice_channel(name="user-" + member.name,
-                                                                  overwrites=overwrites,
-                                                                  reason="Benutzer hat den Sprachkanal erstellt")
                 await member.edit(voice_channel=new_channel, reason="Benutzer hat den Sprachkanal erstellt")
 
                 db_member = await dj.get_member()
@@ -159,8 +158,8 @@ class ChannelsCog(commands.Cog, name="Channels"):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.describe(permission_type="Berechtigungstyp")
     @app_commands.choices(permission_type=[
-        Choice(name='Öffentlich', value="public"),
-        Choice(name='Privat', value="private"),
+        Choice(name='public (öffentlich)', value="public"),
+        Choice(name='private (privat)', value="private"),
     ])
     async def text_channel_create(self, interaction: discord.Interaction, permission_type: Choice[str]):
         await interaction.response.defer(ephemeral=True)
@@ -178,8 +177,9 @@ class ChannelsCog(commands.Cog, name="Channels"):
         created_channel = await category.create_text_channel(
             name=f"user-{user.name.lower()}",
             overwrites={
-                guild.default_role: PERM_TEXT_DENIED if permission_type.value == "private" else PERM_TEXT_GUEST,
-                user: PERM_TEXT_OWNER
+                guild.default_role: PERM_TEXT_GUEST if permission_type.value == "public" else PERM_DEFAULT_NONE,
+                user: PERM_TEXT_OWNER,
+                self.bot.user: PERM_BOT,
             },
             reason="Benutzer hat den Textkanal erstellt"
         )
@@ -220,12 +220,15 @@ class ChannelsCog(commands.Cog, name="Channels"):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.describe(action="Aktion", target="Benutzer/Rolle")
     @app_commands.choices(action=[
-        Choice(name='Einladen', value="invite"),
-        Choice(name='Entfernen', value="remove"),
+        Choice(name='add (hinzufügen)', value="add"),
+        Choice(name='remove (entfernen)', value="remove"),
     ])
     async def text_channel_permissions(self, interaction: discord.Interaction, action: Choice[str],
                                        target: typing.Union[discord.Member, discord.Role]):
         await interaction.response.defer(ephemeral=True)
+
+        if target.id == self.bot.user.id:
+            raise ErrorMessage("Stopp! Lass mich selbst für meine Berechtigungen schauen!")
 
         dj = DjangoConnection.from_interaction(interaction)
         channel = await get_text_channel(interaction.guild, dj)
@@ -233,7 +236,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
         if not channel:
             raise ErrorMessage("Du hast noch keinen Textkanal!")
 
-        if action.value == "invite":
+        if action.value == "add":
             await channel.set_permissions(target, overwrite=PERM_TEXT_GUEST,
                                           reason="Benutzer hat Benutzer/Rolle eingeladen")
 
@@ -242,7 +245,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
                 ("Kanal", channel.mention)
             ])
         elif action.value == "remove":
-            await channel.set_permissions(target, overwrite=PERM_TEXT_DENIED,
+            await channel.set_permissions(target, overwrite=PERM_DEFAULT_NONE,
                                           reason="Benutzer hat Benutzer/Rolle entfernt")
 
             raise SuccessMessage("Einladung zu Textkanal entzogen", fields=[
@@ -263,8 +266,8 @@ class ChannelsCog(commands.Cog, name="Channels"):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.describe(permission_type="Berechtigungstyp")
     @app_commands.choices(permission_type=[
-        Choice(name='Öffentlich', value="public"),
-        Choice(name='Privat', value="private"),
+        Choice(name='public (öffentlich)', value="public"),
+        Choice(name='private (privat)', value="private"),
     ])
     async def voice_channel_create(self, interaction: discord.Interaction, permission_type: Choice[str]):
         await interaction.response.defer(ephemeral=True)
@@ -285,8 +288,9 @@ class ChannelsCog(commands.Cog, name="Channels"):
         created_channel = await category.create_voice_channel(
             name=f"user-{user.name.lower()}",
             overwrites={
-                guild.default_role: PERM_VOICE_DENIED if permission_type.value == "private" else PERM_VOICE_GUEST,
-                user: PERM_VOICE_OWNER
+                guild.default_role: PERM_TEXT_GUEST if permission_type.value == "public" else PERM_DEFAULT_NONE,
+                user: PERM_TEXT_OWNER,
+                self.bot.user: PERM_BOT,
             },
             reason="Benutzer hat den Sprachkanal erstellt"
         )
@@ -329,12 +333,15 @@ class ChannelsCog(commands.Cog, name="Channels"):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.describe(action="Aktion", target="Benutzer/Rolle")
     @app_commands.choices(action=[
-        Choice(name='Einladen', value="invite"),
-        Choice(name='Entfernen', value="remove"),
+        Choice(name='add', value="add"),
+        Choice(name='remove', value="remove"),
     ])
     async def voice_channel_permissions(self, interaction: discord.Interaction, action: Choice[str],
                                         target: typing.Union[discord.Member, discord.Role]):
         await interaction.response.defer(ephemeral=True)
+
+        if target.id == self.bot.user.id:
+            raise ErrorMessage("Stopp! Lass mich selbst für meine Berechtigungen schauen!")
 
         dj = DjangoConnection.from_interaction(interaction)
         channel = await get_voice_channel(interaction.guild, dj)
@@ -342,7 +349,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
         if not channel:
             raise ErrorMessage("Du hast noch keinen Sprachkanal!")
 
-        if action.value == "invite":
+        if action.value == "add":
             await channel.set_permissions(target, overwrite=PERM_VOICE_GUEST,
                                           reason="Benutzer hat Benutzer/Rolle eingeladen")
 
@@ -351,7 +358,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
                 ("Kanal", channel.mention)
             ])
         elif action.value == "remove":
-            await channel.set_permissions(target, overwrite=PERM_VOICE_DENIED,
+            await channel.set_permissions(target, overwrite=PERM_DEFAULT_NONE,
                                           reason="Benutzer hat Benutzer/Rolle entfernt")
 
             raise SuccessMessage("Einladung zu Sprachkanal entzogen", fields=[
@@ -371,8 +378,8 @@ class ChannelsCog(commands.Cog, name="Channels"):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.describe(action="Die auszuführende Aktion")
     @app_commands.choices(action=[
-        Choice(name='Einrichten (alle Kanäle erstellen)', value="activate"),
-        Choice(name='Deaktivieren (alle Kanäle löschen)', value="deactivate"),
+        Choice(name='activate (alle Kanäle erstellen)', value="activate"),
+        Choice(name='deactivate (alle Kanäle löschen)', value="deactivate"),
     ])
     async def channels_config(self, interaction: discord.Interaction, action: Choice[str]):
         await interaction.response.defer()
@@ -387,7 +394,9 @@ class ChannelsCog(commands.Cog, name="Channels"):
 
             category = await interaction.guild.create_category_channel(
                 name=CATEGORY_NAME,
-                overwrites={interaction.guild.default_role: PERM_CHANNEL_CATEGORY},
+                overwrites={
+                    interaction.guild.default_role: PERM_DEFAULT_NONE,
+                    self.bot.user: PERM_BOT},
                 reason=CHANNELS_ACTIVATE_REASON)
             channel_text = await category.create_text_channel(
                 name=CHANNEL_NAME_TEXT,
