@@ -1,115 +1,80 @@
+import json
+from typing import Optional
+
+import discord
+from discord import app_commands, Interaction
 from discord.ext import commands
-from discord import Embed, Message, Color
+
 from discordbot.errors import ErrorMessage
+from discordbot.utils import getEmbed
 
-import random
 
-par = "//"
-opt = "/!/"
+def embed_to_str(embed: discord.Embed) -> str:
+    data = embed.to_dict()
+    return json.dumps(data, indent=2, ensure_ascii=False).replace("```", '\\`\\`\\`')
+
+
+def str_to_embed(value: str) -> discord.Embed:
+    data = json.loads(value.replace('\\`\\`\\`', "```"))
+    return discord.Embed.from_dict(data)
+
+
+class EmbedTransformer(app_commands.Transformer):
+    def transform(self, interaction: Interaction, value: str, /) -> discord.Embed:
+        return str_to_embed(value)
+
 
 class EmbedGenerator(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.color = 0x34b7eb
 
-    @commands.has_permissions(manage_messages = True)
-    @commands.guild_only()
-    @commands.command(
-        name='createembed',
-        brief='Erstelle einen Embed',
-        description='Erstelle einen Embed im Chat!',
-        aliases=["cemb","embedcreate"],
-        help="Benutze /createembed für Erklärungen.",
-        usage="<Titel> [Argumente]"
-    )
-    async def createembed(self, ctx):
-        text = " ".join(ctx.message.content.split(ctx.invoked_with)[1:])
-        if not text:
-            await ctx.sendEmbed(title="Embed-Creator", description=f"""
-Verwendung des Chat-Embed-Generators:
-```/createembed <Titel>
-[Beschreibung]
-[Parameter1]
-[Parameter2]
-[...]
-```
-Parameter brauchen je eine Zeile und beginnen immer mit `{par}`.
-Optionen werden immer mit `{opt}` getrennt.
+        self.ctx_menu_copy_embed = app_commands.ContextMenu(
+            name='Embed(s) kopieren (JSON)',
+            callback=self.copy_embed_contextmenu,
+        )
+        self.bot.tree.add_command(self.ctx_menu_copy_embed)
 
-Verfügbare Parameter:""", inline=False, fields=[
-        ("Feld (bis zu 25)",f"{par}field{opt}<Titel>{opt}<Inhalt>{opt}[Inline]"),
-        ("Footer",          f"{par}footer{opt}<Titel>{opt}[Bild-URL]"),
-        ("Author",          f"{par}author{opt}<Name>{opt}[Link]"),
-        ("Thumbnail",       f"{par}thumbnail{opt}<Bild-URL>"),
-        ("Color",           f"{par}color{opt}<RED>{opt}<GREEN>{opt}<BLUE>")
-        ])
-        else:
-            lines = text.split("\n")
-            data = {
-                "title": lines.pop(0),
-                "description": "",
-                "footertext": "",
-                "footerurl": "",
-                "authorname": "",
-                "authorurl": "",
-                "fields": [],
-                "thumbnailurl": "",
-                "timestamp": False
-            }
+    def cog_unload(self) -> None:
+        self.bot.tree.remove_command(self.ctx_menu_copy_embed.name, type=self.ctx_menu_copy_embed.type)
 
-            for line in lines:
-                if len(line) >= 4 and line.startswith(par):
-                    line = line[2::]
-                    options = line.split(opt)
-                    command = options.pop(0).lower().strip()
-                    if command in ["field","f","field"] and len(options) >= 2:
-                        data["fields"].append((options[0],options[1]) if (len(options) < 3 or not (options[2].lower() in ["f","false","no"])) else (options[0],options[1],False))
-                    elif command in ["footer","foot"] and len(options) >= 1:
-                        data["footertext"] = options[0]
-                        data["footerurl"] = options[1] if len(options) > 1 else ""
-                    elif command in ["author"] and len(options) >= 1:
-                        data["authorname"] = options[0]
-                        data["authorurl"] = options[1] if len(options) > 1 else ""
-                    elif command in ["thumbnailurl", "thumbnail", "thumb"] and len(options) >= 1:
-                        data["thumbnailurl"] = options[0]
-                    elif command in ["color", "c"] and len(options) >= 3:
-                        try:
-                            data["color"] = Color.from_rgb(int(options[0]),int(options[1]),int(options[2]))
-                        except ValueError:
-                            pass
-                else:
-                    data["description"] += "\n"+line
+    @app_commands.allowed_installs(guilds=True, users=True)
+    async def copy_embed_contextmenu(self, interaction: discord.interactions, message: discord.Message):
+        if not message.embeds:
+            raise ErrorMessage("Keine Embeds gefunden!")
 
-            await ctx.sendEmbed(**data)
+        description = f"Original-Nachricht: {message.jump_url}"
+        for i, embed in enumerate(message.embeds):
+            embed_str = embed_to_str(embed)
+            description += f"\n### Embed {i + 1}\n```json\n{embed_str}\n```"
 
-    @commands.command(
-        name='getembed',
-        brief='Erhalte einen Embed',
-        description='Erhalte den Command, um einen bestehenden Embed zu erstellen.',
-        aliases=["gemb","getemb"],
-        help="Benutze /getembed <NachrichtenID>",
-        usage="<NachrichtenID>"
-    )
-    async def getembed(self, ctx, msg:Message):
-        if msg.embeds:
-            emb = msg.embeds[0]
-            text = "/createembed "+emb.title
-            if emb.description:
-                text += f"\n{emb.description}"
-            if emb.footer:
-                text += f"\n{par}footer{opt}{emb.footer.text}{(opt+emb.footer.icon_url) if emb.footer.icon_url else ''}"
-            if emb.thumbnail:
-                text += f"\n{par}thumbnail{opt}{emb.thumbnail.url}"
-            if emb.author:
-                text += f"\n{par}author{opt}{emb.author.name}{(opt+emb.author.url) if emb.author.url else ''}"
-            if emb.fields:
-                for field in emb.fields:
-                    text += f"\n{par}field{opt}{field.name}{opt}{field.value}{(opt+'False') if not field.inline else ''}"
-            if emb.color:
-                text += f"\n{par}color{opt}{str(emb.color.r)}{opt}{str(emb.color.g)}{opt}{str(emb.color.b)}"
-            await ctx.sendEmbed(title="Embed Command", description=text)
-        else:
-            raise ErrorMessage("Diese Nachricht hat kein Embed!")
+        await interaction.response.send_message(ephemeral=True, embed=getEmbed(
+            title="Kopierte Embeds",
+            description=description,
+        ))
+
+    group = app_commands.Group(name="embeds", description="Clone, generate and update embeds")
+
+    @group.command(name="send", description="Sende Embeds in den aktuellen Kanal")
+    async def send_embed(self, interaction: discord.Interaction,
+                         embed1: app_commands.Transform[discord.Embed, EmbedTransformer],
+                         embed2: Optional[app_commands.Transform[discord.Embed, EmbedTransformer]],
+                         embed3: Optional[app_commands.Transform[discord.Embed, EmbedTransformer]],
+                         embed4: Optional[app_commands.Transform[discord.Embed, EmbedTransformer]],
+                         embed5: Optional[app_commands.Transform[discord.Embed, EmbedTransformer]],
+                         embed6: Optional[app_commands.Transform[discord.Embed, EmbedTransformer]],
+                         embed7: Optional[app_commands.Transform[discord.Embed, EmbedTransformer]],
+                         embed8: Optional[app_commands.Transform[discord.Embed, EmbedTransformer]],
+                         embed9: Optional[app_commands.Transform[discord.Embed, EmbedTransformer]],
+                         embed10: Optional[app_commands.Transform[discord.Embed, EmbedTransformer]],
+                         ):
+        embeds = [embed1]
+        for emb in [embed2, embed3, embed4, embed5, embed6, embed7, embed8, embed9, embed10]:
+            if emb:
+                embeds.append(emb)
+
+        await interaction.response.send_message(ephemeral=False, embeds=embeds)
+
 
 async def setup(bot):
     await bot.add_cog(EmbedGenerator(bot))
