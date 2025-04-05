@@ -20,7 +20,7 @@ class Converters(commands.Cog):
     @app_commands.choices(
         fmt=[
             app_commands.Choice(name="Morse -> Text", value="morse_text"),
-            app_commands.Choice(name="Text -> Morse", value="test_morse"),
+            app_commands.Choice(name="Text -> Morse", value="text_morse"),
         ]
     )
     async def convert(
@@ -31,28 +31,28 @@ class Converters(commands.Cog):
     ):
         if fmt.value == "morse_text":
             morse = value
-            text = converters.morse_decrypt(
-                morse.replace("_", "-").replace(" | ", "  ")
-            )
+            text = converters.morse_decrypt(morse.replace("_", "-"))
             await interaction.response.send_message(
                 embed=utils.getEmbed(
-                    title="Morsecode",
+                    title="Umwandlung",
+                    description=fmt.name,
                     fields=[
-                        ("Morsecode", morse.replace("  ", " | ")),
-                        ("Text", text),
+                        ("Morsecode", f"`{morse}`"),
+                        ("Text", f"`{text}`"),
                     ],
                     inline=False,
                 )
             )
-        elif fmt.value == "test_morse":
+        elif fmt.value == "text_morse":
             text = value
             morse = converters.morse_encrypt(text)
             await interaction.response.send_message(
                 embed=utils.getEmbed(
-                    title="Morsecode",
+                    title="Umwandlung",
+                    description=fmt.name,
                     fields=[
-                        ("Morsecode", morse.replace("  ", " | ")),
-                        ("Text", text),
+                        ("Text", f"`{text}`"),
+                        ("Morsecode", f"`{morse}`"),
                     ],
                     inline=False,
                 )
