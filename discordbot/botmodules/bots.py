@@ -40,7 +40,9 @@ class VierGewinntBot:
     @classmethod
     def seq_in_list(cls, sequence, listtotest):
         if len(sequence) <= len(listtotest):
-            return ', '.join(map(str, sequence)) in ', '.join(map(str, listtotest))
+            return ", ".join(map(str, sequence)) in ", ".join(
+                map(str, listtotest)
+            )
         return False
 
     @classmethod
@@ -123,7 +125,16 @@ class VierGewinntBot:
     # Recursive
 
     @classmethod
-    def _get_best_move(cls, board, playernr=2, level=0, alpha=-100000000000, beta=100000000000, botnr=2, maxdepth=4):
+    def _get_best_move(
+        cls,
+        board,
+        playernr=2,
+        level=0,
+        alpha=-100000000000,
+        beta=100000000000,
+        botnr=2,
+        maxdepth=4,
+    ):
         scores = []
         for i in range(len(board[0])):
             if board[0][i] == 0:
@@ -138,7 +149,7 @@ class VierGewinntBot:
                             alpha=alpha,
                             beta=beta,
                             botnr=botnr,
-                            maxdepth=maxdepth
+                            maxdepth=maxdepth,
                         )
 
                         scores.append(score)
@@ -173,7 +184,7 @@ class VierGewinntBot:
                     alpha=-100000000000,
                     beta=100000000000,
                     botnr=botnr,
-                    maxdepth=maxdepth
+                    maxdepth=maxdepth,
                 )
 
                 scores.append(score)

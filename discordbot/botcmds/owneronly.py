@@ -1,5 +1,5 @@
-from discord.ext import commands
 import discord
+from discord.ext import commands
 
 from discordbot import config
 
@@ -14,30 +14,41 @@ class Owneronly(commands.Cog):
     )
     @commands.is_owner()
     async def reload(self, ctx, extension: str = None):
-        emb = ctx.getEmbed(title="Reload", fields=[("Status", "Reloading")])
-        msg = await ctx.message.author.send(embed=emb)
+        msg = await ctx.sendEmbed(
+            title="Reload", fields=[("Status", "Reloading")]
+        )
         emb = ctx.getEmbed(title="Reload", fields=[])
         if extension in config.EXTENSIONS:
-            print("[Bot] - Reloading '"+extension+"' extension...")
+            print("[Bot] - Reloading '" + extension + "' extension...")
             try:
-                await self.bot.unload_extension(config.EXTENSIONFOLDER+"."+extension)
+                await self.bot.unload_extension(
+                    config.EXTENSIONFOLDER + "." + extension
+                )
             except commands.errors.ExtensionNotLoaded:
                 pass
             try:
-                await self.bot.load_extension(config.EXTENSIONFOLDER+"."+extension)
+                await self.bot.load_extension(
+                    config.EXTENSIONFOLDER + "." + extension
+                )
             except commands.errors.ExtensionAlreadyLoaded:
                 pass
             emb.add_field(
-                name="Status", value="Reloaded category "+extension.upper()+"!")
+                name="Status",
+                value="Reloaded category " + extension.upper() + "!",
+            )
         else:
             print("[Bot] - Reloading all extensions...")
             for ext in config.EXTENSIONS:
                 try:
-                    await self.bot.unload_extension(config.EXTENSIONFOLDER+"."+ext)
+                    await self.bot.unload_extension(
+                        config.EXTENSIONFOLDER + "." + ext
+                    )
                 except commands.errors.ExtensionNotLoaded:
                     pass
                 try:
-                    await self.bot.load_extension(config.EXTENSIONFOLDER+"."+ext)
+                    await self.bot.load_extension(
+                        config.EXTENSIONFOLDER + "." + ext
+                    )
                 except commands.errors.ExtensionAlreadyLoaded:
                     pass
             emb.add_field(name="Status", value="Reloaded all categories!")
@@ -59,7 +70,14 @@ class Owneronly(commands.Cog):
         usage="<Status> [Aktivität [Argumente(e)]]",
     )
     @commands.is_owner()
-    async def status(self, ctx, new_state: str = "", new_activity: str = "", arg1: str = "", *args):
+    async def status(
+        self,
+        ctx,
+        new_state: str = "",
+        new_activity: str = "",
+        arg1: str = "",
+        *args,
+    ):
         arg2 = " ".join(args)
         status = None
         activity = None
@@ -67,26 +85,51 @@ class Owneronly(commands.Cog):
             status = discord.Status.online
         elif new_state.lower() in ["off", "offline", "invisible", "grey"]:
             status = discord.Status.invisible
-        elif new_state.lower() in ["dnd", "donotdisturb", "do_not_disturb", "bittenichtstören", "red"]:
+        elif new_state.lower() in [
+            "dnd",
+            "donotdisturb",
+            "do_not_disturb",
+            "bittenichtstören",
+            "red",
+        ]:
             status = discord.Status.dnd
         elif new_state.lower() in ["idle", "abwesend", "orange", "yellow"]:
             status = discord.Status.idle
 
         if new_activity.lower() in ["playing", "spielt", "game", "play"]:
-            activity = discord.Game(name=arg1+" "+arg2)
-        elif new_activity.lower() in ["streaming", "streamt", "stream", "live", "twitch"]:
-            activity = discord.Streaming(url="https://twitch.tv/"+arg1, name=arg2)
-        elif new_activity.lower() in ["listening", "listen", "hört", "hören", "song"]:
+            activity = discord.Game(name=arg1 + " " + arg2)
+        elif new_activity.lower() in [
+            "streaming",
+            "streamt",
+            "stream",
+            "live",
+            "twitch",
+        ]:
+            activity = discord.Streaming(
+                url="https://twitch.tv/" + arg1, name=arg2
+            )
+        elif new_activity.lower() in [
+            "listening",
+            "listen",
+            "hört",
+            "hören",
+            "song",
+        ]:
             activity = discord.Activity(
-                type=discord.ActivityType.listening, name=arg1+" "+arg2)
+                type=discord.ActivityType.listening, name=arg1 + " " + arg2
+            )
         elif new_activity.lower() in ["watching", "watch", "schaut", "video"]:
-            activity = discord.Activity(type=discord.ActivityType.watching, name=arg1+" "+arg2)
+            activity = discord.Activity(
+                type=discord.ActivityType.watching, name=arg1 + " " + arg2
+            )
 
         if status is not None or activity is not None:
             await ctx.bot.change_presence(status=status, activity=activity)
         else:
-            await ctx.sendEmbed(title="Status ändern", inline=False,
-                                description="""
+            await ctx.sendEmbed(
+                title="Status ändern",
+                inline=False,
+                description="""
             **Syntax:**
             /status <STATUS> [AKTIVITÄT [ARGUMENT(E)]]
 
@@ -101,8 +144,8 @@ class Owneronly(commands.Cog):
             streamt <TWITCH-NAME> <SPIEL>
             hört <SONG>
             schaut <VIDEO>
-            """
-                                )
+            """,
+            )
 
     @commands.command(
         brief="Erhalte diesen Chat",
@@ -115,14 +158,16 @@ class Owneronly(commands.Cog):
     async def archive(self, ctx, messages: int = 100):
         msgs = []
         text = ""
-        async for msg in ctx.channel.history(limit=messages, oldest_first=True):
+        async for msg in ctx.channel.history(
+            limit=messages, oldest_first=True
+        ):
             msgs.append(msg)
             time = msg.created_at.strftime("%Y/%m/%d - %H:%M:%S")
             text += f"[[{time}]]({msg.jump_url}) {msg.author.name}#{msg.author.discriminator}: {msg.content}\n"
         await ctx.sendEmbed(
             title="Kanalarchiv",
-            description=f"Kanal: {ctx.channel.mention}\nNachrichten: {len(msgs)}\n\n" +
-            text,
+            description=f"Kanal: {ctx.channel.mention}\nNachrichten: {len(msgs)}\n\n"
+            + text,
             receiver=ctx.author,
         )
 

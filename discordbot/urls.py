@@ -4,7 +4,5 @@ from . import views
 
 ##############
 
-app_name = 'discordbot'
-urlpatterns = [
-
-]
+app_name = "discordbot"
+urlpatterns = []

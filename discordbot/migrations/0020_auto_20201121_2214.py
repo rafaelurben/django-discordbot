@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('discordbot', '0019_auto_20201115_1844'),
+        ("discordbot", "0019_auto_20201115_1844"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='server',
-            options={'verbose_name': 'Guild', 'verbose_name_plural': 'Guilds'},
+            name="server",
+            options={"verbose_name": "Guild", "verbose_name_plural": "Guilds"},
         ),
     ]

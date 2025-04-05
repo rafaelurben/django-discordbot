@@ -6,18 +6,18 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('discordbot', '0001_initial'),
+        ("discordbot", "0001_initial"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='server',
-            old_name='discordid',
-            new_name='id',
+            model_name="server",
+            old_name="discordid",
+            new_name="id",
         ),
         migrations.RenameField(
-            model_name='user',
-            old_name='discordid',
-            new_name='id',
+            model_name="user",
+            old_name="discordid",
+            new_name="id",
         ),
     ]

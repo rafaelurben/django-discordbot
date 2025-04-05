@@ -1,17 +1,18 @@
 "This module can be used to subscribe to website updates"
 
-from discord.ext import commands, tasks
 from discord import errors
+from discord.ext import commands, tasks
 
 from discordbot.botmodules.serverdata import DjangoConnection
 from discordbot.models import NotifierSource
 
+
 class Notifier(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.color = 0xeb8f34
+        self.color = 0xEB8F34
 
-        print('[Notifier Background Tasks] - Started!')
+        print("[Notifier Background Tasks] - Started!")
         self.notifier_backgroundtasks_minute.start()
         self.notifier_backgroundtasks_hour.start()
 
@@ -22,19 +23,31 @@ class Notifier(commands.Cog):
 
     #
 
-    async def notifier_update(self, frequency:str):
+    async def notifier_update(self, frequency: str):
         print(f"[Notifier] - Fetching '{frequency}' sources...")
-        for source in await DjangoConnection._list(NotifierSource, frequency=frequency):
-            print(f"[Notifier] - Fetching '{frequency}' source: '{source.url}'...")
+        for source in await DjangoConnection._list(
+            NotifierSource, frequency=frequency
+        ):
+            print(
+                f"[Notifier] - Fetching '{frequency}' source: '{source.url}'..."
+            )
 
             updated, data, targets = await source.fetch_update()
             if updated:
                 for target in targets:
                     try:
                         if target.where_type == "channel":
-                            where = self.bot.get_channel(int(target.where_id)) or await self.bot.fetch_channel(int(target.where_id))
+                            where = self.bot.get_channel(
+                                int(target.where_id)
+                            ) or await self.bot.fetch_channel(
+                                int(target.where_id)
+                            )
                         elif target.where_type == "member":
-                            where = self.bot.get_user(int(target.where_id)) or await self.bot.fetch_user(int(target.where_id))
+                            where = self.bot.get_user(
+                                int(target.where_id)
+                            ) or await self.bot.fetch_user(
+                                int(target.where_id)
+                            )
                         emb = self.bot.getEmbed(
                             title="Inhalt wurde geändert!",
                             description=str(data),
@@ -44,7 +57,9 @@ class Notifier(commands.Cog):
                         )
                         await where.send(embed=emb)
                     except errors.NotFound:
-                        print(f"[Notifier] Failed to send: {target.where_id} ({target.where_type}) not found!")
+                        print(
+                            f"[Notifier] Failed to send: {target.where_id} ({target.where_type}) not found!"
+                        )
         print(f"[Notifier] - Fetching '{frequency}' sources done!")
 
     #
@@ -76,7 +91,6 @@ class Notifier(commands.Cog):
     # async def notifier(self, ctx):
     #     if ctx.invoked_subcommand is None:
     #         await ctx.send_help()
-
 
 
 async def setup(bot):

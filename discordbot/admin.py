@@ -1,5 +1,14 @@
 from django.contrib import admin
-from .models import Server, User, Report, Member, VierGewinntGame, NotifierSource, NotifierTarget
+
+from .models import (
+    Member,
+    NotifierSource,
+    NotifierTarget,
+    Report,
+    Server,
+    User,
+    VierGewinntGame,
+)
 
 # General
 
@@ -90,19 +99,31 @@ class UserAdmin(admin.ModelAdmin):
 
     list_display = ("id", "name", "reportCount", "createdReportCount")
 
-    inlines = [UserAdminReportInline,
-               UserAdminReportCreatedInline, UserAdminServerInline]
+    inlines = [
+        UserAdminReportInline,
+        UserAdminReportCreatedInline,
+        UserAdminServerInline,
+    ]
 
     def has_add_permission(self, request):
         return False
 
+
 # Games
+
 
 @admin.register(VierGewinntGame)
 class VierGewinntAdmin(admin.ModelAdmin):
-    list_display = ('id', 'player_1_id', 'player_2_id',
-                    'finished', 'winner_id', 'time_edited', 'time_created')
-    ordering = ('id',)
+    list_display = (
+        "id",
+        "player_1_id",
+        "player_2_id",
+        "finished",
+        "winner_id",
+        "time_edited",
+        "time_created",
+    )
+    ordering = ("id",)
 
     def has_add_permission(self, request):
         return False
@@ -110,27 +131,29 @@ class VierGewinntAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
-    fields = ('get_description',)
-    readonly_fields = ('get_description',)
+    fields = ("get_description",)
+    readonly_fields = ("get_description",)
 
 
 # Notifier
+
 
 class NotifierSourceTargetInline(admin.TabularInline):
     model = NotifierTarget
     extra = 0
 
-    fields = ('where_type', 'where_id', 'must_contain_regex')
+    fields = ("where_type", "where_id", "must_contain_regex")
+
 
 @admin.register(NotifierSource)
 class NotifierSourceAdmin(admin.ModelAdmin):
-    list_display = ('name', 'frequency', 'url')
-    ordering = ('id',)
+    list_display = ("name", "frequency", "url")
+    ordering = ("id",)
 
     inlines = [NotifierSourceTargetInline]
 
     fieldsets = [
-        (None, {"fields": ('name',)}),
-        ("Herkunft", {"fields": ('url',)}),
-        ("Einstellungen", {"fields": ('frequency',)}),
+        (None, {"fields": ("name",)}),
+        ("Herkunft", {"fields": ("url",)}),
+        ("Einstellungen", {"fields": ("frequency",)}),
     ]

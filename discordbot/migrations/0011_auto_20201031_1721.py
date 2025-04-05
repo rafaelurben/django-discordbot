@@ -6,13 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('discordbot', '0010_viergewinntgame'),
+        ("discordbot", "0010_viergewinntgame"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='viergewinntgame',
-            name='player_2_id',
-            field=models.CharField(default=None, max_length=32, null=True, verbose_name='Player 2 ID'),
+            model_name="viergewinntgame",
+            name="player_2_id",
+            field=models.CharField(
+                default=None,
+                max_length=32,
+                null=True,
+                verbose_name="Player 2 ID",
+            ),
         ),
     ]

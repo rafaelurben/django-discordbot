@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('discordbot', '0020_auto_20201121_2214'),
+        ("discordbot", "0020_auto_20201121_2214"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='server',
-            name='settings',
-            field=models.JSONField(default=dict, verbose_name='Settings'),
+            model_name="server",
+            name="settings",
+            field=models.JSONField(default=dict, verbose_name="Settings"),
         ),
         migrations.AddField(
-            model_name='user',
-            name='settings',
-            field=models.JSONField(default=dict, verbose_name='Settings'),
+            model_name="user",
+            name="settings",
+            field=models.JSONField(default=dict, verbose_name="Settings"),
         ),
     ]

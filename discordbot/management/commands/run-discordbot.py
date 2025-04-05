@@ -1,29 +1,31 @@
 import os
 
-from django.core.management.base import BaseCommand, CommandError
-
+from django.core.management.base import BaseCommand
 from rich.traceback import install as install_traceback
+
 install_traceback()
 from rich.pretty import install as install_pretty
+
 install_pretty()
 
 from discordbot.bot import run
 
+
 class Command(BaseCommand):
-    help = 'Runs the Discord bot'
+    help = "Runs the Discord bot"
 
     def add_arguments(self, parser):
-        parser.add_argument('--token', help="The token for your bot", type=str)
+        parser.add_argument("--token", help="The token for your bot", type=str)
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS("[Bot] - Bot wird gestartet..."))
 
         if "token" in options and options["token"]:
             run(options["token"])
-        elif 'DISCORDBOT_TOKEN' in os.environ:
-            run(os.environ.get('DISCORDBOT_TOKEN'))
-        elif 'DISCORD_BOTTOKEN' in os.environ:
-            run(os.environ.get('DISCORD_BOTTOKEN'))
+        elif "DISCORDBOT_TOKEN" in os.environ:
+            run(os.environ.get("DISCORDBOT_TOKEN"))
+        elif "DISCORD_BOTTOKEN" in os.environ:
+            run(os.environ.get("DISCORD_BOTTOKEN"))
         else:
             self.stdout.write(self.style.ERROR("[Bot] - No TOKEN found!"))
 

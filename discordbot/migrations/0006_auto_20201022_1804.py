@@ -6,68 +6,92 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('discordbot', '0005_amongusgame_text_message_id'),
+        ("discordbot", "0005_amongusgame_text_message_id"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_black_exists',
-            field=models.BooleanField(default=False, verbose_name='Black exists'),
+            model_name="amongusgame",
+            name="p_black_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="Black exists"
+            ),
         ),
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_blue_exists',
-            field=models.BooleanField(default=False, verbose_name='Blue exists'),
+            model_name="amongusgame",
+            name="p_blue_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="Blue exists"
+            ),
         ),
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_brown_exists',
-            field=models.BooleanField(default=False, verbose_name='Brown exists'),
+            model_name="amongusgame",
+            name="p_brown_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="Brown exists"
+            ),
         ),
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_cyan_exists',
-            field=models.BooleanField(default=False, verbose_name='Cyan exists'),
+            model_name="amongusgame",
+            name="p_cyan_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="Cyan exists"
+            ),
         ),
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_green_exists',
-            field=models.BooleanField(default=False, verbose_name='Green exists'),
+            model_name="amongusgame",
+            name="p_green_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="Green exists"
+            ),
         ),
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_lime_exists',
-            field=models.BooleanField(default=False, verbose_name='Lime exists'),
+            model_name="amongusgame",
+            name="p_lime_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="Lime exists"
+            ),
         ),
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_orange_exists',
-            field=models.BooleanField(default=False, verbose_name='Orange exists'),
+            model_name="amongusgame",
+            name="p_orange_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="Orange exists"
+            ),
         ),
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_pink_exists',
-            field=models.BooleanField(default=False, verbose_name='Pink exists'),
+            model_name="amongusgame",
+            name="p_pink_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="Pink exists"
+            ),
         ),
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_purple_exists',
-            field=models.BooleanField(default=False, verbose_name='Purple exists'),
+            model_name="amongusgame",
+            name="p_purple_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="Purple exists"
+            ),
         ),
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_red_exists',
-            field=models.BooleanField(default=False, verbose_name='Red exists'),
+            model_name="amongusgame",
+            name="p_red_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="Red exists"
+            ),
         ),
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_white_exists',
-            field=models.BooleanField(default=False, verbose_name='White exists'),
+            model_name="amongusgame",
+            name="p_white_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="White exists"
+            ),
         ),
         migrations.AlterField(
-            model_name='amongusgame',
-            name='p_yellow_exists',
-            field=models.BooleanField(default=False, verbose_name='Yellow exists'),
+            model_name="amongusgame",
+            name="p_yellow_exists",
+            field=models.BooleanField(
+                default=False, verbose_name="Yellow exists"
+            ),
         ),
     ]

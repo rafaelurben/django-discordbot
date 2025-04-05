@@ -1,18 +1,18 @@
 import typing
 
 import discord
-from discord import Member, Interaction
-from discord import app_commands
-from discord import ui
+from discord import Interaction, Member, app_commands, ui
 from discord.ext import commands
 
 from discordbot import utils
 from discordbot.botmodules.serverdata import DjangoConnection
-from discordbot.errors import SuccessMessage, ErrorMessage
+from discordbot.errors import ErrorMessage, SuccessMessage
 from discordbot.models import Report
 
 
-async def send_report_to_reports_channel(interaction: Interaction, report: Report):
+async def send_report_to_reports_channel(
+    interaction: Interaction, report: Report
+):
     try:
         channel = discord.utils.get(interaction.guild.channels, name="reports")
         if channel is not None:
@@ -22,7 +22,10 @@ async def send_report_to_reports_channel(interaction: Interaction, report: Repor
                     ("Gemeldeter Benutzer", report.user.mention),
                     ("Gemeldet von", report.reported_by.mention),
                     ("Grund", report.reason),
-                    ("Zeitpunkt", report.timestamp.strftime('%Y/%m/%d %H:%M:%S')),
+                    (
+                        "Zeitpunkt",
+                        report.timestamp.strftime("%Y/%m/%d %H:%M:%S"),
+                    ),
                 ],
                 inline=False,
                 footerurl="",
@@ -36,13 +39,21 @@ async def send_report_to_reports_channel(interaction: Interaction, report: Repor
 
     await interaction.followup.send(
         ephemeral=True,
-        embed=utils.getEmbed(title="Achtung", color=0xff8800,
-                             description="In diesem Server existiert kein #reports-Kanal. Admins wurden daher nicht automatisch informiert! Der Report wurde trotzdem erstellt!")
+        embed=utils.getEmbed(
+            title="Achtung",
+            color=0xFF8800,
+            description="In diesem Server existiert kein #reports-Kanal. Admins wurden daher nicht automatisch informiert! Der Report wurde trotzdem erstellt!",
+        ),
     )
 
 
 class ReportModal(ui.Modal):
-    reason = ui.TextInput(label='Begründung', style=discord.TextStyle.paragraph, required=True, max_length=250)
+    reason = ui.TextInput(
+        label="Begründung",
+        style=discord.TextStyle.paragraph,
+        required=True,
+        max_length=250,
+    )
 
     def __init__(self, member: Member, reason: str = ""):
         self.title = f"@{member.name} melden"
@@ -56,51 +67,76 @@ class ReportModal(ui.Modal):
         report = await dj.create_report(self._member, self.reason.value)
         await interaction.followup.send(
             ephemeral=True,
-            embed=utils.getEmbed(title="Benutzer erfolgreich gemeldet!", inline=False, fields=[
-                ("Betroffener", self._member.mention),
-                ("Grund", self.reason.value)]))
+            embed=utils.getEmbed(
+                title="Benutzer erfolgreich gemeldet!",
+                inline=False,
+                fields=[
+                    ("Betroffener", self._member.mention),
+                    ("Grund", self.reason.value),
+                ],
+            ),
+        )
         await send_report_to_reports_channel(interaction, report)
 
 
 class ReportsCog(commands.Cog, name="Reports"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.color = 0xffdf00
+        self.color = 0xFFDF00
 
         self.ctx_menu_report_create = app_commands.ContextMenu(
-            name='Mitglied melden',
+            name="Mitglied melden",
             callback=self.report_create_contextmenu,
         )
         self.bot.tree.add_command(self.ctx_menu_report_create)
 
     def cog_unload(self) -> None:
-        self.bot.tree.remove_command(self.ctx_menu_report_create.name, type=self.ctx_menu_report_create.type)
+        self.bot.tree.remove_command(
+            self.ctx_menu_report_create.name,
+            type=self.ctx_menu_report_create.type,
+        )
 
     @app_commands.command(
         name="report",
         description="Melde ein Mitglied",
-        extras={'help': "Verwende diesen Befehl, um Servermitglieder zu melden, welche sich falsch verhalten."}
+        extras={
+            "help": "Verwende diesen Befehl, um Servermitglieder zu melden, welche sich falsch verhalten."
+        },
     )
     @app_commands.describe(member="Zu meldendes Mitglied", reason="Begründung")
     @app_commands.guild_only
-    async def report_create(self, interaction: discord.Interaction, member: Member, reason: str = None):
+    async def report_create(
+        self,
+        interaction: discord.Interaction,
+        member: Member,
+        reason: str = None,
+    ):
         await interaction.response.send_modal(ReportModal(member, reason))
 
     @app_commands.guild_only
-    async def report_create_contextmenu(self, interaction: discord.Interaction, member: Member):
+    async def report_create_contextmenu(
+        self, interaction: discord.Interaction, member: Member
+    ):
         await interaction.response.send_modal(ReportModal(member))
 
-    report_mgmt_group = app_commands.Group(name="reports", description="Verwalte Reports von Mitgliedern",
-                                           guild_only=True,
-                                           default_permissions=discord.Permissions(kick_members=True),
-                                           extras={'help': "Verwende Befehle diese Gruppe, um Reports zu verwalten."})
+    report_mgmt_group = app_commands.Group(
+        name="reports",
+        description="Verwalte Reports von Mitgliedern",
+        guild_only=True,
+        default_permissions=discord.Permissions(kick_members=True),
+        extras={
+            "help": "Verwende Befehle diese Gruppe, um Reports zu verwalten."
+        },
+    )
 
     @report_mgmt_group.command(
         name="view",
-        description="Sieh Reports eines Mitglieds oder aller Mitglieder an"
+        description="Sieh Reports eines Mitglieds oder aller Mitglieder an",
     )
     @app_commands.describe(member="Mitglied (leer lassen für alle Mitglieder)")
-    async def reports_view(self, interaction: discord.Interaction, member: Member = None):
+    async def reports_view(
+        self, interaction: discord.Interaction, member: Member = None
+    ):
         await interaction.response.defer(ephemeral=True)
         dj = DjangoConnection.from_interaction(interaction)
         if member is None:
@@ -108,9 +144,9 @@ class ReportsCog(commands.Cog, name="Reports"):
                 interaction.followup,
                 title="Serverreports",
                 description=(
-                        f"Reports auf {interaction.guild.name}\n\n" +
-                        await dj.get_all_reports()
-                )
+                    f"Reports auf {interaction.guild.name}\n\n"
+                    + await dj.get_all_reports()
+                ),
             )
         else:
             await utils.sendEmbed(
@@ -121,25 +157,32 @@ class ReportsCog(commands.Cog, name="Reports"):
             )
 
     @report_mgmt_group.command(
-        name="delete",
-        description="Lösche einen Report"
+        name="delete", description="Lösche einen Report"
     )
     @app_commands.describe(report_id="ID des Reports")
-    async def reports_delete(self, interaction: discord.Interaction, report_id: int):
+    async def reports_delete(
+        self, interaction: discord.Interaction, report_id: int
+    ):
         dj = DjangoConnection.from_interaction(interaction)
         if await dj.delete_report(report_id=report_id):
-            raise SuccessMessage(f"Report mit folgender ID gelöscht: {report_id}")
+            raise SuccessMessage(
+                f"Report mit folgender ID gelöscht: {report_id}"
+            )
         else:
-            raise ErrorMessage(f"Report mit der ID {report_id} wurde nicht gefunden!")
+            raise ErrorMessage(
+                f"Report mit der ID {report_id} wurde nicht gefunden!"
+            )
 
-    @reports_delete.autocomplete('report_id')
-    async def reports_delete__report_id_autocomplete(self,
-                                                     interaction: discord.Interaction,
-                                                     current: str,
-                                                     ) -> typing.List[app_commands.Choice[str]]:
+    @reports_delete.autocomplete("report_id")
+    async def reports_delete__report_id_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str,
+    ) -> typing.List[app_commands.Choice[str]]:
         result = []
-        async for report in Report.objects.filter(server_id=interaction.guild.id,
-                                                  pk__contains=f"{current}").select_related('user', 'reported_by')[:25]:
+        async for report in Report.objects.filter(
+            server_id=interaction.guild.id, pk__contains=f"{current}"
+        ).select_related("user", "reported_by")[:25]:
             name = f"{report.id} (@{report.user.name} von @{report.reported_by.name} wegen {report.reason})"
             if len(name) > 100:
                 name = name[:96] + "...)"
@@ -148,11 +191,12 @@ class ReportsCog(commands.Cog, name="Reports"):
         return result
 
     @report_mgmt_group.command(
-        name="clear",
-        description="Lösche alle Reports zu einem Mitglied"
+        name="clear", description="Lösche alle Reports zu einem Mitglied"
     )
     @app_commands.describe(member="Mitglied")
-    async def reports_clear(self, interaction: discord.Interaction, member: Member):
+    async def reports_clear(
+        self, interaction: discord.Interaction, member: Member
+    ):
         await interaction.response.defer(ephemeral=True)
         dj = DjangoConnection.from_interaction(interaction)
         await dj.clear_reports(member.id)

@@ -1,15 +1,13 @@
 # pylint: disable=no-member, unsubscriptable-object
 
+import re
+
+from asgiref.sync import sync_to_async
 from django.contrib import admin
 from django.db import models
 
 from discordbot.botmodules.bots import VierGewinntBot
 from discordbot.botmodules.parser import HTMLCleaner
-
-from asgiref.sync import sync_to_async
-
-import re
-
 
 # Basic
 
@@ -17,7 +15,8 @@ import re
 class Member(models.Model):
     server = models.ForeignKey("Server", on_delete=models.CASCADE)
     user = models.ForeignKey(
-        "User", on_delete=models.CASCADE, related_name="servers")
+        "User", on_delete=models.CASCADE, related_name="servers"
+    )
 
     settings = models.JSONField("Settings", default=dict)
 
@@ -35,7 +34,7 @@ class Member(models.Model):
     def __str__(self):
         return f"{self.server_id} <-> {self.user_id}"
 
-    class Meta():
+    class Meta:
         verbose_name = "Mitglied"
         verbose_name_plural = "Mitglieder"
 
@@ -47,8 +46,14 @@ class Server(models.Model):
     name = models.CharField("Name", default="", blank=True, max_length=100)
     members = models.ManyToManyField("User", through="Member")
 
-    playlist = models.ForeignKey("Playlist", on_delete=models.SET_NULL,
-                                 default=None, blank=True, null=True, related_name="+")
+    playlist = models.ForeignKey(
+        "Playlist",
+        on_delete=models.SET_NULL,
+        default=None,
+        blank=True,
+        null=True,
+        related_name="+",
+    )
 
     settings = models.JSONField("Settings", default=dict)
 
@@ -66,7 +71,8 @@ class Server(models.Model):
     def getPlaylist(self):
         if self.playlist is None:
             self.playlist = Playlist.objects.create(
-                server=self, title="Playlist in " + self.name)
+                server=self, title="Playlist in " + self.name
+            )
             self.save()
         return self.playlist
 
@@ -86,7 +92,7 @@ class Server(models.Model):
     def __str__(self):
         return f"{self.name} ({self.id})"
 
-    class Meta():
+    class Meta:
         verbose_name = "Guild"
         verbose_name_plural = "Guilds"
 
@@ -127,7 +133,9 @@ class User(models.Model):
     def joinServer(self, server) -> Member:
         if not server.members.filter(id=self.id).exists():
             server.members.add(self)
-        return server.members.through.objects.get(server__id=server.id, user__id=self.id)
+        return server.members.through.objects.get(
+            server__id=server.id, user__id=self.id
+        )
 
     @property
     def mention(self):
@@ -137,7 +145,7 @@ class User(models.Model):
     def __str__(self):
         return f"{self.name} ({self.id})"
 
-    class Meta():
+    class Meta:
         verbose_name = "Benutzer"
         verbose_name_plural = "Benutzer"
 
@@ -158,7 +166,8 @@ class AudioSource(models.Model):
     duration = models.IntegerField("Duration", default=0, blank=True)
 
     uploader_name = models.CharField(
-        "Uploader name", max_length=256, default="", blank=True)
+        "Uploader name", max_length=256, default="", blank=True
+    )
     uploader_url = models.URLField("Uploader Url", default="", blank=True)
 
     @classmethod
@@ -171,29 +180,27 @@ class AudioSource(models.Model):
         # print(data)
 
         if not data is None:
-            url_source = data.get('url', '')
+            url_source = data.get("url", "")
 
-            url_watch = data.get('webpage_url', url_source)[:200]
-            url_thumbnail = data.get('thumbnail', "")[:200]
+            url_watch = data.get("webpage_url", url_source)[:200]
+            url_thumbnail = data.get("thumbnail", "")[:200]
 
-            title = data.get('title', 'Unbekannter Titel')[:256]
+            title = data.get("title", "Unbekannter Titel")[:256]
             description = data.get(
-                'description', "Keine Beschreibung gefunden.")[:2048]
-            duration = int(data.get('duration', 0))
+                "description", "Keine Beschreibung gefunden."
+            )[:2048]
+            duration = int(data.get("duration", 0))
 
-            uploader_name = data.get('uploader', "")[:256]
-            uploader_url = data.get('uploader_url', "")[:200]
+            uploader_name = data.get("uploader", "")[:256]
+            uploader_url = data.get("uploader_url", "")[:200]
 
             return self.objects.create(
                 url_source=url_source,
-
                 url_watch=url_watch,
                 url_thumbnail=url_thumbnail,
-
                 title=title,
                 description=description,
                 duration=duration,
-
                 uploader_name=uploader_name,
                 uploader_url=uploader_url,
             )
@@ -214,7 +221,7 @@ class AudioSource(models.Model):
     def __str__(self):
         return f"{self.title} [{self.duration_calc}]"
 
-    class Meta():
+    class Meta:
         verbose_name = "Audio source"
         verbose_name_plural = "Audio sources"
 
@@ -222,11 +229,11 @@ class AudioSource(models.Model):
 
 
 class PlaylistPosition(models.Model):
-    source = models.ForeignKey('AudioSource', on_delete=models.PROTECT)
-    queue = models.ForeignKey('Playlist', on_delete=models.CASCADE)
+    source = models.ForeignKey("AudioSource", on_delete=models.PROTECT)
+    queue = models.ForeignKey("Playlist", on_delete=models.CASCADE)
     position = models.PositiveSmallIntegerField("Position")
 
-    class Meta():
+    class Meta:
         verbose_name = "Audio queue position"
         verbose_name_plural = "Audio queue positions"
 
@@ -235,12 +242,14 @@ class PlaylistPosition(models.Model):
 
 class Playlist(models.Model):
     server = models.ForeignKey(
-        'Server', on_delete=models.CASCADE, related_name="playlists")
+        "Server", on_delete=models.CASCADE, related_name="playlists"
+    )
     title = models.CharField("Title", max_length=256, default="Server default")
 
-    sources = models.ManyToManyField('AudioSource', through="PlaylistPosition")
+    sources = models.ManyToManyField("AudioSource", through="PlaylistPosition")
     current_pos = models.PositiveSmallIntegerField(
-        "Current position", default=0)
+        "Current position", default=0
+    )
 
     @sync_to_async
     def addSource(self, source):
@@ -250,7 +259,11 @@ class Playlist(models.Model):
 
     @sync_to_async
     def removePosition(self, pos: int):
-        if pos > 0 and pos <= self.sources.count() and not self.current_pos == pos:
+        if (
+            pos > 0
+            and pos <= self.sources.count()
+            and not self.current_pos == pos
+        ):
             self.sources.through.objects.filter(position=pos).delete()
             for s in self.sources.through.objects.filter(position__gt=pos):
                 s.position -= 1
@@ -274,17 +287,20 @@ class Playlist(models.Model):
 
     @sync_to_async
     def hasNext(self):
-        return self.sources.through.objects.filter(playlist=self, position__gt=self.current_pos).exists()
+        return self.sources.through.objects.filter(
+            playlist=self, position__gt=self.current_pos
+        ).exists()
 
     @sync_to_async
     def next(self):
         self.current_pos += 1
         obj = self.sources.through.objects.get(
-            playlist=self, position=self.current_pos)
+            playlist=self, position=self.current_pos
+        )
         self.save()
         return obj
 
-    class Meta():
+    class Meta:
         verbose_name = "Audio queue"
         verbose_name_plural = "Audio queues"
 
@@ -293,13 +309,21 @@ class Playlist(models.Model):
 
 # Support
 
+
 class Report(models.Model):
     server = models.ForeignKey(
-        "Server", on_delete=models.CASCADE, related_name="reports")
+        "Server", on_delete=models.CASCADE, related_name="reports"
+    )
     user = models.ForeignKey(
-        "User", on_delete=models.CASCADE, related_name="reports")
-    reported_by = models.ForeignKey("User", on_delete=models.SET_NULL,
-                                    null=True, related_name="created_reports", verbose_name="Gemeldet von")
+        "User", on_delete=models.CASCADE, related_name="reports"
+    )
+    reported_by = models.ForeignKey(
+        "User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="created_reports",
+        verbose_name="Gemeldet von",
+    )
 
     reason = models.CharField("Grund", default="", blank=True, max_length=250)
     timestamp = models.DateTimeField("Zeitpunkt", auto_now_add=True)
@@ -308,7 +332,7 @@ class Report(models.Model):
     def __str__(self):
         return "Report #" + str(self.pk)
 
-    class Meta():
+    class Meta:
         verbose_name = "Report"
         verbose_name_plural = "Reports"
 
@@ -321,8 +345,7 @@ class Report(models.Model):
 
 VIERGEWINNT_PLAYER_EMOJIS = ["⬛", "🟥", "🟨"]
 VIERGEWINNT_WALL_EMOJI = "🟦"
-VIERGEWINNT_NUMBER_EMOJIS = ["1️⃣", "2️⃣", "3️⃣",
-                             "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+VIERGEWINNT_NUMBER_EMOJIS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
 
 def VIERGEWINNT_DEFAULT_GAME():
@@ -338,13 +361,16 @@ class VierGewinntGame(models.Model):
     finished = models.BooleanField("Finished", default=False)
 
     current_player = models.PositiveSmallIntegerField(
-        "Current player", default=1)
+        "Current player", default=1
+    )
 
     player_1_id = models.CharField("Player 1 ID", max_length=32)
     player_2_id = models.CharField(
-        "Player 2 ID", max_length=32, default=None, null=True)
+        "Player 2 ID", max_length=32, default=None, null=True
+    )
     winner_id = models.CharField(
-        "Winner ID", max_length=32, default=None, null=True)
+        "Winner ID", max_length=32, default=None, null=True
+    )
 
     channel_id = models.CharField("Channel ID", max_length=32)
     message_id = models.CharField("Message ID", max_length=32)
@@ -361,7 +387,9 @@ class VierGewinntGame(models.Model):
         height = 4 if height < 4 else 14 if height > 14 else height
         game = [[0 for _ in range(width)] for _ in range(height)]
         print("create game", width, height, game, kwargs)
-        return self.objects.create(width=width, height=height, game=game, **kwargs)
+        return self.objects.create(
+            width=width, height=height, game=game, **kwargs
+        )
 
     # Show
 
@@ -370,9 +398,13 @@ class VierGewinntGame(models.Model):
         P = VIERGEWINNT_PLAYER_EMOJIS
         N = VIERGEWINNT_NUMBER_EMOJIS
 
-        numberline = (W + "".join(N[:int(self.width)]) + W + "\n")
-        gamelines = "\n".join([(W + "".join([P[p] for p in row]) + W)
-                               for row in self.rows]) + "\n"
+        numberline = W + "".join(N[: int(self.width)]) + W + "\n"
+        gamelines = (
+            "\n".join(
+                [(W + "".join([P[p] for p in row]) + W) for row in self.rows]
+            )
+            + "\n"
+        )
 
         return numberline + gamelines + numberline
 
@@ -391,7 +423,9 @@ class VierGewinntGame(models.Model):
             if self.winner_id:
                 if self.winner_id == "BOT":
                     return "Das Spiel ist beendet! Du hast leider verloren!"
-                return f"Das Spiel ist beendet! Gewonnen hat <@{self.winner_id}>!"
+                return (
+                    f"Das Spiel ist beendet! Gewonnen hat <@{self.winner_id}>!"
+                )
             return "Das Spiel ist beendet! Unentschieden!"
 
         p = getattr(self, f"player_{self.current_player}_id")
@@ -400,7 +434,13 @@ class VierGewinntGame(models.Model):
         return f"{VIERGEWINNT_PLAYER_EMOJIS[self.current_player]} <@{p}> ist an der Reihe!"
 
     def get_description(self):
-        return self._get_game_info() + "\n\n" + self._get_players() + "\n\n" + self._get_gameboard()
+        return (
+            self._get_game_info()
+            + "\n\n"
+            + self._get_players()
+            + "\n\n"
+            + self._get_gameboard()
+        )
 
     get_description.short_description = "Game"
 
@@ -412,7 +452,10 @@ class VierGewinntGame(models.Model):
 
     @property
     def cols(self):
-        return [[self.rows[h][w] for h in range(self.height)] for w in range(self.width)]
+        return [
+            [self.rows[h][w] for h in range(self.height)]
+            for w in range(self.width)
+        ]
 
     @property
     def dias(self):
@@ -454,8 +497,9 @@ class VierGewinntGame(models.Model):
     # Functions
 
     def _next_player(self):
-        self.current_player = (self.current_player +
-                               1 if self.current_player < 2 else 1)
+        self.current_player = (
+            self.current_player + 1 if self.current_player < 2 else 1
+        )
 
     def _can_add_to_column(self, n: int):
         if n >= self.width:
@@ -480,15 +524,25 @@ class VierGewinntGame(models.Model):
         for ls in [self.rows, self.cols, self.dias]:
             for l in ls:
                 for i in range(len(l) - 3):
-                    if (not l[i] == 0) and (l[i] == l[i + 1]) and (l[i + 1] == l[i + 2]) and (l[i + 2] == l[i + 3]):
+                    if (
+                        (not l[i] == 0)
+                        and (l[i] == l[i + 1])
+                        and (l[i + 1] == l[i + 2])
+                        and (l[i + 2] == l[i + 3])
+                    ):
                         return l[i]
         return 0
 
     def is_players_turn(self, player_id):
-        return getattr(self, "player_" + str(self.current_player) + "_id", None) == str(player_id)
+        return getattr(
+            self, "player_" + str(self.current_player) + "_id", None
+        ) == str(player_id)
 
     def is_bots_turn(self):
-        return getattr(self, "player_" + str(self.current_player) + "_id", None) is None
+        return (
+            getattr(self, "player_" + str(self.current_player) + "_id", None)
+            is None
+        )
 
     # Process Input
 
@@ -499,7 +553,8 @@ class VierGewinntGame(models.Model):
                     w = self._get_winner()
                     if w:
                         self.winner_id = getattr(
-                            self, "player_" + str(w) + "_id", None)
+                            self, "player_" + str(w) + "_id", None
+                        )
                         self.finished = True
                     elif self._is_full():
                         self.finished = True
@@ -509,7 +564,10 @@ class VierGewinntGame(models.Model):
     def process_bot(self):
         if not self.finished and self.is_bots_turn():
             if self._add_to_column(
-                    VierGewinntBot.get_best_move(board=self.game, botnr=self.current_player, maxdepth=4)):
+                VierGewinntBot.get_best_move(
+                    board=self.game, botnr=self.current_player, maxdepth=4
+                )
+            ):
                 w = self._get_winner()
                 if w:
                     self.winner_id = "BOT"
@@ -522,8 +580,8 @@ class VierGewinntGame(models.Model):
     # Meta
 
     class Meta:
-        verbose_name = 'VierGewinnt Game'
-        verbose_name_plural = 'VierGewinnt Games'
+        verbose_name = "VierGewinnt Game"
+        verbose_name_plural = "VierGewinnt Games"
 
     objects = models.Manager()
 
@@ -544,12 +602,17 @@ NOTIFIER_FREQUENCIES = [
 
 class NotifierSource(models.Model):
     name = models.CharField(
-        verbose_name="Name", default="Unbenannte Quelle", max_length=50)
+        verbose_name="Name", default="Unbenannte Quelle", max_length=50
+    )
 
     url = models.URLField(verbose_name="URL")
 
     frequency = models.CharField(
-        verbose_name="Abfragehäufigkeit", max_length=8, choices=NOTIFIER_FREQUENCIES, default="hour")
+        verbose_name="Abfragehäufigkeit",
+        max_length=8,
+        choices=NOTIFIER_FREQUENCIES,
+        default="hour",
+    )
 
     last_hash = models.CharField("Letzter Hash", max_length=32, editable=False)
 
@@ -566,7 +629,9 @@ class NotifierSource(models.Model):
 
             if last_hash != "":  # Don't send on first fetch
                 data = cleaner.get_data()
-                targets = [t for t in self.targets.all() if t.check_regex(data)]
+                targets = [
+                    t for t in self.targets.all() if t.check_regex(data)
+                ]
                 return True, data, targets
         return False, "", []
 
@@ -576,30 +641,37 @@ class NotifierSource(models.Model):
     __str__.short_description = "NotifierSource"
 
     class Meta:
-        verbose_name = 'NotifierSource'
-        verbose_name_plural = 'NotifierSources'
+        verbose_name = "NotifierSource"
+        verbose_name_plural = "NotifierSources"
 
     objects = models.Manager()
 
 
 class NotifierTarget(models.Model):
     source = models.ForeignKey(
-        to='NotifierSource', on_delete=models.CASCADE, related_name="targets")
+        to="NotifierSource", on_delete=models.CASCADE, related_name="targets"
+    )
 
     must_contain_regex = models.CharField(
-        verbose_name="Muss Regex enthalten", default="", blank=True, max_length=32)
+        verbose_name="Muss Regex enthalten",
+        default="",
+        blank=True,
+        max_length=32,
+    )
 
     where_type = models.CharField(
-        verbose_name="Wohin: Typ", max_length=8, choices=NOTIFIER_WHERE_TYPES)
-    where_id = models.CharField(
-        verbose_name="Wohin: ID", max_length=32)
+        verbose_name="Wohin: Typ", max_length=8, choices=NOTIFIER_WHERE_TYPES
+    )
+    where_id = models.CharField(verbose_name="Wohin: ID", max_length=32)
 
     def check_regex(self, data):
-        return (not self.must_contain_regex) or re.search(self.must_contain_regex, data)
+        return (not self.must_contain_regex) or re.search(
+            self.must_contain_regex, data
+        )
 
     def __str__(self):
         return ""
 
     class Meta:
-        verbose_name = 'NotifierTarget'
-        verbose_name_plural = 'NotifierTargets'
+        verbose_name = "NotifierTarget"
+        verbose_name_plural = "NotifierTargets"

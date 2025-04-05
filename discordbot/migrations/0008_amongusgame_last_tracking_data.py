@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('discordbot', '0007_auto_20201023_2145'),
+        ("discordbot", "0007_auto_20201023_2145"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='amongusgame',
-            name='last_tracking_data',
-            field=models.DateTimeField(default=None, null=True, verbose_name='Last tracking data'),
+            model_name="amongusgame",
+            name="last_tracking_data",
+            field=models.DateTimeField(
+                default=None, null=True, verbose_name="Last tracking data"
+            ),
         ),
     ]

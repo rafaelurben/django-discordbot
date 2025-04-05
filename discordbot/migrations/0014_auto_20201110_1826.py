@@ -6,27 +6,37 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('discordbot', '0013_notifiersub'),
+        ("discordbot", "0013_notifiersub"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='notifiersub',
-            options={'verbose_name': 'NotifierSub', 'verbose_name_plural': 'NotifierSubs'},
+            name="notifiersub",
+            options={
+                "verbose_name": "NotifierSub",
+                "verbose_name_plural": "NotifierSubs",
+            },
         ),
         migrations.AlterField(
-            model_name='notifiersub',
-            name='last_hash',
-            field=models.CharField(editable=False, max_length=32, verbose_name='Letzter Hash'),
+            model_name="notifiersub",
+            name="last_hash",
+            field=models.CharField(
+                editable=False, max_length=32, verbose_name="Letzter Hash"
+            ),
         ),
         migrations.AlterField(
-            model_name='notifiersub',
-            name='must_contain_regex',
-            field=models.CharField(blank=True, default='', max_length=32, verbose_name='Muss Regex enthalten'),
+            model_name="notifiersub",
+            name="must_contain_regex",
+            field=models.CharField(
+                blank=True,
+                default="",
+                max_length=32,
+                verbose_name="Muss Regex enthalten",
+            ),
         ),
         migrations.AlterField(
-            model_name='notifiersub',
-            name='where_id',
-            field=models.CharField(max_length=32, verbose_name='ID'),
+            model_name="notifiersub",
+            name="where_id",
+            field=models.CharField(max_length=32, verbose_name="ID"),
         ),
     ]

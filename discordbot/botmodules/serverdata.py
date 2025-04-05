@@ -1,10 +1,12 @@
 """Module used to manage database connections in the Discord bot"""
+
 from typing import Type
 
 import discord
 from asgiref.sync import sync_to_async
 from django.db import connection, connections
-from django.db.models import Model as DjangoModel, Count
+from django.db.models import Count
+from django.db.models import Model as DjangoModel
 
 from discordbot.botmodules.audio import YouTubePlayer
 from discordbot.errors import ErrorMessage
@@ -14,8 +16,8 @@ from discordbot.models import Report as DB_Report
 from discordbot.models import Server as DB_Server
 from discordbot.models import User as DB_User
 
-
 #####
+
 
 class MusicQueue:
     def __init__(self, server):
@@ -30,7 +32,11 @@ class MusicQueue:
         return bool(self._players)
 
     def playNext(self, ctx):
-        if self.hasPlayer() and ctx.voice_client and ctx.voice_client.is_connected():
+        if (
+            self.hasPlayer()
+            and ctx.voice_client
+            and ctx.voice_client.is_connected()
+        ):
             player = self._players.pop(0)
             player.play(ctx)
             return player
@@ -39,7 +45,9 @@ class MusicQueue:
     async def sendNowPlaying(self, ctx):
         if ctx.voice_client and ctx.voice_client.source:
             if isinstance(ctx.voice_client.source, YouTubePlayer):
-                await ctx.voice_client.source.send(ctx, status="Wird aktuell gespielt.")
+                await ctx.voice_client.source.send(
+                    ctx, status="Wird aktuell gespielt."
+                )
         else:
             raise ErrorMessage("Aktuell wird nichts abgespielt.")
 
@@ -52,7 +60,9 @@ class MusicQueue:
         )
 
     async def createYoutubePlayer(self, search, loop=None, stream=False):
-        return await YouTubePlayer.from_url(search, queue=self, loop=loop, stream=stream)
+        return await YouTubePlayer.from_url(
+            search, queue=self, loop=loop, stream=stream
+        )
 
 
 class Server:
@@ -74,16 +84,18 @@ class Server:
 
 
 class DjangoConnection:
-    def __init__(self, dc_user: discord.User | discord.Member, dc_guild: discord.Guild):
-        self.dc_user = dc_user
-        self.dc_guild = dc_guild
-        self._db_user = None
-        self._db_member = None
-        self._db_server = None
+    def __init__(
+        self, dc_user: discord.User | discord.Member, dc_guild: discord.Guild
+    ):
+        self.dc_user: discord.User | discord.Member = dc_user
+        self.dc_guild: discord.Guild = dc_guild
+        self._db_user: DB_User | None = None
+        self._db_member: DB_Member | None = None
+        self._db_server: DB_Server | None = None
         self._db_playlist = None
 
     @classmethod
-    def ensure_connection(self):
+    def ensure_connection(cls):
         if connection.connection and not connection.is_usable():
             del connections._connections.default
 
@@ -133,7 +145,9 @@ class DjangoConnection:
 
     @classmethod
     @sync_to_async
-    def _list(cls, model: Type[DjangoModel], _order_by: tuple = ("pk",), **filters) -> list:
+    def _list(
+        cls, model: Type[DjangoModel], _order_by: tuple = ("pk",), **filters
+    ) -> list:
         "Gets a list of objects matching the given filters from the database"
         cls.ensure_connection()
         return list(model.objects.filter(**filters).order_by(*_order_by))
@@ -159,7 +173,9 @@ class DjangoConnection:
     @classmethod
     async def fetch_user(cls, dc_user) -> DB_User:
         if not await cls._has(DB_User, id=str(dc_user.id)):
-            user = await cls._create(DB_User, id=str(dc_user.id), name=dc_user.name)
+            user = await cls._create(
+                DB_User, id=str(dc_user.id), name=dc_user.name
+            )
         else:
             user = await cls._get(DB_User, id=str(dc_user.id))
             if not user.name == dc_user.name:
@@ -175,7 +191,9 @@ class DjangoConnection:
     @classmethod
     async def fetch_server(cls, dc_guild) -> DB_Server:
         if not await cls._has(DB_Server, id=str(dc_guild.id)):
-            server = await cls._create(DB_Server, id=str(dc_guild.id), name=dc_guild.name)
+            server = await cls._create(
+                DB_Server, id=str(dc_guild.id), name=dc_guild.name
+            )
         else:
             server = await cls._get(DB_Server, id=str(dc_guild.id))
             if not server.name == dc_guild.name:
@@ -205,8 +223,13 @@ class DjangoConnection:
 
     @classmethod
     async def getOrCreateAudioSourceFromDict(cls, data):
-        if await cls._exists(AudioSource, url_watch=data.get("webpage_url", data.get("url", None))):
-            audio = await cls._get(AudioSource, url_watch=data.get("webpage_url", data.get("url")))
+        if await cls._exists(
+            AudioSource,
+            url_watch=data.get("webpage_url", data.get("url", None)),
+        ):
+            audio = await cls._get(
+                AudioSource, url_watch=data.get("webpage_url", data.get("url"))
+            )
             audio.url_source = data.get("url", "")
             await cls._save(audio)
             return audio
@@ -220,13 +243,22 @@ class DjangoConnection:
         await user.joinServer(server)
         reported_user = await self.fetch_user(dc_user)
         await reported_user.joinServer(server)
-        return await self._create(DB_Report, server=server, user=reported_user, reported_by=user, reason=reason)
+        return await self._create(
+            DB_Report,
+            server=server,
+            user=reported_user,
+            reported_by=user,
+            reason=reason,
+        )
 
     async def get_all_reports(self):
         description = ""
-        async for member in DB_User.objects.prefetch_related('reports').filter(
-                reports__server_id=self.dc_guild.id).annotate(
-            reports_count=Count('reports')).order_by('-reports_count'):
+        async for member in (
+            DB_User.objects.prefetch_related("reports")
+            .filter(reports__server_id=self.dc_guild.id)
+            .annotate(reports_count=Count("reports"))
+            .order_by("-reports_count")
+        ):
             count = member.reports_count
             if count == 1:
                 description += f"- 1 Report: {member.mention}\n"
@@ -236,13 +268,20 @@ class DjangoConnection:
 
     async def get_all_reports_for_member(self, dc_member: discord.Member):
         fields = []
-        async for report in (DB_Report.objects.filter(server_id=self.dc_guild.id, user_id=dc_member.id).select_related(
-                'reported_by').order_by("-timestamp")):
-            fields.append((
-                f"{report.timestamp.strftime('%Y/%m/%d %H:%M:%S')} ({report.pk})",
-                f"{report.reported_by.mention} - {report.reason}",
-                False
-            ))
+        async for report in (
+            DB_Report.objects.filter(
+                server_id=self.dc_guild.id, user_id=dc_member.id
+            )
+            .select_related("reported_by")
+            .order_by("-timestamp")
+        ):
+            fields.append(
+                (
+                    f"{report.timestamp.strftime('%Y/%m/%d %H:%M:%S')} ({report.pk})",
+                    f"{report.reported_by.mention} - {report.reason}",
+                    False,
+                )
+            )
         return fields
 
     async def delete_report(self, report_id: int):
@@ -251,4 +290,6 @@ class DjangoConnection:
 
     async def clear_reports(self, userid: int):
         server = await self.get_server()
-        return await DB_Report.objects.filter(server=server, user_id=userid).adelete()
+        return await DB_Report.objects.filter(
+            server=server, user_id=userid
+        ).adelete()

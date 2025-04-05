@@ -6,18 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('discordbot', '0015_notifiersub_name'),
+        ("discordbot", "0015_notifiersub_name"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='notifiersub',
-            name='where_id',
-            field=models.CharField(max_length=32, verbose_name='Wohin: ID'),
+            model_name="notifiersub",
+            name="where_id",
+            field=models.CharField(max_length=32, verbose_name="Wohin: ID"),
         ),
         migrations.AlterField(
-            model_name='notifiersub',
-            name='where_type',
-            field=models.CharField(choices=[('channel', 'Kanal'), ('member', 'Mitglied (DM)')], max_length=8, verbose_name='Wohin: Typ'),
+            model_name="notifiersub",
+            name="where_type",
+            field=models.CharField(
+                choices=[("channel", "Kanal"), ("member", "Mitglied (DM)")],
+                max_length=8,
+                verbose_name="Wohin: Typ",
+            ),
         ),
     ]

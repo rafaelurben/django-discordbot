@@ -6,17 +6,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('discordbot', '0011_auto_20201031_1721'),
+        ("discordbot", "0011_auto_20201031_1721"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='BotPermission',
+            name="BotPermission",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('id_1', models.CharField(max_length=32, verbose_name='ID 1')),
-                ('id_2', models.CharField(max_length=32, verbose_name='ID 2')),
-                ('typ', models.CharField(max_length=32, verbose_name='Typ')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("id_1", models.CharField(max_length=32, verbose_name="ID 1")),
+                ("id_2", models.CharField(max_length=32, verbose_name="ID 2")),
+                ("typ", models.CharField(max_length=32, verbose_name="Typ")),
             ],
         ),
     ]

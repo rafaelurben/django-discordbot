@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('discordbot', '0008_amongusgame_last_tracking_data'),
+        ("discordbot", "0008_amongusgame_last_tracking_data"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='amongusgame',
-            name='tracker_connected',
+            model_name="amongusgame",
+            name="tracker_connected",
         ),
     ]

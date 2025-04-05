@@ -1,4 +1,4 @@
-from . import minecraft, connect4
+from . import connect4, minecraft
 
 
 async def setup(bot):

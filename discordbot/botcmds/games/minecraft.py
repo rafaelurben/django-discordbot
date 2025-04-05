@@ -1,9 +1,9 @@
 # pylint: disable=no-member
 
 import base64
+import json
 
 import discord
-import json
 import requests
 from discord import app_commands
 from discord.ext import commands
@@ -16,52 +16,62 @@ class MinecraftAPI:
     @classmethod
     def get_uuid(cls, name: str):
         r = requests.get(
-            'https://api.mojang.com/users/profiles/minecraft/' + name)
+            "https://api.mojang.com/users/profiles/minecraft/" + name
+        )
 
         if r.status_code == 204 or r.status_code == 404:
             raise ErrorMessage("Spieler wurde nicht gefunden!")
         if r.status_code == 400:
             raise ErrorMessage("Ungültiger Spielername!")
         if r.status_code == 429:
-            raise ErrorMessage("Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
+            raise ErrorMessage(
+                "Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!"
+            )
 
         return r.json()["id"]
 
     @classmethod
     def get_name(cls, uuid: str):
-        r = requests.get(
-            'https://api.mojang.com/user/profile/' + uuid)
+        r = requests.get("https://api.mojang.com/user/profile/" + uuid)
 
         if r.status_code == 204 or r.status_code == 404:
             raise ErrorMessage("Spieler wurde nicht gefunden!")
         if r.status_code == 400:
             raise ErrorMessage("Ungültige UUID!")
         if r.status_code == 429:
-            raise ErrorMessage("Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
+            raise ErrorMessage(
+                "Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!"
+            )
 
         return r.json()["name"]
 
     @classmethod
     def get_profile(cls, uuid: str):
         r = requests.get(
-            'https://sessionserver.mojang.com/session/minecraft/profile/' + str(uuid))
+            "https://sessionserver.mojang.com/session/minecraft/profile/"
+            + str(uuid)
+        )
 
         if r.status_code == 204 or r.status_code == 404:
             raise ErrorMessage("Spieler wurde nicht gefunden!")
         if r.status_code == 400:
             raise ErrorMessage("Ungültige UUID!")
         if r.status_code == 429:
-            raise ErrorMessage("Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!")
+            raise ErrorMessage(
+                "Mojangs Server wollen nicht antworten. Versuche es in einer Minute erneut!"
+            )
 
         data = r.json()
         if "error" in data:
-            raise ErrorMessage("Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!")
+            raise ErrorMessage(
+                "Abfrage für einen Skin kann pro UUID maximal ein Mal pro Minute erfolgen!"
+            )
 
         ppty = data["properties"][0]
         base64_message = ppty["value"]
-        base64_bytes = base64_message.encode('ascii')
+        base64_bytes = base64_message.encode("ascii")
         message_bytes = base64.b64decode(base64_bytes)
-        message_string = message_bytes.decode('ascii')
+        message_string = message_bytes.decode("ascii")
         message_dict = json.loads(message_string)
 
         data["textures"] = message_dict.get("textures", None)
@@ -71,9 +81,11 @@ class MinecraftAPI:
 class MinecraftCog(commands.Cog, name="Minecraft"):
     def __init__(self, bot):
         self.bot = bot
-        self.color = 0x1f871e
+        self.color = 0x1F871E
 
-    group = app_commands.Group(name="minecraft", description="Erhalte Infos über Minecraft-Spieler")
+    group = app_commands.Group(
+        name="minecraft", description="Erhalte Infos über Minecraft-Spieler"
+    )
 
     @group.command(
         name="uuid",
@@ -84,8 +96,10 @@ class MinecraftCog(commands.Cog, name="Minecraft"):
         await interaction.response.defer()
 
         uuid = MinecraftAPI.get_uuid(name)
-        embed = utils.getEmbed(title="Minecraft Spieler",
-                               fields=[("Name", name, False), ("UUID", uuid, False)])
+        embed = utils.getEmbed(
+            title="Minecraft Spieler",
+            fields=[("Name", name, False), ("UUID", uuid, False)],
+        )
         await interaction.followup.send(embed=embed)
 
     @group.command(
@@ -97,8 +111,10 @@ class MinecraftCog(commands.Cog, name="Minecraft"):
         await interaction.response.defer()
 
         name = MinecraftAPI.get_name(uuid)
-        embed = utils.getEmbed(title="Minecraft Spieler",
-                               fields=[("Name", name, False), ("UUID", uuid, False)])
+        embed = utils.getEmbed(
+            title="Minecraft Spieler",
+            fields=[("Name", name, False), ("UUID", uuid, False)],
+        )
         await interaction.followup.send(embed=embed)
 
     @group.command(
@@ -107,7 +123,9 @@ class MinecraftCog(commands.Cog, name="Minecraft"):
     )
     @app_commands.describe(name_or_uuid="Name oder UUID des Spielers")
     @app_commands.rename(name_or_uuid="player")
-    async def cmd_playerinfo(self, interaction: discord.Interaction, name_or_uuid: str):
+    async def cmd_playerinfo(
+        self, interaction: discord.Interaction, name_or_uuid: str
+    ):
         await interaction.response.defer()
 
         if len(name_or_uuid) == 32:  # uuid
@@ -123,24 +141,43 @@ class MinecraftCog(commands.Cog, name="Minecraft"):
         embed.add_field(name="Name", value=data["name"], inline=False)
         embed.add_field(name="UUID", value=data["id"], inline=False)
         if "legacy" in data:
-            embed.add_field(name="Account-Typ", value="Legacy Account (2010-2012)")
+            embed.add_field(
+                name="Account-Typ", value="Legacy Account (2010-2012)"
+            )
         if "demo" in data:
             embed.add_field(name="Account-Typ", value="Demo Account")
 
         textures = data["textures"]
         if "SKIN" in textures:
-            if "metadata" in textures["SKIN"] and "model" in textures["SKIN"]["metadata"]:
+            if (
+                "metadata" in textures["SKIN"]
+                and "model" in textures["SKIN"]["metadata"]
+            ):
                 if textures["SKIN"]["metadata"]["model"] == "slim":
-                    embed.add_field(name="Skin-Typ", value="Alex (schlank)", inline=False)
+                    embed.add_field(
+                        name="Skin-Typ", value="Alex (schlank)", inline=False
+                    )
                 else:
-                    embed.add_field(name="Skin-Typ", value="Steve (klassisch)", inline=False)
+                    embed.add_field(
+                        name="Skin-Typ",
+                        value="Steve (klassisch)",
+                        inline=False,
+                    )
 
             if "url" in textures["SKIN"]:
                 data["skin_url"] = textures["SKIN"]["url"]
-                embed.add_field(name="Skin", value=f"[Skin]({textures['SKIN']['url']})", inline=False)
-                embed.set_thumbnail(url=textures['SKIN']['url'])
+                embed.add_field(
+                    name="Skin",
+                    value=f"[Skin]({textures['SKIN']['url']})",
+                    inline=False,
+                )
+                embed.set_thumbnail(url=textures["SKIN"]["url"])
 
         if "CAPE" in textures:
-            embed.add_field(name="Skin", value=f"[Cape]({textures['CAPE']['url']})", inline=False)
+            embed.add_field(
+                name="Skin",
+                value=f"[Cape]({textures['CAPE']['url']})",
+                inline=False,
+            )
 
         await interaction.followup.send(embed=embed)

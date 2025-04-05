@@ -1,7 +1,9 @@
-from html.parser import HTMLParser as HTMLParserOriginal
 import zlib
-import requests
+from html.parser import HTMLParser as HTMLParserOriginal
 from urllib.parse import urlparse
+
+import requests
+
 
 class HTMLCleaner(HTMLParserOriginal):
     def __init__(self, data, convert_charrefs=True, error=None, **kwargs):
@@ -88,7 +90,21 @@ class HTMLCleaner(HTMLParserOriginal):
     def handle_endtag(self, tag):
         data = ""
 
-        if tag in ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "ul", "ol", "tr", "table", "blockquote"]:
+        if tag in [
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "p",
+            "div",
+            "ul",
+            "ol",
+            "tr",
+            "table",
+            "blockquote",
+        ]:
             data = "\n"
         elif tag in ["span"]:
             data = " "
@@ -122,9 +138,13 @@ class HTMLCleaner(HTMLParserOriginal):
             html = requests.get(url).text
             if body_only:
                 try:
-                    data = ">".join(html.split("<body")[1].split(">")[1:]).split("</body>")[0]
+                    data = ">".join(
+                        html.split("<body")[1].split(">")[1:]
+                    ).split("</body>")[0]
                 except (AttributeError, ValueError, IndexError):
-                    print("HTMLParser Error: Couldn't strip body tag in '"+url+"'!")
+                    print(
+                        f"HTMLParser Error: Couldn't strip body tag in '{url}'!"
+                    )
                     data = html
 
             parsedurl = urlparse(url)
@@ -133,9 +153,16 @@ class HTMLCleaner(HTMLParserOriginal):
                 return cls.from_data(data, base_url=base_url)
             return cls.from_data(data)
         except requests.exceptions.RequestException as error:
-            print("HTMLParser Error: The request to '"+url+"' raised an exception:", error)
+            print(
+                "HTMLParser Error: The request to '"
+                + url
+                + "' raised an exception:",
+                error,
+            )
             return cls(
                 None,
-                error="Beim Abfragen der URL '"+url+"' ist ein Fehler aufgetreten. \n" \
-                      "Möglicherweise ist die Seite offline oder der Zugriff wurde verweigert."
+                error="Beim Abfragen der URL '"
+                + url
+                + "' ist ein Fehler aufgetreten. \n"
+                "Möglicherweise ist die Seite offline oder der Zugriff wurde verweigert.",
             )
