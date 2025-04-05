@@ -222,68 +222,6 @@ class Moderation(commands.Cog):
         )
 
     @commands.command(
-        brief="Kickt einen Spieler",
-        description="Kickt einen Spieler vom Server",
-        aliases=[],
-        help="Benutze /kick <Member> [Grund] um einen Spieler zu kicken",
-        usage="<Member> [Grund]",
-    )
-    @commands.has_permissions(kick_members=True)
-    @commands.bot_has_permissions(kick_members=True)
-    @commands.guild_only()
-    async def kick(self, ctx, member: Member, *args):
-        if not ctx.author.roles[-1] > member.roles[-1]:
-            raise ErrorMessage(
-                "Deine Rolle ist nicht höher als die des Benutzers, den du kicken wolltest!"
-            )
-        Grund = " ".join(args)
-        if Grund.rstrip() == "":
-            Grund = "Leer"
-        await member.kick(
-            reason="Von Moderator "
-            + ctx.author.name
-            + "#"
-            + ctx.author.discriminator
-            + " angefordert: "
-            + Grund
-        )
-        raise SuccessMessage(
-            "Benutzer Gekickt",
-            fields=[("Betroffener", member.mention), ("Grund", Grund)],
-        )
-
-    @commands.command(
-        brief="Bannt einen Spieler",
-        description="Bannt einen Spieler vom Server",
-        aliases=[],
-        help="Benutze /ban <Member> [Grund] um einen Spieler zu bannen",
-        usage="<Member> [Grund]",
-    )
-    @commands.has_permissions(ban_members=True)
-    @commands.bot_has_permissions(ban_members=True)
-    @commands.guild_only()
-    async def ban(self, ctx, member: Member, *args):
-        if not ctx.author.roles[-1] > member.roles[-1]:
-            raise ErrorMessage(
-                "Deine Rolle ist nicht höher als die des Benutzers, den du bannen wolltest!"
-            )
-        Grund = " ".join(args)
-        if Grund.rstrip() == "":
-            Grund = "Leer"
-        await member.ban(
-            reason="Von Moderator "
-            + ctx.author.name
-            + "#"
-            + ctx.author.discriminator
-            + " angefordert: "
-            + Grund
-        )
-        raise SuccessMessage(
-            "Benutzer Gebannt",
-            fields=[("Betroffener", member.mention), ("Grund", Grund)],
-        )
-
-    @commands.command(
         brief="Entbannt einen Spieler",
         description="Entbannt einen zuvor gebannten Spieler",
         aliases=["pardon"],
@@ -316,50 +254,6 @@ class Moderation(commands.Cog):
             )
         except DiscordException:
             raise ErrorMessage("Benutzer wurde nicht gefunden!")
-
-    @commands.command(
-        brief="Tötet einen Spieler",
-        description="Kickt einen Spieler aus dem aktuellen Sprachkanal",
-        aliases=["kickvoice"],
-        help="Benutze /kill <Member> [Grund] um einen Spieler zu töten",
-        usage="<Member> [Grund]",
-    )
-    @commands.guild_only()
-    async def kill(self, ctx, member: Member, *args):
-        Grund = " ".join(args)
-        if Grund.rstrip() == "":
-            Grund = "Leer"
-        VoiceState = member.voice
-        if VoiceState:
-            if VoiceState.channel.permissions_for(ctx.author).move_members:
-                if VoiceState.channel.permissions_for(
-                    ctx.guild.get_member(self.bot.user.id)
-                ).move_members:
-                    if ctx.author.roles[-1] >= member.roles[-1]:
-                        await member.edit(
-                            voice_channel=None,
-                            reason="Von Moderator "
-                            + ctx.author.name
-                            + "#"
-                            + ctx.author.discriminator
-                            + " angefordert: "
-                            + Grund,
-                        )
-                        raise SuccessMessage(
-                            "Benutzer Getötet",
-                            fields=[
-                                ("Betroffener", member.mention),
-                                ("Grund", Grund),
-                            ],
-                        )
-                    raise ErrorMessage(
-                        "Deine Rolle ist nicht höher als oder gleich wie die des Benutzers, den du töten wolltest!"
-                    )
-                raise commands.BotMissingPermissions([])
-            raise commands.MissingPermissions([])
-        raise ErrorMessage(
-            "Der Benutzer befindet sich nicht in einem Sprachkanal."
-        )
 
     @commands.command(
         brief="Bewegt einen Spieler zu dir",
