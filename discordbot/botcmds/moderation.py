@@ -6,7 +6,6 @@ from discord.ext import commands
 
 from discordbot.errors import ErrorMessage, SuccessMessage
 
-VOTEKILL_EMOJI = "☠"
 VOTEKICK_EMOJI = "👋"
 
 
@@ -25,65 +24,6 @@ class Moderation(commands.Cog):
             message = await channel.fetch_message(payload.message_id)
 
             if message.author.id == self.bot.user.id:
-                # Votekill
-
-                if (
-                    emoji == VOTEKILL_EMOJI
-                    and message.embeds
-                    and message.embeds[0].title.startswith("[Votekill]")
-                ):
-                    _, memberid, _, channelid, _ = message.embeds[
-                        0
-                    ].title.split("'")
-
-                    voicechannel = await self.bot.fetch_channel(channelid)
-                    member = await channel.guild.fetch_member(memberid)
-
-                    if voicechannel and member:
-                        if not (
-                            member.voice
-                            and member.voice.channel
-                            and member.voice.channel == voicechannel
-                        ):
-                            await message.delete()
-                        else:
-                            allowedvoterids = [
-                                member.id
-                                for member in voicechannel.members
-                                if not member.id == self.bot.user.id
-                            ]
-                            voters = []
-
-                            for reaction in message.reactions:
-                                if reaction.emoji == VOTEKILL_EMOJI:
-                                    async for user in reaction.users():
-                                        if user.id in allowedvoterids:
-                                            voters.append(user)
-                                    break
-
-                            a = len(allowedvoterids)
-                            minvotercount = a if a <= 2 else a / 2
-                            votercount = len(voters)
-
-                            print(
-                                f"{votercount} of {a} voted to kick {member.name}#{member.discriminator}! (Required {minvotercount})"
-                            )
-
-                            if votercount >= minvotercount:
-                                emb = self.bot.getEmbed(
-                                    title="Benutzer getötet",
-                                    color=0x0078D7,
-                                    description=member.mention
-                                    + " flog aus dem Kanal\nZählende Stimmen: "
-                                    + ", ".join(
-                                        [voter.mention for voter in voters]
-                                    ),
-                                )
-                                await member.edit(voice_channel=None)
-                                await message.edit(embed=emb)
-                    else:
-                        await message.delete()
-
                 # Votekick
 
                 if (
@@ -127,33 +67,6 @@ class Moderation(commands.Cog):
                         await message.delete()
 
     # Public commands
-
-    @commands.command(
-        brief="Stimme dafür, jemanden aus deinem Sprachkanal zu werfen.",
-        description="Jemand stört? Stimme dafür, dass ein Benutzer aus dem Sprachkanal fliegt. (dieser kann danach jedoch jederzeit wieder beitreten)",
-        aliases=[],
-        help="Benutze /votekill <Benutzer> um eine Abstimmung zu starten.",
-        usage="<Benutzer>",
-    )
-    @commands.guild_only()
-    async def votekill(self, ctx, member: Member):
-        if ctx.author.voice and ctx.author.voice.channel is not None:
-            if (
-                member.voice
-                and member.voice.channel == ctx.author.voice.channel
-            ):
-                msg = await ctx.sendEmbed(
-                    title=f"[Votekill] '{member.id}' in '{ctx.author.voice.channel.id}'",
-                    color=0x0078D7,
-                    description=f"Stimme mit {VOTEKILL_EMOJI} ab um dafür zu stimmen, dass {member.mention} aus dem Sprachkanal fliegt! (er kann danach jederzeit wieder beitreten)",
-                )
-                await msg.add_reaction(VOTEKILL_EMOJI)
-            else:
-                raise ErrorMessage(
-                    "Du musst dich im gleichen Sprachkanal wie der betroffene Benutzer befinden."
-                )
-        else:
-            raise ErrorMessage("Du musst dich in einem Sprachkanal befinden!")
 
     @commands.command(
         brief="Stimme dafür, jemanden aus dem Server zu werfen.",
