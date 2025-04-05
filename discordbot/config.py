@@ -71,6 +71,8 @@ HELP_HIDDEN_COGS = [
 # Music
 
 MUSIC_MODULE = _s("MUSIC_MODULE", False)
+if not MUSIC_MODULE and "music" in EXTENSIONS:
+    EXTENSIONS.remove("music")
 
 FILESPATH = _s(
     "FILESPATH",
