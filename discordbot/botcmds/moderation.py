@@ -1,12 +1,146 @@
 import typing
 
 import discord
+import discord.ui
 from discord import Member, app_commands
 from discord.ext import commands
 
+from discordbot import utils
 from discordbot.errors import ErrorMessage, SuccessMessage
 
-VOTEKICK_EMOJI = "👋"
+
+class VoteKickUi(discord.ui.View):
+    def __init__(
+        self,
+        target: discord.Member,
+        creator: discord.Member,
+        online_users: int,
+    ):
+        self._target = target
+        self._creator = creator
+        self._member_ids_voted_kick = [creator.id]
+        self._member_ids_voted_stay = []
+        self._votes_required = max(2, min(online_users // 2, 10))
+        super().__init__(timeout=3600)
+
+    def _get_vote_info(self) -> tuple[int, int]:
+        kick_votes = len(self._member_ids_voted_kick)
+        stay_votes = len(self._member_ids_voted_stay)
+        total_votes = kick_votes + stay_votes
+        vote_percentage = (
+            (kick_votes * 100 // total_votes) if total_votes else 0
+        )
+        return total_votes, vote_percentage
+
+    def get_embed(self, status="Abstimmung aktiv"):
+        total_votes, vote_percentage = self._get_vote_info()
+        return utils.getEmbed(
+            title=f"Vote-Kick",
+            color=0x0078D7,
+            description=f"Möchtest du, dass {self._target.mention} vom Server gekickt wird?",
+            inline=False,
+            fields=[
+                ("Stimmen für 'kick'", str(len(self._member_ids_voted_kick))),
+                (
+                    "Stimmen für 'bleiben'",
+                    str(len(self._member_ids_voted_stay)),
+                ),
+                (
+                    "Benötigte Stimmquote",
+                    f"75%+ bei {self._votes_required} Stimmen",
+                ),
+                (
+                    "Aktuelle Stimmquote",
+                    f"{vote_percentage}% bei {total_votes} Stimmen",
+                ),
+                ("Status", status),
+            ],
+        )
+
+    async def handle_changed(self, interaction: discord.Interaction):
+        total_votes, vote_percentage = self._get_vote_info()
+        if total_votes >= self._votes_required:
+            if vote_percentage >= 75:
+                await interaction.response.edit_message(
+                    view=None,
+                    embed=self.get_embed(
+                        status=f"{self._target.mention} wurde gekickt!"
+                    ),
+                )
+                await self._target.kick(
+                    reason=f"Vote-Kick with {total_votes} votes of which {vote_percentage}% voted for kick."
+                )
+            else:
+                await interaction.response.edit_message(
+                    view=None,
+                    embed=self.get_embed(
+                        status=f"{self._target.mention} darf bleiben!"
+                    ),
+                )
+        else:
+            await interaction.response.edit_message(
+                view=self, embed=self.get_embed()
+            )
+
+    @discord.ui.button(label="Weg mit dir! 👋", style=discord.ButtonStyle.red)
+    async def add_kick_vote(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id in self._member_ids_voted_kick:
+            return await interaction.response.send_message(
+                "❌ Du hast bereits für 'kick' abgestimmt!", ephemeral=True
+            )
+
+        if interaction.user.id in self._member_ids_voted_stay:
+            self._member_ids_voted_stay.remove(interaction.user.id)
+        self._member_ids_voted_kick.append(interaction.user.id)
+
+        await self.handle_changed(interaction)
+        await interaction.followup.send(
+            "✅ Erfolgreich für 'kick' abgestimmt!", ephemeral=True
+        )
+
+    @discord.ui.button(
+        label="Du darfst bleiben! 🛑", style=discord.ButtonStyle.green
+    )
+    async def add_stay_vote(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id in self._member_ids_voted_stay:
+            return await interaction.response.send_message(
+                "❌ Du hast bereits für 'bleiben' abgestimmt!", ephemeral=True
+            )
+        if interaction.user.id == self._target.id:
+            return await interaction.response.send_message(
+                "❌ Du darfst nicht für dich selbst stimmen!", ephemeral=True
+            )
+
+        if interaction.user.id in self._member_ids_voted_kick:
+            self._member_ids_voted_kick.remove(interaction.user.id)
+        self._member_ids_voted_stay.append(interaction.user.id)
+
+        await self.handle_changed(interaction)
+        await interaction.followup.send(
+            "✅ Erfolgreich für 'bleiben' abgestimmt!", ephemeral=True
+        )
+
+    @discord.ui.button(
+        label="Stimme entfernen", style=discord.ButtonStyle.gray
+    )
+    async def remove_vote(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        if interaction.user.id in self._member_ids_voted_kick:
+            self._member_ids_voted_kick.remove(interaction.user.id)
+        elif interaction.user.id in self._member_ids_voted_stay:
+            self._member_ids_voted_stay.remove(interaction.user.id)
+        else:
+            return await interaction.response.send_message(
+                "❌ Du hattest gar keine Stimme abgegeben!", ephemeral=True
+            )
+
+        await self.handle_changed(interaction)
+        await interaction.followup.send("✅ Stimme entfernt!", ephemeral=True)
 
 
 class Moderation(commands.Cog):
@@ -14,76 +148,31 @@ class Moderation(commands.Cog):
         self.bot = bot
         self.color = 0x5156FF
 
-    # Listeners
-
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload):
-        if not payload.user_id == self.bot.user.id:
-            emoji = payload.emoji.name
-            channel = await self.bot.fetch_channel(payload.channel_id)
-            message = await channel.fetch_message(payload.message_id)
-
-            if message.author.id == self.bot.user.id:
-                # Votekick
-
-                if (
-                    emoji == VOTEKICK_EMOJI
-                    and message.embeds
-                    and message.embeds[0].title.startswith("[Votekick]")
-                ):
-                    _, memberid, _ = message.embeds[0].title.split("'")
-
-                    member = await channel.guild.fetch_member(memberid)
-                    if member:
-                        m = (
-                            message.guild.member_count - 1
-                        )  # TODO: Subtract Bots
-
-                        minvotes = m / 2 if m <= 200 else 100
-
-                        for reaction in message.reactions:
-                            if reaction.emoji == VOTEKICK_EMOJI:
-                                votes = (
-                                    reaction.count - 1
-                                    if reaction.me
-                                    else reaction.count
-                                )
-
-                        print(
-                            f"{votes} of {m} voted to kick {member.name}#{member.discriminator}! (Required {minvotes})"
-                        )
-
-                        if votes >= minvotes:
-                            emb = self.bot.getEmbed(
-                                title="Benutzer gekickt",
-                                color=0x0078D7,
-                                description=f"{member.mention} wurde vom Server gekickt!\nStimmen: {votes}",
-                            )
-                            await member.kick(
-                                reason=f"{votes} voted to kick this person."
-                            )
-                            await message.edit(embed=emb)
-                    else:
-                        await message.delete()
-
     # Public commands
 
-    @commands.command(
-        brief="Stimme dafür, jemanden aus dem Server zu werfen.",
-        description="Jemand stört? Stimme dafür, dass ein Benutzer aus dem Server fliegt. (dieser kann danach jedoch jederzeit wieder mit einem Einladungslink beitreten)",
-        aliases=[],
-        help="Benutze /votekick <Benutzer> um eine Abstimmung zu starten.",
-        usage="<Benutzer>",
+    @app_commands.command(
+        name="vote-kick",
+        description="Stimme dafür, jemanden aus dem Server zu werfen.",
     )
-    @commands.guild_only()
-    @commands.bot_has_permissions(kick_members=True)
-    async def votekick(self, ctx, member: Member):
-        msg = await ctx.sendEmbed(
-            title=f"[Votekick] '{member.id}'",
-            color=0x0078D7,
-            description=f"Stimme mit {VOTEKICK_EMOJI} ab um dafür zu stimmen, dass {member.mention} aus dem Server fliegt! (dieser kann danach jedoch jederzeit wieder mit einem Einladungslink beitreten)",
+    @app_commands.guild_only()
+    @app_commands.guild_install()
+    @app_commands.checks.bot_has_permissions(kick_members=True)
+    async def vote_kick(
+        self, interaction: discord.Interaction, member: Member
+    ):
+        guild = await self.bot.fetch_guild(
+            interaction.guild_id, with_counts=True
         )
-        await msg.add_reaction(VOTEKICK_EMOJI)
+        online_users = guild.approximate_presence_count - 1
+        if online_users <= 2:
+            raise ErrorMessage(
+                "Es sind zu wenige Benutzer online, um abzustimmen."
+            )
+
+        view = VoteKickUi(member, interaction.user, online_users)
+        await interaction.response.send_message(
+            view=view, embed=view.get_embed(), ephemeral=False
+        )
 
     # Moderator commands
 
