@@ -98,45 +98,6 @@ class UserInfo(commands.Cog):
         )
         return await interaction.response.send_message(embeds=[emb, emb2])
 
-    @group.command(
-        name="song",
-        description="Erhalte Links zu dem Song, welcher jemand gerade hört",
-    )
-    @app_commands.guild_only()
-    @app_commands.describe(member="Benutzer")
-    async def song(
-        self, interaction: discord.Interaction, member: discord.Member
-    ):
-        for activity in member.activities:
-            if str(activity.type) == "ActivityType.listening":
-                try:
-                    emb = utils.getEmbed(
-                        title="Spotify Song",
-                        fields=[
-                            ("Titel", activity.title),
-                            ("Künstler", activity.artist),
-                            (
-                                "Link",
-                                (
-                                    "[Spotify](https://open.spotify.com/track/"
-                                    + activity.track_id
-                                    + ")"
-                                ),
-                            ),
-                            ("Benutzer", member.mention),
-                        ],
-                    )
-                    await interaction.response.send_message(embed=emb)
-                except AttributeError:
-                    await interaction.response.send_message(
-                        f"Scheinbar hört {member.mention} keinen richtigen Song.",
-                        ephemeral=True,
-                    )
-                return
-        await interaction.response.send_message(
-            f"{member.mention} hört keinen Song!", ephemeral=True
-        )
-
 
 async def setup(bot):
     await bot.add_cog(UserInfo(bot))
