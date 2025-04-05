@@ -104,7 +104,8 @@ class ReportsCog(commands.Cog, name="Reports"):
         },
     )
     @app_commands.describe(member="Zu meldendes Mitglied", reason="Begründung")
-    @app_commands.guild_only
+    @app_commands.guild_only()
+    @app_commands.guild_install()
     async def report_create(
         self,
         interaction: discord.Interaction,
@@ -113,7 +114,8 @@ class ReportsCog(commands.Cog, name="Reports"):
     ):
         await interaction.response.send_modal(ReportModal(member, reason))
 
-    @app_commands.guild_only
+    @app_commands.guild_only()
+    @app_commands.guild_install()
     async def report_create_contextmenu(
         self, interaction: discord.Interaction, member: Member
     ):
@@ -123,6 +125,7 @@ class ReportsCog(commands.Cog, name="Reports"):
         name="reports",
         description="Verwalte Reports von Mitgliedern",
         guild_only=True,
+        allowed_installs=app_commands.AppInstallationType(guild=True),
         default_permissions=discord.Permissions(kick_members=True),
         extras={
             "help": "Verwende Befehle diese Gruppe, um Reports zu verwalten."

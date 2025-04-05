@@ -65,7 +65,10 @@ class EmbedGenerator(commands.Cog):
         )
 
     group = app_commands.Group(
-        name="embeds", description="Clone, generate and update embeds"
+        name="embeds",
+        description="Clone, generate and update embeds",
+        guild_only=True,
+        allowed_installs=app_commands.AppInstallationType(guild=True),
     )
 
     @group.command(

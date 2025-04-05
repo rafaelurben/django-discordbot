@@ -45,7 +45,8 @@ class Basic(commands.Cog):
         name="rules",
         description="Schickt die Regeln in den Chat",
     )
-    @app_commands.guild_only
+    @app_commands.guild_only()
+    @app_commands.guild_install()
     async def rules(self, interaction: discord.Interaction):
         description = (
             "Das Nichtbeachten der Regeln kann und wird bestraft werden!\n"
@@ -104,7 +105,8 @@ class Basic(commands.Cog):
         name="invite",
         description="Erhalte Einladungen zu diesem Server, zum Server des Besitzers und für diesen Bot.",
     )
-    @app_commands.guild_only
+    @app_commands.guild_only()
+    @app_commands.guild_install()
     async def invite(self, interaction: discord.Interaction):
         await interaction.response.defer()
 

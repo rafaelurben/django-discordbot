@@ -203,6 +203,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
         name="tmp-text",
         description="Erstelle deinen eigenen Textkanal und lade deine Freunde oder den ganzen Server dazu ein",
         guild_only=True,
+        allowed_installs=app_commands.AppInstallationType(guild=True),
     )
 
     @tc_group.command(
@@ -360,6 +361,7 @@ class ChannelsCog(commands.Cog, name="Channels"):
         name="tmp-voice",
         description="Erstelle deinen eigenen Sprachkanal und lade deine Freunde oder den ganzen Server dazu ein",
         guild_only=True,
+        allowed_installs=app_commands.AppInstallationType(guild=True),
     )
 
     @vc_group.command(
@@ -530,7 +532,8 @@ class ChannelsCog(commands.Cog, name="Channels"):
             "help": "Verwende diesen Befehl, um das Modul 'Benutzerkanäle' zu aktivieren oder deaktivieren."
         },
     )
-    @app_commands.guild_only
+    @app_commands.guild_only()
+    @app_commands.guild_install()
     @app_commands.default_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.describe(action="Die auszuführende Aktion")

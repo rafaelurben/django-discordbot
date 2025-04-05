@@ -185,6 +185,7 @@ class Moderation(commands.Cog):
     @app_commands.checks.cooldown(1, 30, key=lambda i: i.channel.id)
     @app_commands.checks.bot_has_permissions(read_message_history=True)
     @app_commands.guild_only()
+    @app_commands.guild_install()
     async def clear_channel(
         self,
         interaction: discord.Interaction,
