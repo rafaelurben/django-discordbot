@@ -56,3 +56,12 @@ find = { namespaces = false }
 
 [tool.setuptools.dynamic]
 version = { file = ["_version.txt"] }
+
+[tool.black]
+target-version = ["py313"]
+line-length = 79
+
+[tool.isort]
+py_version = 313
+profile = "black"
+line_length = 79
