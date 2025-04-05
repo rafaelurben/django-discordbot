@@ -1,4 +1,5 @@
-from discord import DiscordException, Member
+import discord
+from discord import DiscordException, Member, app_commands
 from discord.ext import commands
 
 from discordbot.errors import ErrorMessage, SuccessMessage
@@ -171,48 +172,54 @@ class Moderation(commands.Cog):
 
     # Moderator commands
 
-    @commands.command(
-        brief="Leert den Chat",
-        description="Leert den Chat",
-        aliases=["cc"],
-        help="Gib einfach /clearchat ein und der Chat wird bald leer sein",
-        usage="[Limit]",
+    @app_commands.command(
+        name="clear-channel",
+        description="Löscht Nachrichten in diesem Kanal",
     )
-    @commands.cooldown(1, 2.0, commands.BucketType.channel)
-    @commands.has_permissions(manage_messages=True)
-    @commands.bot_has_permissions(manage_messages=True)
-    @commands.guild_only()
-    async def clearchat(self, ctx, limit: int = 0):
-        await ctx.sendEmbed(
-            title="Chat leeren...", description="Der Chat wird geleert!"
-        )
-        try:
-            if limit > 0:
-                await ctx.message.channel.purge(limit=limit + 1)
-            else:
-                await ctx.message.channel.purge()
-        except DiscordException as e:
-            print("[Clearchat] - Error:", e)
-
-    @commands.command(
-        brief="Löscht alle Nachrichten von mir",
-        description="Löscht alle von diesem Bot gesendeten Nachrichten",
-        aliases=[],
-        help="Nicht mit /clearchat zu verwechseln!",
-        usage="",
-        hidden=True,
+    @app_commands.describe(
+        only_bot="Nur die Nachrichten dieses Bots löschen.",
+        oldest_first="Älteste zuerst",
+        limit="Maximale Anzahl Nachrichten",
     )
-    @commands.has_permissions(manage_messages=True)
-    @commands.guild_only()
-    async def cleanchat(self, ctx):
-        await ctx.sendEmbed(
-            title="Chat aufräumen...", description="Der Chat wird aufgeräumt!"
+    @app_commands.default_permissions(manage_messages=True)
+    @app_commands.checks.cooldown(1, 30, key=lambda i: i.channel.id)
+    @app_commands.checks.bot_has_permissions(read_message_history=True)
+    @app_commands.guild_only()
+    async def clear_channel(
+        self,
+        interaction: discord.Interaction,
+        only_bot: bool = False,
+        oldest_first: bool = False,
+        limit: app_commands.Range[int, 0] = None,
+    ):
+        await interaction.response.defer(ephemeral=True)
+
+        if only_bot:
+            deleted_messages = await interaction.channel.purge(
+                limit=limit,
+                check=lambda m: m.author.id == self.bot.user.id,
+                oldest_first=oldest_first,
+                bulk=interaction.app_permissions.manage_messages,
+                reason=f"User {interaction.user.mention} used /clear-channel",
+            )
+            raise SuccessMessage(
+                f"{len(deleted_messages)} Nachricht(en) von mir gelöscht!"
+            )
+
+        if not interaction.app_permissions.manage_messages:
+            raise ErrorMessage(
+                "Ich darf in diesem Kanal nur meine Nachrichten löschen."
+            )
+
+        deleted_messages = await interaction.channel.purge(
+            limit=limit,
+            oldest_first=oldest_first,
+            bulk=True,
+            reason=f"User {interaction.user.mention} used /clear-channel",
         )
-
-        def is_me(message):
-            return message.author.id == ctx.bot.user.id
-
-        await ctx.channel.purge(limit=100, check=is_me)
+        raise SuccessMessage(
+            f"{len(deleted_messages)} Nachricht(en) von gelöscht!"
+        )
 
     @commands.command(
         brief="Kickt einen Spieler",
