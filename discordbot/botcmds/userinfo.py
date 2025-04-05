@@ -20,30 +20,83 @@ class UserInfo(commands.Cog):
         name="profile",
         description="Erhalte den Standardavatar, Avatar und das Alter eines Discordaccounts",
     )
-    @app_commands.describe(user="Benutzer")
+    @app_commands.describe(user="Benutzer (oder Benutzer-ID)")
     async def profile(
-        self, interaction: discord.Interaction, user: discord.User
+        self,
+        interaction: discord.Interaction,
+        user: discord.User | discord.Member,
     ):
-        diff = discord.utils.utcnow() - user.created_at
+        diff_created = discord.utils.utcnow() - user.created_at
         emb = utils.getEmbed(
             title="Benutzerinformationen",
-            description=f"Infos über den Benutzer {user.mention}",
+            description=f"Infos über {user.mention}",
             fields=[
+                (
+                    "Benutzername",
+                    (
+                        f"@{user.name}#{user.discriminator}"
+                        if user.discriminator
+                        and user.discriminator != "0"
+                        and user.discriminator != "0000"
+                        else f"@{user.name}"
+                    ),
+                ),
+                ("Globaler Nickname", user.global_name or "_n/a_"),
                 ("ID", str(user.id)),
                 (
-                    "Account erstellt am",
-                    f"<t:{int(datetime.timestamp(user.created_at))}>",
+                    "Account erstellt",
+                    f"<t:{int(datetime.timestamp(user.created_at))}> (vor {diff_created.days} Tag(en))",
                 ),
-                ("Account erstellt vor", f"{diff.days} Tag(en)"),
+                (
+                    "Benutzer-Typ",
+                    (
+                        "Bot"
+                        if user.bot
+                        else (
+                            "System"
+                            if user.system or user.public_flags.system
+                            else (
+                                "Team"
+                                if user.public_flags.team_user
+                                else "Mensch"
+                            )
+                        )
+                    ),
+                ),
                 (
                     "Standardavatar",
                     f"[{user.default_avatar.key}]({user.default_avatar})",
                 ),
             ],
             inline=False,
-            thumbnailurl=str(user.avatar),
+            thumbnailurl=str(user.avatar) if user.avatar else None,
         )
-        await interaction.response.send_message(embed=emb)
+
+        if not isinstance(user, discord.Member):
+            return await interaction.response.send_message(embed=emb)
+
+        diff_joined = discord.utils.utcnow() - user.created_at
+        emb2 = utils.getEmbed(
+            title="Guild-spezifische Infos",
+            fields=[
+                ("Guild Nickname", user.display_name),
+                (
+                    "Guild beigetreten",
+                    f"<t:{int(datetime.timestamp(user.joined_at))}> (vor {diff_joined.days} Tag(en))",
+                ),
+                (
+                    "Mehrfach beigetreten?",
+                    "Ja" if user.flags.did_rejoin else "Nein",
+                ),
+            ],
+            inline=False,
+            thumbnailurl=(
+                str(user.display_avatar)
+                if user.display_avatar and user.display_avatar != user.avatar
+                else None
+            ),
+        )
+        return await interaction.response.send_message(embeds=[emb, emb2])
 
     @group.command(
         name="song",
