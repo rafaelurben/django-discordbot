@@ -6,13 +6,26 @@ import dns.rdataclass
 import dns.rdatatype
 import dns.rdtypes
 import dns.resolver
+import re
+from whois import whois
 from discord import app_commands
 from discord.ext import commands
+from whois.parser import PywhoisError
 
 from discordbot import utils
 from discordbot.errors import ErrorMessage, SuccessMessage
 
 ALL_RDATA_TYPES: list[str] = [t.name for t in dns.rdatatype.RdataType]
+DOMAIN_REGEX = r"^(((?!-))(xn--|_)?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9\-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$"
+
+
+def ensure_valid_domain(domain_orig: str):
+    domain_idna = domain_orig.encode('idna').decode("utf-8")
+    if re.fullmatch(DOMAIN_REGEX, domain_idna) is None:
+        raise ErrorMessage("Dies sieht nicht nach einer Domain aus...", inline=False, fields=[
+            ("Domain", domain_orig),
+            ("Domain (IDNA)", domain_idna)
+        ])
 
 
 class Networking(commands.Cog):
@@ -29,6 +42,8 @@ class Networking(commands.Cog):
     @app_commands.describe(domain="Domain, welche abgefragt werden soll.")
     @app_commands.checks.cooldown(5, 60)
     async def cmd_ip(self, interaction: discord.Interaction, domain: str):
+        ensure_valid_domain(domain)
+
         await interaction.response.defer()
         try:
             ip = socket.gethostbyname(domain)
@@ -47,6 +62,8 @@ class Networking(commands.Cog):
     )
     @app_commands.checks.cooldown(3, 60)
     async def cmd_dns(self, interaction: discord.Interaction, domain: str, typ: str = "A"):
+        ensure_valid_domain(domain)
+
         await interaction.response.defer()
         typ = typ.upper()
         try:
@@ -100,6 +117,27 @@ class Networking(commands.Cog):
             if current.lower() in value.lower():
                 result.append(app_commands.Choice(name=value, value=value))
         return result[:25]
+
+    @group.command(
+        name="whois",
+        description="Führe einen WHOIS-Lookup für eine Domain aus."
+    )
+    @app_commands.describe(
+        domain="Domain, welche abgefragt werden soll.",
+    )
+    @app_commands.checks.cooldown(1, 60)
+    async def cmd_whois(self, interaction: discord.Interaction, domain: str):
+        ensure_valid_domain(domain)
+
+        await interaction.response.defer()
+
+        try:
+            result = whois(domain)
+            if result['domain_name'] is None:
+                raise ErrorMessage(f"Antwort für Domain '{domain}':\n\n{result.text}")
+            raise SuccessMessage(f"Antwort für Domain '{domain}':\n\n{result.text}")
+        except PywhoisError as e:
+            raise ErrorMessage("Fehler beim Abrufen: " + str(e))
 
 
 async def setup(bot):
