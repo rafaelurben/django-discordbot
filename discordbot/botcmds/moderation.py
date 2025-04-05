@@ -1,5 +1,7 @@
+import typing
+
 import discord
-from discord import DiscordException, Member, app_commands
+from discord import Member, app_commands
 from discord.ext import commands
 
 from discordbot.errors import ErrorMessage, SuccessMessage
@@ -222,39 +224,69 @@ class Moderation(commands.Cog):
             f"{len(deleted_messages)} Nachricht(en) von gelöscht!"
         )
 
-    @commands.command(
-        brief="Entbannt einen Spieler",
-        description="Entbannt einen zuvor gebannten Spieler",
-        aliases=["pardon"],
-        help="Benutze /unban <Userid> [Grund] um einen Spieler zu entbannen",
-        usage="<Userid> [Grund]",
+    @app_commands.command(
+        name="unban",
+        description="Entbanne einen zuvor gebannten Spieler",
     )
-    @commands.has_permissions(ban_members=True)
-    @commands.bot_has_permissions(ban_members=True)
-    @commands.guild_only()
-    async def unban(self, ctx, userid: int, *args):
-        Grund = " ".join(args)
-        if Grund.rstrip() == "":
-            Grund = "Leer"
-        user = self.bot.get_user(userid)
-        if user is None:
-            raise ErrorMessage("Benutzer wurde nicht gefunden!")
+    @app_commands.describe(user_id="Benutzer-ID", reason="Begründung")
+    @app_commands.default_permissions(ban_members=True)
+    @app_commands.checks.bot_has_permissions(ban_members=True)
+    @app_commands.guild_only()
+    @app_commands.guild_install()
+    async def unban(
+        self,
+        interaction: discord.Interaction,
+        user_id: str,
+        reason: str = "",
+    ):
         try:
-            await ctx.guild.unban(
+            user_id = int(user_id)
+        except TypeError:
+            raise ErrorMessage("Ungültige Benutzer-ID!")
+
+        try:
+            user = discord.Object(user_id, type=discord.User)
+
+            await interaction.guild.unban(
                 user,
-                reason="Von Moderator "
-                + ctx.author.name
-                + "#"
-                + ctx.author.discriminator
-                + " angefordert: "
-                + Grund,
+                reason=f"Von @{interaction.user.name} angefordert mit Begründung: {reason}",
             )
             raise SuccessMessage(
-                "Benutzer Entbannt",
-                fields=[("Betroffener", user.mention), ("Grund", Grund)],
+                "Benutzer entbannt!",
+                inline=False,
+                fields=[("Betroffener", f"<@{user_id}>"), ("Grund", reason)],
             )
-        except DiscordException:
-            raise ErrorMessage("Benutzer wurde nicht gefunden!")
+        except discord.NotFound:
+            raise ErrorMessage(
+                "Zu entbannender Benutzer konnte nicht gefunden werden!"
+            )
+
+    @unban.autocomplete("user_id")
+    async def unban__user_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str,
+    ) -> typing.List[app_commands.Choice[str]]:
+        results = []
+        async for ban_entry in interaction.guild.bans():
+            if (
+                current in ban_entry.user.name
+                or current in ban_entry.user.global_name
+                or current in ban_entry.reason
+            ):
+                name = f"@{ban_entry.user.name} wegen '{ban_entry.reason}'"
+                if len(name) > 100:
+                    name = name[:96] + "...'"
+                results.append(
+                    app_commands.Choice(
+                        name=name,
+                        value=str(ban_entry.user.id),
+                    )
+                )
+
+            if len(results) == 25:
+                break
+        return results[:25]
 
     @commands.command(
         brief="Bewegt einen Spieler zu dir",
