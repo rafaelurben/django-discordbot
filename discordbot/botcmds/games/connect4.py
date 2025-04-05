@@ -73,6 +73,10 @@ class Connect4View(discord.ui.View):
             await self.game.asave()
             await interaction.message.edit(embed=self.get_game_embed())
 
+            await interaction.followup.send(
+                f"Du bist dran, {interaction.user.mention}!", ephemeral=True
+            )
+
         if self.game.finished:
             await interaction.message.edit(view=None)
 
