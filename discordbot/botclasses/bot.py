@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
 
-from discordbot import botclasses, config
+from discordbot import config
+from discordbot.botclasses.context import Context
 from discordbot.botmodules.serverdata import DjangoConnection
 from discordbot.errors import EmbedException
 
@@ -17,7 +18,7 @@ class Bot(commands.Bot):
             prefixes = config.ALL_PREFIXES
         return commands.when_mentioned_or(*prefixes)(client, message)
 
-    async def get_context(self, message, *, cls=botclasses.Context):
+    async def get_context(self, message, *, cls=Context):
         return await super().get_context(message, cls=cls)
 
     def getEmbed(

@@ -1,13 +1,15 @@
 import discord
 
-from discordbot import botclasses, config
+from discordbot import config
+from discordbot.botclasses.bot import Bot
+from discordbot.botclasses.tree import CommandTree
 
 # Create Bot
 
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = botclasses.Bot(
+bot = Bot(
     description="Das ist eine Beschreibung!",
     case_insensitive=True,
     activity=discord.Activity(
@@ -19,7 +21,7 @@ bot = botclasses.Bot(
     status=discord.Status.idle,
     help_command=None,
     strip_after_prefix=True,
-    tree_cls=botclasses.CommandTree,
+    tree_cls=CommandTree,
 )
 
 
