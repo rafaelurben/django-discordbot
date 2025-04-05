@@ -288,43 +288,43 @@ class Moderation(commands.Cog):
                 break
         return results[:25]
 
-    @commands.command(
-        brief="Bewegt einen Spieler zu dir",
-        description="Bewegt einen Spieler in deinen aktuellen Kanal",
-        aliases=["mvhere"],
-        help="Benutze /movehere <Member> um ein Mitglied hier hin zu bewegen.",
-        usage="<Member>",
+    @app_commands.command(
+        name="move-here",
+        description="Bewegt einen Spieler in deinen aktuellen Sprachkanal",
     )
-    @commands.guild_only()
-    async def movehere(self, ctx, member: Member):
-        if member.voice:
-            if ctx.author.voice:
-                if member.voice.channel.permissions_for(
-                    ctx.author
-                ).move_members:
-                    if member.voice.channel.permissions_for(
-                        ctx.guild.get_member(self.bot.user.id)
-                    ).move_members:
-                        await member.edit(
-                            voice_channel=ctx.author.voice.channel,
-                            reason="Von Moderator "
-                            + ctx.author.name
-                            + "#"
-                            + ctx.author.discriminator
-                            + " angefordert.",
-                        )
-                        raise SuccessMessage(
-                            "Hierhin bewegt",
-                            fields=[
-                                ("Betroffener", member.mention),
-                                ("Kanal", ctx.author.voice.channel.name),
-                            ],
-                        )
-                    raise commands.BotMissingPermissions([])
-                raise commands.MissingPermissions([])
+    @app_commands.default_permissions(move_members=True)
+    @app_commands.checks.bot_has_permissions(move_members=True)
+    @app_commands.guild_only()
+    @app_commands.guild_install()
+    async def move_here(
+        self, interaction: discord.Interaction, member: discord.Member
+    ):
+        target = (
+            interaction.user.voice.channel if interaction.user.voice else None
+        )
+        if target is None:
             raise ErrorMessage("Du befindest sich nicht in einem Sprachkanal.")
-        raise ErrorMessage(
-            "Der Benutzer befindet sich nicht in einem Sprachkanal."
+
+        source = member.voice.channel if member.voice else None
+        if source is None:
+            raise ErrorMessage(
+                "Der Benutzer befindet sich nicht in einem Sprachkanal."
+            )
+
+        if not source.permissions_for(interaction.user).move_members:
+            raise app_commands.MissingPermissions(["move_members"])
+
+        await member.edit(
+            voice_channel=target,
+            reason=f"Von @{interaction.user.name} angefordert.",
+        )
+        raise SuccessMessage(
+            f"{member.mention} wurde bewegt!",
+            inline=True,
+            fields=[
+                ("Von", source.mention),
+                ("Zu", target.mention),
+            ],
         )
 
 
