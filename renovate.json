@@ -1,0 +1,28 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended"
+    ],
+    "packageRules": [
+        {
+            "description": "Automerge patch updates after 2 days",
+            "matchUpdateTypes": [
+                "patch"
+            ],
+            "minimumReleaseAge": "2 days",
+            "automerge": true
+        },
+        {
+            "description": "Automerge minor updates after 5 days",
+            "matchUpdateTypes": [
+                "minor"
+            ],
+            "minimumReleaseAge": "5 days",
+            "automerge": true
+        }
+    ],
+    "lockFileMaintenance": {
+        "enabled": true,
+        "automerge": true
+    }
+}
