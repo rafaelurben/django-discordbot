@@ -8,4 +8,4 @@ youtube-dl==2021.12.17
 rich==14.1.0
 tqdm==4.67.1
 dnspython==2.8.0
-python-whois==0.9.5
+python-whois==0.9.6
