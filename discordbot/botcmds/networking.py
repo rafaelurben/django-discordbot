@@ -10,7 +10,7 @@ import dns.resolver
 from discord import app_commands
 from discord.ext import commands
 from whois import whois
-from whois.parser import PywhoisError
+from whois.exceptions import PywhoisError
 
 from discordbot import utils
 from discordbot.errors import ErrorMessage, SuccessMessage
