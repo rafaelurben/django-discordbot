@@ -345,7 +345,18 @@ class Report(models.Model):
 
 VIERGEWINNT_PLAYER_EMOJIS = ["⬛", "🟥", "🟨"]
 VIERGEWINNT_WALL_EMOJI = "🟦"
-VIERGEWINNT_NUMBER_EMOJIS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+VIERGEWINNT_NUMBER_EMOJIS = [
+    "1️⃣",
+    "2️⃣",
+    "3️⃣",
+    "4️⃣",
+    "5️⃣",
+    "6️⃣",
+    "7️⃣",
+    "8️⃣",
+    "9️⃣",
+    "🔟",
+]
 
 
 def VIERGEWINNT_DEFAULT_GAME():
