@@ -1,5 +1,5 @@
 django==6.0.3
-requests==2.33.0
+requests==2.33.1
 discord.py[speed,voice]==2.7.1
 opuslib==3.0.1
 ffmpeg==1.4
