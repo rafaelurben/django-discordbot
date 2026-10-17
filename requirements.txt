@@ -7,5 +7,5 @@ fuzzywuzzy[speedup]==0.18.0
 youtube-dl==2021.12.17
 rich==15.0.0
 tqdm==4.70.1
-dnspython==2.8.0
+dnspython==2.9.0
 python-whois==0.9.6
